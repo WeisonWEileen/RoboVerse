@@ -1,3 +1,5 @@
+"""A humanoid base wrapper for skillBench tasks"""
+
 # ruff: noqa: F405
 from __future__ import annotations
 
@@ -7,8 +9,10 @@ from typing import Callable
 
 import torch
 
+from metasim.utils.math import quat_apply, quat_rotate_inverse
+
 try:
-    from isaacgym.torch_utils import quat_rotate_inverse, torch_rand_float
+    from isaacgym.torch_utils import torch_rand_float
 except ImportError:
     pass
 
@@ -18,11 +22,8 @@ from metasim.utils.demo_util import get_traj
 from metasim.utils.humanoid_robot_util import *
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 
-# TODO 2
-# log metric visualization
 
-
-class LeggedRobotWrapper(RslRlWrapper):
+class HumanoidBaseWrapper(RslRlWrapper):
     """
     Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
 
@@ -43,30 +44,23 @@ class LeggedRobotWrapper(RslRlWrapper):
         self._prepare_reward_function(scenario.task)
         self._init_buffers()
 
-        # for debugging
-        # self.debug = True'
-        self.debug = False
-        if self.debug:
-            self.counter = 0
-            self.obs_logging = []
-            self.privileged_obs_logging = []
-
     def _parse_joint_indices(self, robot):
         """
-        Parse joint indices from scenario.
+        Parse humanoid rigid body indices from robot cfg.
         """
-
         feet_names = robot.feet_links
         knee_names = robot.knee_links
         elbow_names = robot.elbow_links
         termination_contact_names = robot.terminate_contacts_links
         penalised_contact_names = robot.penalized_contacts_links
+        wrist_names = robot.wrist_links
 
         self.feet_indices = self.env.handler.get_robot_rigid_body_index(feet_names)
         self.knee_indices = self.env.handler.get_robot_rigid_body_index(knee_names)
         self.elbow_indices = self.env.handler.get_robot_rigid_body_index(elbow_names)
         self.termination_contact_indices = self.env.handler.get_robot_rigid_body_index(termination_contact_names)
         self.penalised_contact_indices = self.env.handler.get_robot_rigid_body_index(penalised_contact_names)
+        self.wrist_indices = self.env.handler.get_robot_rigid_body_index(wrist_names)
 
         # attach to cfg for reward computation.
         self.cfg.feet_indices = self.feet_indices
@@ -81,6 +75,7 @@ class LeggedRobotWrapper(RslRlWrapper):
         self.num_commands = scenario.task.command_dim
 
     def _get_init_states(self, scenario):
+        """Get initial states from handler."""
         self.init_states, _, _ = get_traj(scenario.task, scenario.robot, self.env.handler)
         if len(self.init_states) < self.num_envs:
             self.init_states = (
@@ -118,6 +113,8 @@ class LeggedRobotWrapper(RslRlWrapper):
             self.num_envs,
             1,
         ))
+
+        # TODO implement it
         # self.neg_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
         # self.pos_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
 
@@ -165,19 +162,22 @@ class LeggedRobotWrapper(RslRlWrapper):
 
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
 
-        # store globally for reset update, which will be forward to obs and priviliged obs
+        # store globally for reset update and pass to obs and privileged_obs
         self.actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
+
+        # reference dof position
+        self.ref_dof_pos = torch.zeros(
+            self.num_envs, self.env.handler.robot_num_dof, device=self.device, requires_grad=False
+        )
+
         # history buffer for reward computation
         self.last_actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
         self.last_last_actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.ref_dof_pos = torch.zeros(
-            self.num_envs, self.env.handler.robot_num_dof, device=self.device, requires_grad=False
         )
         self.last_dof_vel = torch.zeros(
             self.num_envs, self.env.handler.robot_num_dof, device=self.device, requires_grad=False
@@ -188,6 +188,7 @@ class LeggedRobotWrapper(RslRlWrapper):
         self.last_feet_z = 0.05 * torch.ones(
             self.num_envs, len(self.feet_indices), device=self.device, requires_grad=False
         )
+
         self.feet_pos = torch.zeros((self.num_envs, len(self.feet_indices), 3), device=self.device, requires_grad=False)
         self.feet_height = torch.zeros((self.num_envs, len(self.feet_indices)), device=self.device, requires_grad=False)
 
@@ -230,32 +231,6 @@ class LeggedRobotWrapper(RslRlWrapper):
         self.last_actions[:] = self.actions[:]
         self.last_dof_vel[:] = dof_vel_tensor(envstate, self.robot.name)[:]
         self.last_root_vel[:] = robot_root_state_tensor(envstate, self.robot.name)[:, 7:13]
-
-    def _compute_ref_state(self):
-        """compute reference target positione"""
-        phase = self._get_phase()
-        sin_pos = torch.sin(2 * torch.pi * phase)
-        sin_pos_l = sin_pos.clone()
-        sin_pos_r = sin_pos.clone()
-        self.ref_dof_pos = torch.zeros(
-            self.num_envs, self.env.handler.robot_num_dof, device=self.device, requires_grad=False
-        )
-        scale_1 = self.cfg.reward_cfg.target_joint_pos_scale
-        scale_2 = 2 * scale_1
-        sin_pos_l[sin_pos_l > 0] = 0
-        self.ref_dof_pos[:, 2] = sin_pos_l * scale_1  # left_hip_pitch_joint
-        self.ref_dof_pos[:, 3] = sin_pos_l * scale_2  # left_knee_joint
-        self.ref_dof_pos[:, 4] = sin_pos_l * scale_1  # left_ankle_joint
-        sin_pos_r[sin_pos_r < 0] = 0
-        self.ref_dof_pos[:, 7] = sin_pos_r * scale_1  # right_hip_pitch_joint
-        self.ref_dof_pos[:, 8] = sin_pos_r * scale_2  # right_knee_joint
-        self.ref_dof_pos[:, 9] = sin_pos_r * scale_1  # right_ankle_joint
-        # Double support phase
-        self.ref_dof_pos[torch.abs(sin_pos) < 0.1] = 0
-        self.ref_dof_pos = 2 * self.ref_dof_pos
-
-    def _parse_ref_pos(self, envstate):
-        envstate.robots[self.robot.name].extra["ref_dof_pos"] = self.ref_dof_pos
 
     def _parse_gait_phase(self, envstate):
         envstate.robots[self.robot.name].extra["gait_phase"] = self._get_gait_phase()
@@ -345,10 +320,7 @@ class LeggedRobotWrapper(RslRlWrapper):
         Eg., offset the observation by default obs, compute input rewards.
         """
         # TODO read from config
-        # parse those state which cannot directly get from Envstates
-        self._compute_ref_state()
         self._parse_gait_phase(envstate)
-        self._parse_ref_pos(envstate)
         self._parse_action(envstate)
         self._parse_history_state(envstate)
         self._parse_base_euler_xyz(envstate)
@@ -422,85 +394,11 @@ class LeggedRobotWrapper(RslRlWrapper):
         return stance_mask
 
     def _compute_observations(self, envstates):
-        """Add observation into states"""
+        """compute observations and priviledged observation
 
-        phase = self._get_phase()
-
-        sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
-        cos_pos = torch.cos(2 * torch.pi * phase).unsqueeze(1)
-
-        stance_mask = self._get_gait_phase()
-        contact_mask = contact_forces_tensor(envstates, self.robot.name)[:, self.feet_indices, 2] > 5
-
-        self.command_input = torch.cat((sin_pos, cos_pos, self.commands[:, :3] * self.commands_scale), dim=1)
-        self.command_input_wo_clock = self.commands[:, :3] * self.commands_scale
-
-        q = (
-            dof_pos_tensor(envstates, self.robot.name) - self.cfg.default_joint_pd_target
-        ) * self.cfg.normalization.obs_scales.dof_pos
-        dq = dof_vel_tensor(envstates, self.robot.name) * self.cfg.normalization.obs_scales.dof_vel
-        diff = dof_pos_tensor(envstates, self.robot.name) - ref_dof_pos_tenosr(envstates, self.robot.name)
-
-        self.privileged_obs_buf = torch.cat(
-            (
-                self.command_input,  # 2 + 3
-                q,  # |A|
-                dq,  # |A|
-                self.actions,  # |A|
-                diff,  # |A|
-                self.base_lin_vel * self.cfg.normalization.obs_scales.lin_vel,  # 3
-                self.base_ang_vel * self.cfg.normalization.obs_scales.ang_vel,  # 3
-                self.base_euler_xyz * self.cfg.normalization.obs_scales.quat,  # 3
-                self.rand_push_force[:, :2],  # 3
-                self.rand_push_torque,  # 3
-                self.env_frictions,  # 1
-                self.body_mass / 30.0,  # 1
-                stance_mask,  # 2
-                contact_mask,  # 2
-            ),
-            dim=-1,
-        )
-
-        obs_buf = torch.cat(
-            (
-                self.command_input_wo_clock,  # 3
-                q,  # |A|
-                dq,  # |A|
-                self.actions,
-                self.base_ang_vel * self.cfg.normalization.obs_scales.ang_vel,  # 3
-                self.base_euler_xyz * self.cfg.normalization.obs_scales.quat,  # 3
-            ),
-            dim=-1,
-        )
-
-        # for debugging
-        if self.debug:
-            save_len = 500
-            if self.counter < save_len:
-                # append obs and privileged_obs for debugging
-                self.obs_logging.append(obs_buf[0].clone().cpu().numpy())
-                self.privileged_obs_logging.append(self.privileged_obs_buf[0].clone().cpu().numpy())
-                print("add frame!")
-            if self.counter == save_len:
-                # save obs and privileged_obs for debugging
-                import numpy as np
-
-                np.save("obs_logging_new.npy", np.array(self.obs_logging))
-                np.save("privileged_obs_logging_new.npy", np.array(self.privileged_obs_logging))
-                print("obs and privileged_obs saved to obs_logging.npy and privileged_obs_logging.npy!!!!!!!!!!")
-
-            self.counter += 1
-
-        obs_now = obs_buf.clone()
-        self.obs_history.append(obs_now)
-        self.critic_history.append(self.privileged_obs_buf)
-        obs_buf_all = torch.stack([self.obs_history[i] for i in range(self.obs_history.maxlen)], dim=1)
-        self.obs_buf = obs_buf_all.reshape(self.num_envs, -1)
-        self.privileged_obs_buf = torch.cat([self.critic_history[i] for i in range(self.cfg.c_frame_stack)], dim=1)
-
-        self.privileged_obs_buf = torch.clip(
-            self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
-        )
+        Implement when add new tasks.
+        """
+        raise NotImplementedError
 
     def _update_refreshed_tensors(self, env_states):
         """Update tensors from are refreshed tensors after physics step."""
@@ -550,18 +448,18 @@ class LeggedRobotWrapper(RslRlWrapper):
         return torch.clip(actions, -clip_action_limit, clip_action_limit).to(self.device)
 
     def _pre_physics_step(self, actions):
-        """Preprocess actions before physics step."""
+        """Apply action smoothing and wrap actions as dict before physics step."""
         # action smoothing
         delay = torch.rand((self.num_envs, 1), device=self.device)
         actions = (1 - delay) * actions.to(self.device) + delay * self.actions
         clipped_actions = self.clip_actions(actions)
         self.actions = clipped_actions
-        action_dict = self.wrap_action_as_dict(clipped_actions)
-        return action_dict
+        # action_dict = self.wrap_action_as_dict(clipped_actions)
+        return self.actions
 
     def _physics_step(self, action_dict):
         """
-        input: Tensor
+        Task physics step
         """
         env_states, _, terminated, time_out, _ = self.env.step(action_dict)
         self.reset_buf = terminated | time_out
@@ -588,7 +486,6 @@ class LeggedRobotWrapper(RslRlWrapper):
         # if env_ids is empty, do nothing
         if len(env_ids) == 0:
             return
-        # reset in the env
         _, _ = self.env.reset(self.init_states, env_ids)
 
         self._resample_commands(env_ids)
@@ -672,7 +569,7 @@ class LeggedRobotWrapper(RslRlWrapper):
         )
         self._resample_commands(env_ids)
         if self.cfg.commands.heading_command:
-            forward = self.quat_apply(self.base_quat, self.forward_vec)
+            forward = quat_apply(self.base_quat, self.forward_vec)
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5 * self.wrap_to_pi(self.commands[:, 3] - heading), -1.0, 1.0)
 
@@ -711,14 +608,3 @@ class LeggedRobotWrapper(RslRlWrapper):
         angles %= 2 * np.pi
         angles -= 2 * np.pi * (angles > np.pi)
         return angles
-
-    # TODO move .utils file
-    @staticmethod
-    @torch.jit.script
-    def quat_apply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-        shape = b.shape
-        a = a.reshape(-1, 4)
-        b = b.reshape(-1, 3)
-        xyz = a[:, :3]
-        t = xyz.cross(b, dim=-1) * 2
-        return (b + a[:, 3:] * t + xyz.cross(t, dim=-1)).view(shape)

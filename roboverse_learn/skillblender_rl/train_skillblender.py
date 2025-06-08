@@ -23,7 +23,7 @@ import wandb
 from rsl_rl.runners.on_policy_runner import OnPolicyRunner
 
 from metasim.cfg.scenario import ScenarioCfg
-from roboverse_learn.skillblender_rl.legged_robot_wrapper import LeggedRobotWrapper
+from roboverse_learn.skillblender_rl.env_wrappers.primitive_skills.walking_wrapper import WalkingWrapper
 
 
 def parse_arguments(description="humanoid rl task arguments", custom_parameters=None):
@@ -138,7 +138,7 @@ def train(args):
         task=args.task, robot=args.robot, num_envs=args.num_envs, sim=args.sim, headless=args.headless, cameras=cameras
     )
     log_dir = get_log_dir(scenario)
-    env = LeggedRobotWrapper(scenario)
+    env = WalkingWrapper(scenario)
     use_wandb = args.use_wandb
     if use_wandb:
         wandb.init(project=args.wandb, name=args.run_name)

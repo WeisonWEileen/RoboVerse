@@ -108,7 +108,7 @@ class H1Cfg(BaseRobotCfg):
         "right_elbow": "effort",
     }
 
-    # rigid body name
+    # rigid body name substrings, to find indices of different rigid bodies.
     feet_links: list[str] = [
         "left_ankle",
         "right_ankle",
@@ -132,5 +132,5 @@ class H1Cfg(BaseRobotCfg):
         "right_shoulder_yaw",
     ]
     terminate_contacts_links: list[str] = ["pelvis", "torso", "shoulder", "elbow"]
-
     penalized_contacts_links: list[str] = ["hip", "knee"]
+    wrist_links = "wrist"

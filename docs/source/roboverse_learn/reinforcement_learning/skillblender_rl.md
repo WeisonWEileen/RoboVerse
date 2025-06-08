@@ -20,7 +20,6 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
    ```
 
 
-
 ## Task list
 > 4 Goal-Conditional Skills
 - [√] Walking
@@ -36,6 +35,22 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 - [ ] PackageLift
 - [ ] BoxTransfer
 - [ ] PackageCarry
+
+## How to add new Task
+1. Create a new `wrapper.py` in , add reward function
+    define your reward functions in reward_fun_cfg.py, check whether the current states is enough for reward computation. If not, parse your state as follow:
+    ```
+    def _parse_NEW_STATES(self, envstate):
+        """NEWSTATES PARSEING..."""
+
+    def _parse_state_for_reward(self, envstate):
+        super()._parse_state_for_reward(self, envstate):
+        _parse_NEW_STATES(self, envstate)
+    ```
+2. Implemented `_compute_observation()`
+    implement `obs` and `privelidged_obs`.
+3. Add Cfg for your task
+
 
 ## References and Acknowledgements
 We implement SkillBench based on and inspired by the following projects:
