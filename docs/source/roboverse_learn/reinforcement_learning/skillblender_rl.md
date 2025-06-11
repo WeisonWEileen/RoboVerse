@@ -36,6 +36,10 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
 - [ ] BoxTransfer
 - [ ] PackageCarry
 
+## Todos
+- [ ] ground type selection
+- [ ] pushing robot
+
 ## How to add new Task
 1. Create a new `wrapper.py` in , add reward function
     define your reward functions in reward_fun_cfg.py, check whether the current states is enough for reward computation. If not, parse your state as follow:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import importlib
 import os
 
 from loguru import logger as log
@@ -22,7 +23,7 @@ import wandb
 from rsl_rl.runners.on_policy_runner import OnPolicyRunner
 
 from metasim.cfg.scenario import ScenarioCfg
-from roboverse_learn.skillblender_rl.env_wrappers.primitive_skills.walking_wrapper import WalkingWrapper
+from metasim.utils import is_camel_case, is_snake_case, to_camel_case
 
 
 def parse_arguments(description="humanoid rl task arguments", custom_parameters=None):
@@ -58,6 +59,25 @@ def parse_arguments(description="humanoid rl task arguments", custom_parameters=
 
 # TODO
 # 1. add resume training from checkpoint
+
+
+def get_wrapper(task_id: str):
+    if ":" in task_id:
+        prefix, task_name = task_id.split(":")
+        if prefix not in ["skillblender", "Skillblender"]:
+            raise ValueError(f"Invalid task name: {task_id}, should be skillblender:task_name in the format")
+    else:
+        raise ValueError(f"Invalid task name: {task_id}, should be skillblender:task_name in the format")
+
+    if is_camel_case(task_name):
+        task_name_camel = task_name
+
+    elif is_snake_case(task_name):
+        task_name_camel = to_camel_case(task_name)
+
+    wrapper_module = importlib.import_module("roboverse_learn.skillblender_rl.env_wrappers")
+    wrapper_cls = getattr(wrapper_module, f"{task_name_camel}Wrapper")
+    return wrapper_cls
 
 
 def get_args(test=False):
@@ -136,9 +156,9 @@ def train(args):
     scenario = ScenarioCfg(
         task=args.task, robot=args.robot, num_envs=args.num_envs, sim=args.sim, headless=args.headless, cameras=cameras
     )
-
     log_dir = get_log_dir(args, scenario)
-    env = WalkingWrapper(scenario)
+    task_wrapper = get_wrapper(args.task)
+    env = task_wrapper(scenario)
     use_wandb = args.use_wandb
     if use_wandb:
         wandb.init(project=args.wandb, name=args.run_name)

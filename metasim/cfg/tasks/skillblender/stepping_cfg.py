@@ -6,41 +6,20 @@ from typing import Callable
 
 from metasim.cfg.simulator_params import SimParamCfg
 from metasim.cfg.tasks.skillblender.base_humanoid_cfg import BaseHumanoidCfg
-from metasim.cfg.tasks.skillblender.base_legged_cfg import CommandRanges, CommandsConfig, LeggedRobotCfgPPO, RewardCfg
+from metasim.cfg.tasks.skillblender.base_legged_cfg import (
+    BaseConfig,
+    CommandRanges,
+    CommandsConfig,
+    LeggedRobotCfgPPO,
+    RewardCfg,
+)
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
-    reward_action_rate,
-    reward_action_smoothness,
-    reward_ang_vel_xy,
-    reward_base_acc,
-    reward_base_height,
-    reward_collision,
-    reward_default_joint_pos,
     reward_dof_acc,
-    reward_dof_pos_limits,
     reward_dof_vel,
-    reward_dof_vel_limits,
-    reward_elbow_distance,
-    reward_feet_air_time,
-    reward_feet_clearance,
-    reward_feet_contact_forces,
-    reward_feet_contact_number,
-    reward_feet_distance,
-    reward_foot_slip,
-    reward_joint_pos,
-    reward_knee_distance,
-    reward_lin_vel_z,
-    reward_low_speed,
+    reward_feet_pos,
     reward_orientation,
-    reward_stand_still,
-    reward_stumble,
-    reward_termination,
-    reward_torque_limits,
     reward_torques,
-    reward_track_vel_hard,
-    reward_tracking_ang_vel,
-    reward_tracking_lin_vel,
     reward_upper_body_pos,
-    reward_vel_mismatch_exp,
 )
 
 # from metasim.cfg.tasks.skillblender.reward_func_cfg import *  # FIXME star import
@@ -83,6 +62,12 @@ class WalkingCfgPPO(LeggedRobotCfgPPO):
         resume_path = None  # updated from load_run and ckpt
 
 
+# TODO task config override robot config
+class robot_asset(BaseConfig):
+    fix_base_link: bool = False
+    penalize_contacts_on = ["hip", "knee", "pelvis", "torso", "shoulder", "elbow"]
+
+
 @configclass
 class WalkingRewardCfg(RewardCfg):
     base_height_target = 0.89
@@ -101,8 +86,8 @@ class WalkingRewardCfg(RewardCfg):
 
 
 @configclass
-class WalkingCfg(BaseHumanoidCfg):
-    """Cfg class for Skillbench:Walking."""
+class SteppingCfg(BaseHumanoidCfg):
+    """Cfg class for Skillbench:Stepping."""
 
     task_name = "walking"
     sim_params = SimParamCfg(
@@ -119,10 +104,11 @@ class WalkingCfg(BaseHumanoidCfg):
 
     ppo_cfg = WalkingCfgPPO()
     reward_cfg = WalkingRewardCfg()
-    command_ranges = CommandRanges()
+    command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
+    command_ranges.feet_max_radius = 0.25
 
     num_actions = 19
-    command_dim = 3
+    command_dim = 4
     frame_stack = 1
     c_frame_stack = 3
     num_single_obs = 3 * num_actions + 6 + command_dim  #
@@ -173,81 +159,21 @@ class WalkingCfg(BaseHumanoidCfg):
     }
 
     reward_functions: list[Callable] = [
-        # legged
-        reward_lin_vel_z,
-        reward_ang_vel_xy,
+        reward_feet_pos,
+        reward_upper_body_pos,
         reward_orientation,
-        reward_base_height,
         reward_torques,
         reward_dof_vel,
         reward_dof_acc,
-        reward_action_rate,
-        reward_collision,
-        reward_termination,
-        reward_dof_pos_limits,
-        reward_dof_vel_limits,
-        reward_torque_limits,
-        reward_tracking_lin_vel,
-        reward_tracking_ang_vel,
-        reward_feet_air_time,
-        reward_stumble,
-        reward_stand_still,
-        reward_feet_contact_forces,
-        # walking
-        reward_joint_pos,
-        reward_feet_distance,
-        reward_knee_distance,
-        reward_elbow_distance,
-        reward_foot_slip,
-        reward_feet_contact_number,
-        reward_default_joint_pos,
-        reward_upper_body_pos,
-        reward_base_acc,
-        reward_vel_mismatch_exp,
-        reward_track_vel_hard,
-        reward_feet_clearance,
-        reward_low_speed,
-        reward_action_smoothness,
     ]
 
     # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
 
     reward_weights: dict[str, float] = {
-        "termination": -0.0,
-        "lin_vel_z": -0.0,
-        # "ang_vel_xy": -0.05,
-        "base_height": 0.2,
-        "feet_air_time": 1.0,
-        "collision": -1.0,
-        "feet_stumble": -0.0,
-        "stand_still": -0.0,
-        # skillblender: walking
-        "joint_pos": 3.2,
-        "feet_clearance": 2.0,
-        "feet_contact_number": 2.4,
-        # gait
-        "foot_slip": -0.05,
-        "feet_distance": 0.2,
-        "knee_distance": 0.2,
-        # contact
-        "feet_contact_forces": -0.01,
-        # vel tracking
-        "tracking_lin_vel": 4.8,
-        "tracking_ang_vel": 2.2,
-        "vel_mismatch_exp": 0.5,
-        "low_speed": 0.2,
-        "track_vel_hard": 1.0,
-        # base pos
-        "default_joint_pos": 0.5,
+        "feet_pos": 5,
         "upper_body_pos": 0.5,
         "orientation": 1.0,
-        "base_acc": 0.2,
-        # energy
-        "action_smoothness": -0.002,
         "torques": -1e-5,
         "dof_vel": -5e-4,
         "dof_acc": -1e-7,
-        "torque_limits": 0.001,
-        # optional
-        "action_rate": -0.0,
     }

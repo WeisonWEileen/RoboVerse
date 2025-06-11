@@ -13,6 +13,8 @@ from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper imp
 class WalkingWrapper(HumanoidBaseWrapper):
     """
     Wrapper for Skillbench:walking
+
+    # TODO implement push robot
     """
 
     def __init__(self, scenario: ScenarioCfg):

@@ -99,7 +99,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         TODO: move those var into
         """
-        self.base_quat = torch.tensor([0.0, 0.0, 0.0, 1.0], device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
+        self.base_quat = (
+            torch.tensor([0.0, 0.0, 0.0, 1.0], device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
+        )  # TODO align it with metasim quaternion format [wxyz]
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
 
         self.obs_buf = torch.zeros(self.num_envs, self.num_obs, device=self.device, dtype=torch.float)
@@ -118,6 +120,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         # self.neg_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
         # self.pos_reward_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
 
+        self.common_step_counter = 0
         self.reset_buf = torch.ones(self.num_envs, device=self.device, dtype=torch.bool)
         self.episode_length_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.int)
         self.time_out_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
@@ -415,6 +418,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """After physics step, compute reward, get obs and privileged_obs, resample command."""
         # update episode length from env_wrapper
         self.episode_length_buf = self.env.episode_length_buf_tensor
+        self.common_step_counter += 1
+
         self._post_physics_step_callback()
         # update refreshed tensors from simulaor
         self._update_refreshed_tensors(env_states)
@@ -486,6 +491,11 @@ class HumanoidBaseWrapper(RslRlWrapper):
         # if env_ids is empty, do nothing
         if len(env_ids) == 0:
             return
+
+        # TODO
+        # update terrain curriculum
+        # update command curriculum
+
         _, _ = self.env.reset(self.init_states, env_ids)
 
         self._resample_commands(env_ids)
