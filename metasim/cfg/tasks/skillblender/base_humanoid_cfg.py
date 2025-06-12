@@ -38,3 +38,10 @@ class BaseHumanoidCfg(BaseLeggedTaskCfg):
 
     elbow_indices: torch.Tensor | None = None
     contact_indices: torch.Tensor | None = None
+
+    class human:
+        delay = 0.0  # delay in seconds
+        freq = 10
+        resample_on_env_reset = True
+        filename = "CMU.npy"
+        rng = None

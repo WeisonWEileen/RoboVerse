@@ -1,4 +1,4 @@
-"""SkillBlench wrapper for training primitive skill: stepping."""
+"""SkillBlench wrapper for training primitive skill: squatting."""
 
 # ruff: noqa: F405
 from __future__ import annotations
@@ -12,7 +12,7 @@ from metasim.utils.math import sample_int_from_float
 from roboverse_learn.skillblender_rl.env_wrappers.base.humanoid_base_wrapper import HumanoidBaseWrapper
 
 
-class SteppingWrapper(HumanoidBaseWrapper):
+class SquattingWrapper(HumanoidBaseWrapper):
     """
     Wrapper for Skillbench:walking
 
@@ -22,36 +22,37 @@ class SteppingWrapper(HumanoidBaseWrapper):
     def __init__(self, scenario: ScenarioCfg):
         # TODO check compatibility for other simulators
         super().__init__(scenario)
-        env_states, _ = self.env.reset()
-        self._init_target_wp(env_states)
+        _, _ = self.env.reset()
+        self._init_target_wp()
 
-    def _parse_ref_pos(self, envstate: EnvState):
-        envstate.robots[self.robot.name].extra["ref_feet_pos"] = self.ref_feet_pos
+    def _parse_ref_root_height(self, envstate: EnvState):
+        envstate.robots[self.robot.name].extra["ref_root_height"] = self.ref_root_height
 
-    def _init_target_wp(self, envstate: EnvState) -> None:
-        self.ori_feet_pos = (
-            envstate.robots[self.robot.name].extra["rigid_body_states"][:, self.feet_indices, :2].clone()
-        )  # [num_envs, 2, 2], two feet's original xy positions
-        self.target_wp, self.num_pairs, self.num_wp = self.sample_fp(
-            device=self.device, num_points=1000000, num_wp=10, ranges=self.cfg.command_ranges
-        )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 2]
+    def _init_target_wp(self) -> None:
+        self.target_wp, self.num_pairs, self.num_wp = self.sample_root_height(
+            self.device,
+            num_points=1000000,
+            num_wp=10,
+            ranges=self.cfg.command_ranges,
+            base_height_target=self.cfg.reward_cfg.base_height_target,
+        )  # relative, self.target_wp.shape=[num_pairs, num_wp, 1]
         self.target_wp_i = torch.randint(
             0, self.num_pairs, (self.num_envs,), device=self.device
         )  # for each env, choose one seq, [num_envs]
         self.target_wp_j = torch.zeros(
             self.num_envs, dtype=torch.long, device=self.device
         )  # for each env, the timestep in the seq is initialized to 0, [num_envs]
-        self.target_wp_dt = 1 / self.cfg.human.freq  # TODO
+        self.target_wp_dt = 1 / self.cfg.human.freq
         self.target_wp_update_steps = self.target_wp_dt / self.dt  # not necessary integer
         assert self.dt <= self.target_wp_dt, (
             f"self.dt {self.dt} must be less than self.target_wp_dt {self.target_wp_dt}"
         )
         self.target_wp_update_steps_int = sample_int_from_float(self.target_wp_update_steps)
 
-        self.ref_feet_pos = None
+        self.ref_root_height = None
         self.ref_action = self.cfg.default_joint_pd_target
         self.delayed_obs_target_wp = None
-        self.delayed_obs_target_wp_steps = self.cfg.human.delay / self.target_wp_dt  # TODO
+        self.delayed_obs_target_wp_steps = self.cfg.human.delay / self.target_wp_dt
         self.delayed_obs_target_wp_steps_int = sample_int_from_float(self.delayed_obs_target_wp_steps)
         self.update_target_wp(torch.tensor([], dtype=torch.long, device=self.device))
 
@@ -81,11 +82,9 @@ class SteppingWrapper(HumanoidBaseWrapper):
 
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf
 
-    def update_target_wp(self, reset_env_ids) -> None:
+    def update_target_wp(self, reset_env_ids):
         # self.target_wp_i specifies which seq to use for each env, and self.target_wp_j specifies the timestep in the seq
-        self.ref_feet_pos = (
-            self.target_wp[self.target_wp_i, self.target_wp_j] + self.ori_feet_pos
-        )  # [num_envs, 2, 2], two feet
+        self.ref_root_height = self.target_wp[self.target_wp_i, self.target_wp_j]  # [num_envs, 1]
         self.delayed_obs_target_wp = self.target_wp[
             self.target_wp_i, torch.maximum(self.target_wp_j - self.delayed_obs_target_wp_steps_int, torch.tensor(0))
         ]
@@ -114,7 +113,7 @@ class SteppingWrapper(HumanoidBaseWrapper):
         # TODO read from config
         # parse those state which cannot directly get from Envstates
         super()._parse_state_for_reward(envstate)
-        self._parse_ref_pos(envstate)
+        self._parse_ref_root_height(envstate)
 
     def _compute_observations(self, envstates: EnvState) -> None:
         """Add observation into states
@@ -140,21 +139,17 @@ class SteppingWrapper(HumanoidBaseWrapper):
         ) * self.cfg.normalization.obs_scales.dof_pos
         dq = dof_vel_tensor(envstates, self.robot.name) * self.cfg.normalization.obs_scales.dof_vel
 
-        feet_pos = envstates.robots[self.robot.name].extra["rigid_body_states"][
-            :, self.feet_indices, :2
-        ]  # [num_envs, 2, 2], two feet
-        feet_pos_obs = torch.flatten(feet_pos, start_dim=1)
-        ref_feet_pos_obs = torch.flatten(self.ref_feet_pos, start_dim=1)
-        diff = feet_pos - self.ref_feet_pos  # [num_envs, 2, 2], two feet
-        diff_obs = torch.flatten(diff, start_dim=1)
+        root_height = robot_position_tensor(envstates, self.robot.name)[:, 2].unsqueeze(1)
+        ref_root_height = self.ref_root_height
+        diff = root_height - self.ref_root_height  # [num_envs, 1]
 
         self.privileged_obs_buf = torch.cat(
             (
-                ref_feet_pos_obs,
-                feet_pos_obs,
-                diff_obs,
-                q,
-                dq,
+                ref_root_height,  # 1
+                root_height,  # 1
+                diff,  # 1
+                q,  # |A|
+                dq,  # |A|
                 self.actions,  # |A|
                 self.base_lin_vel * self.cfg.normalization.obs_scales.lin_vel,  # 3
                 self.base_ang_vel * self.cfg.normalization.obs_scales.ang_vel,  # 3
@@ -170,7 +165,7 @@ class SteppingWrapper(HumanoidBaseWrapper):
 
         obs_buf = torch.cat(
             (
-                diff_obs,  # 3
+                diff,  # 3
                 q,  # |A|
                 dq,  # |A|
                 self.actions,
@@ -191,24 +186,17 @@ class SteppingWrapper(HumanoidBaseWrapper):
         )
 
     @staticmethod
-    def sample_fp(device, num_points, num_wp, ranges):
-        """sample feet waypoints"""
-        # left foot still, right foot move, [num_points//2, 2]
-        l_positions_s = torch.zeros(num_points // 2, 2)  # left foot positions (xy)
-        r_positions_m = torch.randn(num_points // 2, 2)
-        r_positions_m = (
-            r_positions_m / r_positions_m.norm(dim=-1, keepdim=True) * ranges.feet_max_radius
-        )  # within a sphere, [-radius, +radius]
-        # right foot still, left foot move, [num_points//2, 2]
-        r_positions_s = torch.zeros(num_points // 2, 2)  # right foot positions (xy)
-        l_positions_m = torch.randn(num_points // 2, 2)
-        l_positions_m = (
-            l_positions_m / l_positions_m.norm(dim=-1, keepdim=True) * ranges.feet_max_radius
-        )  # within a sphere, [-radius, +radius]
-        # concat
-        l_positions = torch.cat([l_positions_s, l_positions_m], dim=0)  # (num_points, 2)
-        r_positions = torch.cat([r_positions_m, r_positions_s], dim=0)  # (num_points, 2)
-        wp = torch.stack([l_positions, r_positions], dim=1)  # (num_points, 2, 2)
-        wp = wp.unsqueeze(1).repeat(1, num_wp, 1, 1)  # (num_points, num_wp, 2, 2)
-        print("===> [sample_fp] return shape:", wp.shape)
-        return wp.to(device), num_points, num_wp
+    def sample_int_from_float(x: float) -> int:
+        """Sample an int from a float."""
+        if int(x) == x:
+            return int(x)
+        return int(x) if np.random.rand() < (x - int(x)) else int(x) + 1
+
+    @staticmethod
+    def sample_root_height(device, num_points, num_wp, ranges, base_height_target):
+        """sample root height"""
+        root_height = torch.randn(num_points, 1) * ranges.root_height_std + base_height_target
+        root_height = torch.clamp(root_height, ranges.min_root_height, ranges.max_root_height)
+        root_height = root_height.unsqueeze(1).repeat(1, num_wp, 1)  # (num_points, num_wp, 1)
+        print("===> [sample_root_height] return shape:", root_height.shape)
+        return root_height.to(device), num_points, num_wp

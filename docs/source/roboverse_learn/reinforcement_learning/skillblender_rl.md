@@ -52,8 +52,11 @@ pip install -e roboverse_learn/skillblender_rl/rsl_rl
         _parse_NEW_STATES(self, envstate)
     ```
 2. Implemented `_compute_observation()`
-    implement `obs` and `privelidged_obs`.
-3. Add Cfg for your task
+    - fill `obs` and `privelidged_obs`.
+    - modified `_post_physics_step` to reset variables you defined with `reset_env_idx`
+
+
+3. Add Cfg for your task `metasim/cfg/tasks/skillblender`
 
 
 ## References and Acknowledgements

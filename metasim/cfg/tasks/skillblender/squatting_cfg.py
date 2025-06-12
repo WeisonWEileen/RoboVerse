@@ -1,4 +1,4 @@
-"""Walking config in SkillBench in Skillblender"""
+"""Squattting config in SkillBench in Skillblender"""
 
 from __future__ import annotations
 
@@ -17,8 +17,10 @@ from metasim.cfg.tasks.skillblender.base_legged_cfg import (
     RewardCfg,
 )
 from metasim.cfg.tasks.skillblender.reward_func_cfg import (
+    reward_default_joint_pos,
     reward_dof_acc,
     reward_dof_vel,
+    reward_feet_distance,
     reward_orientation,
     reward_torques,
     reward_upper_body_pos,
@@ -31,18 +33,18 @@ from metasim.utils.humanoid_robot_util import *
 
 
 # define new reward function
-def reward_feet_pos(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
-    foot_pos = env_states.robots[robot_name].extra["rigid_body_states"][:, cfg.feet_indices, :2]
-    feet_pos_diff = (
-        foot_pos[:, :, :2] - env_states.robots[robot_name].extra["ref_feet_pos"][:, :, :2]
-    )  # [num_envs, 2, 2], two feet, position only
-    feet_pos_diff = torch.flatten(feet_pos_diff, start_dim=1)  # [num_envs, 4]
-    feet_pos_error = torch.mean(torch.abs(feet_pos_diff), dim=1)
-    return torch.exp(-4 * feet_pos_error), feet_pos_error
+def reward_squatting(env_states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
+    """
+    Calculates the reward based on the difference between the current root height and the target root height.
+    """
+    root_height = env_states.robots[robot_name].root_state[:, 2].unsqueeze(1)
+    ref_root_height = env_states.robots[robot_name].extra["ref_root_height"]
+    root_height_diff = root_height - ref_root_height  # [num_envs, 1]
+    root_height_error = torch.mean(torch.abs(root_height_diff), dim=1)
+    return torch.exp(-4 * root_height_error), root_height_error
 
 
-# ppo config
-class SteppingCfgPPO(LeggedRobotCfgPPO):
+class SquattingCfgPPO(LeggedRobotCfgPPO):
     seed = 5
     runner_class_name = "OnPolicyRunner"  # DWLOnPolicyRunner
 
@@ -84,7 +86,7 @@ class robot_asset(BaseConfig):
 
 
 @configclass
-class SteppingRewardCfg(RewardCfg):
+class SquattingRewardCfg(RewardCfg):
     base_height_target = 0.89
     min_dist = 0.2
     max_dist = 0.5
@@ -100,7 +102,7 @@ class SteppingRewardCfg(RewardCfg):
 
 
 @configclass
-class SteppingCfg(BaseHumanoidCfg):
+class SquattingCfg(BaseHumanoidCfg):
     """Cfg class for Skillbench:Stepping."""
 
     task_name = "walking"
@@ -116,37 +118,43 @@ class SteppingCfg(BaseHumanoidCfg):
         num_threads=10,
     )
 
-    ppo_cfg = SteppingCfgPPO()
-    reward_cfg = SteppingRewardCfg()
+    ppo_cfg = SquattingCfgPPO()
+    reward_cfg = SquattingRewardCfg()
     command_ranges = CommandRanges(lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0])
-    command_ranges.feet_max_radius = 0.25
+    command_ranges.root_height_std = 0.2
+    command_ranges.min_root_height = 0.2
+    command_ranges.max_root_height = 1.1
 
     num_actions = 19
-    command_dim = 4
-    frame_stack = 1
+    command_dim = 1
     c_frame_stack = 3
+    frame_stack = 1
     num_single_obs = 3 * num_actions + 6 + command_dim  #
     num_observations = int(frame_stack * num_single_obs)
-    single_num_privileged_obs = 3 * num_actions + 18 + 12
+    single_num_privileged_obs = 3 * num_actions + 18 + 3
     num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
-    commands = CommandsConfig(num_commands=4, resampling_time=8.0)
+    commands = CommandsConfig(num_commands=4, resampling_time=10.0)
     traj_filepath = "roboverse_data/trajs/humanoidbench/stand/v2/initial_state_v2.json"
 
     reward_functions: list[Callable] = [
-        reward_feet_pos,
+        reward_squatting,
         reward_upper_body_pos,
         reward_orientation,
         reward_torques,
         reward_dof_vel,
         reward_dof_acc,
+        reward_feet_distance,
+        reward_default_joint_pos,
     ]
 
     # TODO: check why this configuration not work as well as the original one, that is probably a bug in infra.
 
     reward_weights: dict[str, float] = {
-        "feet_pos": 5,
+        "squatting": 5,
+        "feet_distance": 0.5,
         "upper_body_pos": 0.5,
+        "default_joint_pos": 0.5,
         "orientation": 1.0,
         "torques": -1e-5,
         "dof_vel": -5e-4,

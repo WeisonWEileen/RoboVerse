@@ -133,4 +133,4 @@ class H1Cfg(BaseRobotCfg):
     ]
     terminate_contacts_links: list[str] = ["pelvis", "torso", "shoulder", "elbow"]
     penalized_contacts_links: list[str] = ["hip", "knee"]
-    wrist_links = "wrist"
+    wrist_links: list[str] = ["wrist"]

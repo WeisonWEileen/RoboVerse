@@ -55,6 +55,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         penalised_contact_names = robot.penalized_contacts_links
         wrist_names = robot.wrist_links
 
+        # TODO get alphabet order
         self.feet_indices = self.env.handler.get_robot_rigid_body_index(feet_names)
         self.knee_indices = self.env.handler.get_robot_rigid_body_index(knee_names)
         self.elbow_indices = self.env.handler.get_robot_rigid_body_index(elbow_names)

@@ -132,46 +132,6 @@ class WalkingCfg(BaseHumanoidCfg):
     commands = CommandsConfig(num_commands=4, resampling_time=8.0)
     traj_filepath = "roboverse_data/trajs/humanoidbench/stand/v2/initial_state_v2.json"
 
-    # TODO read obs from here instead of hardcoding in the legged_robot wrapper.
-    obs = {
-        "actor_obs": [
-            "command",
-            "q",
-            "dq",
-            "actions",
-            "base_ang_vel",
-            "base_euler_xyz",
-        ],
-        "critic_obs": [
-            "command",
-            "q",
-            "dq",
-            "actions",
-            "base_lin_vel",
-            "base_ang_vel",
-            "base_euler_xyz",
-            "rand_push_force",
-            "rand_push_torque",
-            "env_frictions",
-            "body_mass",
-            "stance_mask",
-        ],
-        "scales": {
-            "command": 1.0,
-            "q": 1.0,
-            "dq": 0.05,
-            "actions": 1.0,
-            "base_lin_vel": 2.0,
-            "base_ang_vel": 1.0,
-            "base_euler_xyz": 1.0,
-            "rand_push_force": 1.0,
-            "rand_push_torque": 1.0,
-            "env_frictions": 1.0,
-            "body_mass": 1.0 / 30.0,
-            "contact_mask": 1.0,
-        },
-    }
-
     reward_functions: list[Callable] = [
         # legged
         reward_lin_vel_z,

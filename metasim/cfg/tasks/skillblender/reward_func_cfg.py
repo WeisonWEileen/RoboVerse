@@ -383,13 +383,3 @@ def reward_action_smoothness(states: EnvState, robot_name: str, cfg: BaseRLTaskC
     )
     term_3 = 0.05 * torch.sum(torch.abs(states.robots[robot_name].extra["actions"]), dim=1)
     return term_1 + term_2 + term_3
-
-
-def reward_feet_pos(states: EnvState, robot_name: str, cfg: BaseRLTaskCfg):
-    foot_pos = states.robots[robot_name].extra["rigid_body_states"][:, cfg.feet_indices, :2]
-    feet_pos_diff = (
-        foot_pos[:, :, :2] - states.robots[robot_name].extra["ref_feet_pos"][:, :, :2]
-    )  # [num_envs, 2, 2], two feet, position only
-    feet_pos_diff = torch.flatten(feet_pos_diff, start_dim=1)  # [num_envs, 4]
-    feet_pos_error = torch.mean(torch.abs(feet_pos_diff), dim=1)
-    return torch.exp(-4 * feet_pos_error), feet_pos_error
