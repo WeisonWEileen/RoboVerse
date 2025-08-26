@@ -346,7 +346,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.reset(reset_env_idx)
 
         # compute obs for actor,  privileged_obs for critic network
-        self._compute_observations(tensor_state)
+        self._compute_observations()
         self._update_history(tensor_state)
 
     def update_command_curriculum(self, env_ids):

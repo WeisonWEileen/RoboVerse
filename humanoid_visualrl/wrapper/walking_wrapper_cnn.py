@@ -91,7 +91,7 @@ class WalkingWrapperCNN(HumanoidBaseWrapper):
         self._post_physics_step()
         return self.obs_buf, self.rew_buf, self.reset_buf, self.extra_buf
 
-    def _compute_observations(self, tensor_state: TensorState):
+    def _compute_observations(self):
         phase = self._get_phase()
 
         sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)

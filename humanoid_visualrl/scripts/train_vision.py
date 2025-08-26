@@ -24,8 +24,7 @@ from metasim.utils import configclass
 # for humanoid_visualrl
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 
-from humanoid_visualrl.cfg.humanoidVisualRLVisionCfg import BaseTableHumanoidTaskCfg
-from humanoid_visualrl.wrapper.walking_wrapper_cnn import WalkingWrapperCNN as TaskWrapper
+
 from humanoid_visualrl.utils.utils import get_log_dir
 
 if __name__ == "__main__":
@@ -35,10 +34,12 @@ if __name__ == "__main__":
         """Arguments for the static scene."""
 
         robot: str = "g1"
-        sim: Literal["isaacsim"] = "isaacsim" # only support isaacsim
+        sim: Literal["isaacsim"] = "isaacsim"  # only support isaacsim
         num_envs: int = 1
         headless: bool = False
         num_learning_iterations: int = 10000
+        enable_opencv_display: bool = False
+        use_vision: bool = False
 
         def __post_init__(self):
             """Post-initialization configuration."""
@@ -58,13 +59,23 @@ if __name__ == "__main__":
     # add cameras
     # egocentric camera
 
+    # look different task cfg
+    if args.use_vision:
+        from humanoid_visualrl.cfg.humanoidVisualRLVisionCfg import BaseTableHumanoidTaskCfg
+    else:
+        from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
+
     task_cfg = BaseTableHumanoidTaskCfg()
-    scenario.cameras = [
-        task_cfg.camera,
-    ]
+
+    if args.use_vision:
+        scenario.cameras = [
+            task_cfg.camera,
+        ]
+    else:
+        scenario.cameras = []
+
     # add objects
     scenario.objects = []
-
 
     # task assign and override
     scenario.sim_params = task_cfg.sim_params
@@ -74,7 +85,16 @@ if __name__ == "__main__":
     scenario.env_spacing = task_cfg.env_spacing
 
     log.info(f"Using simulator: {args.sim}")
-    env = TaskWrapper(scenario, enable_opencv_display=True, opencv_fps=30)
+    
+
+    if args.use_vision:
+        from humanoid_visualrl.wrapper.walking_wrapper_cnn import WalkingWrapperCNN as TaskWrapper
+
+        env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display, opencv_fps=30)
+    else:
+        from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
+        env = TaskWrapper(scenario)
+    
     device = torch.device("cuda")
     log_dir = get_log_dir(args, scenario)
     ppo_runner = OnPolicyRunner(

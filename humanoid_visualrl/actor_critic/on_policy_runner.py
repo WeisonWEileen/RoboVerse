@@ -49,7 +49,10 @@ class OnPolicyRunner:
 
         # resolve dimensions of observations
         obs, extras = self.env.get_observations()
-        num_obs = obs[0].shape[1]
+        if self.use_vision:
+            num_obs = obs[0].shape[1]
+        else:
+            num_obs = obs.shape[1]
 
         # resolve type of privileged observations
         if self.training_type == "rl":
@@ -65,7 +68,10 @@ class OnPolicyRunner:
 
         # resolve dimensions of privileged observations
         if self.privileged_obs_type is not None:
-            num_privileged_obs = extras["observations"][self.privileged_obs_type][0].shape[1]
+            if self.use_vision:
+                num_privileged_obs = extras["observations"][self.privileged_obs_type][0].shape[1]
+            else:
+                num_privileged_obs = extras["observations"][self.privileged_obs_type].shape[1]
         else:
             num_privileged_obs = num_obs
 
