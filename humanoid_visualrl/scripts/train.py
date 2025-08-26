@@ -7,6 +7,8 @@ from typing import Literal
 import rootutils
 import torch
 import tyro
+from metasim.scenario.cameras import PinholeCameraCfg
+
 from loguru import logger as log
 from rich.logging import RichHandler
 
@@ -22,8 +24,7 @@ from metasim.utils import configclass
 # for humanoid_visualrl
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 
-from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
-from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
+
 from humanoid_visualrl.utils.utils import get_log_dir
 
 if __name__ == "__main__":
@@ -33,16 +34,22 @@ if __name__ == "__main__":
         """Arguments for the static scene."""
 
         robot: str = "g1"
-        sim: Literal["isaacsim"] = "isaacsim" # only support isaacsim
+        sim: Literal["isaacsim"] = "isaacsim"  # only support isaacsim
         num_envs: int = 1
         headless: bool = False
         num_learning_iterations: int = 10000
+        enable_opencv_display: bool = False
+        use_vision: bool = False
+        use_resnet: bool = False
 
         def __post_init__(self):
             """Post-initialization configuration."""
             log.info(f"Args: {self}")
 
     args = tyro.cli(Args)
+
+    if args.use_resnet and args.use_vision:
+        raise ValueError("use_resnet and use_vision cannot be True at the same time")
 
     # initialize scenario
     scenario = ScenarioCfg(
@@ -53,13 +60,27 @@ if __name__ == "__main__":
     )
     scenario.lights = []
 
-    # add cameras
-    # scenario.cameras = [PinholeCameraCfg(width=1024, height=1024, pos=(1.5, -1.5, 1.5), look_at=(0.0, 0.0, 0.0))]
-    scenario.cameras = []
-    # add objects
-    scenario.objects = []
+    # look different task cfg
+    if args.use_vision:
+        from humanoid_visualrl.cfg.humanoidVisualRLVisionCfg import BaseTableHumanoidTaskCfg
+    elif args.use_resnet:
+        from humanoid_visualrl.cfg.humanoidVisualRLCfgResnet import HumanoidVisualRLCfgResnet as BaseTableHumanoidTaskCfg
+    else:
+        from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
+    
+    # if args.:
+    #     task_cfg = BaseTableHumanoidTaskCfg()
+    # else:
 
     task_cfg = BaseTableHumanoidTaskCfg()
+
+    if args.use_vision or args.use_resnet:
+        scenario.cameras = [task_cfg.camera]
+    else:
+        scenario.cameras = []
+
+    # add objects
+    scenario.objects = []
 
     # task assign and override
     scenario.sim_params = task_cfg.sim_params
@@ -69,7 +90,17 @@ if __name__ == "__main__":
     scenario.env_spacing = task_cfg.env_spacing
 
     log.info(f"Using simulator: {args.sim}")
-    env = TaskWrapper(scenario)
+
+    if args.use_resnet:
+        from humanoid_visualrl.wrapper.walking_wrapper_resnet import WalkingWrapperResNet as TaskWrapper
+        env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
+    elif args.use_vision:
+        from humanoid_visualrl.wrapper.walking_wrapper_cnn import WalkingWrapperCNN as TaskWrapper
+        env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
+    else:
+        from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
+        env = TaskWrapper(scenario)
+
     device = torch.device("cuda")
     log_dir = get_log_dir(args, scenario)
     ppo_runner = OnPolicyRunner(
@@ -77,5 +108,6 @@ if __name__ == "__main__":
         train_cfg=env.train_cfg,
         device=device,
         log_dir=log_dir,
+        use_vision=task_cfg.use_vision,
     )
     ppo_runner.learn(num_learning_iterations=args.num_learning_iterations)
