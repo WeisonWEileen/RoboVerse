@@ -74,7 +74,7 @@ if __name__ == "__main__":
     scenario.env_spacing = task_cfg.env_spacing
 
     log.info(f"Using simulator: {args.sim}")
-    env = TaskWrapper(scenario)
+    env = TaskWrapper(scenario, enable_opencv_display=True, opencv_fps=30)
     device = torch.device("cuda")
     log_dir = get_log_dir(args, scenario)
     ppo_runner = OnPolicyRunner(

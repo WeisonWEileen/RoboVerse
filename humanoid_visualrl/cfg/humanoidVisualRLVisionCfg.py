@@ -67,7 +67,7 @@ class LeggedRobotRunnerCfg:
     """max number of iterations"""
 
     # logging
-    # logger: str = "wandb"
+    logger: str = "wandb"
     wandb_project: str = "humanoid_visualrl"
 
     save_interval = 1000

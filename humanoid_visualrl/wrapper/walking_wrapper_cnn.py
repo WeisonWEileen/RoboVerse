@@ -2,6 +2,7 @@ import torch
 
 from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
+from humanoid_visualrl.utils.opencv_renderer import OpenCVRenderer
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
 
@@ -9,9 +10,21 @@ from metasim.types import TensorState
 class WalkingWrapperCNN(HumanoidBaseWrapper):
     """Wrapper for walking tasks."""
 
-    def __init__(self, scenario: ScenarioCfg):
+    def __init__(self, scenario: ScenarioCfg, enable_opencv_display: bool = False, opencv_fps: int = 30):
         super().__init__(scenario)
         self._prepare_ref_indices()
+
+        # Initialize OpenCV renderer for real-time visualization
+        self.enable_opencv_display = enable_opencv_display
+        self.opencv_renderer = None
+        if self.enable_opencv_display:
+            self.opencv_renderer = OpenCVRenderer(
+                window_name="Humanoid First Person View",
+                window_size=(640, 480),  # Upscale from 64x48 to 640x480
+                fps_limit=opencv_fps,
+                enable_recording=True,  # Allow video recording
+                recording_path="humanoid_vision_recording.mp4",
+            )
 
     def _prepare_ref_indices(self):
         joint_names = self.env.get_joint_names(self.robot.name)
@@ -38,6 +51,19 @@ class WalkingWrapperCNN(HumanoidBaseWrapper):
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras["camera_first_person"].rgb
         self.vision_buf = vision_rgb.permute(0, 3, 1, 2).float() / 255.0
+
+        # Display image in OpenCV window if enabled
+        if self.enable_opencv_display and self.opencv_renderer is not None:
+            # Use the original uint8 RGB image for display (before normalization)
+            # vision_rgb is in format (batch_size, height, width, channels)
+            display_image = vision_rgb[0]  # Take first environment
+
+            # Display the image and check if window is still open
+            window_open = self.opencv_renderer.display(display_image)
+            if not window_open:
+                # User closed the window, disable further display
+                self.enable_opencv_display = False
+                print("OpenCV display window closed by user")
 
     def _compute_ref_state(self):
         phase = self._get_phase()
@@ -203,6 +229,19 @@ class WalkingWrapperCNN(HumanoidBaseWrapper):
         )
         term_3 = 0.05 * torch.sum(torch.abs(self.actions), dim=1)
         return term_1 + term_2 + term_3
+
+    def close_opencv_display(self):
+        """Close OpenCV display window and cleanup resources."""
+        if self.opencv_renderer is not None:
+            self.opencv_renderer.destroy_window()
+            self.opencv_renderer = None
+            self.enable_opencv_display = False
+            print("OpenCV display closed and resources cleaned up")
+
+    def __del__(self):
+        """Cleanup when wrapper is destroyed."""
+        if hasattr(self, "opencv_renderer") and self.opencv_renderer is not None:
+            self.close_opencv_display()
 
     def _reward_ang_vel_xy(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
         """Reward for xy angular velocity."""
