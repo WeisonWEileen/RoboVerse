@@ -128,7 +128,8 @@ class WalkingWrapper(HumanoidBaseWrapper):
         self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
     ) -> torch.Tensor:
         """Keep upper body joints close to default positions."""
-        upper_body_diff = self.dof_pos - self.default_joint_pd_target
+        diff = self.dof_pos - self.default_joint_pd_target
+        upper_body_diff = diff[:, self.upper_body_joint_indices]
         upper_body_error = torch.mean(torch.abs(upper_body_diff), dim=1)
         return torch.exp(-4 * upper_body_error), upper_body_error
 

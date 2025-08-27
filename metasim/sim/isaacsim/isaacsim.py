@@ -616,7 +616,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.contact_sensor = ContactSensor(contact_sensor_config)
         self.scene.sensors["contact_sensor"] = self.contact_sensor
 
-    def load_contact_sensor_idx(self) -> None:
+    def _load_contact_sensor_idx(self) -> None:
         body_names = [
             "pelvis",
             "left_hip_pitch_link",

@@ -17,11 +17,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 
-# for vanilla rsl_rl
-# from rsl_rl.runners.on_policy_runner import OnPolicyRunner
 
-
-# for humanoid_visualrl
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 
 
@@ -41,6 +37,7 @@ if __name__ == "__main__":
         enable_opencv_display: bool = False
         use_vision: bool = False
         use_resnet: bool = False
+        use_reaching: bool = False
 
         def __post_init__(self):
             """Post-initialization configuration."""
@@ -65,6 +62,8 @@ if __name__ == "__main__":
         from humanoid_visualrl.cfg.humanoidVisualRLVisionCfg import BaseTableHumanoidTaskCfg
     elif args.use_resnet:
         from humanoid_visualrl.cfg.humanoidVisualRLCfgResnet import HumanoidVisualRLCfgResnet as BaseTableHumanoidTaskCfg
+    elif args.use_reaching:
+        from humanoid_visualrl.cfg.humanoidReaching import HumanoidReachingCfg as BaseTableHumanoidTaskCfg
     else:
         from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
     
@@ -97,6 +96,9 @@ if __name__ == "__main__":
     elif args.use_vision:
         from humanoid_visualrl.wrapper.walking_wrapper_cnn import WalkingWrapperCNN as TaskWrapper
         env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
+    elif args.use_reaching:
+        from humanoid_visualrl.wrapper.reaching_wrapper import ReachingWrapper as TaskWrapper
+        env = TaskWrapper(scenario)
     else:
         from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
         env = TaskWrapper(scenario)

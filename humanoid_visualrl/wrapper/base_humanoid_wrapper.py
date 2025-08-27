@@ -12,6 +12,7 @@ from metasim.utils.math import quat_apply
 from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
 from humanoid_visualrl.utils.utils import (
     get_body_reindexed_indices_from_substring,
+    get_joint_reindexed_indices_from_substring,
     get_euler_xyz_tensor,
     sample_int_from_float,
     sample_wp,
@@ -34,16 +35,15 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         self._env_origins = self.env.scene.env_origins.clone()
 
-        self._parse_rigid_body_indices(scenario.robots[0])
+        self._parse_indices(scenario.robots[0])
         self._parse_actuation_cfg(scenario)
         self._prepare_reward_function(scenario.task)
         self._init_buffers()
 
         # tensor_state = self.env.get_states()
-        # self._init_target_wp(tensor_state)
         self.marker_viz = self.env.init_marker_viz()
 
-    def _parse_rigid_body_indices(self, robot):
+    def _parse_indices(self, robot):
         """Parse rigid body indices from robot cfg."""
         feet_names = robot.feet_links
         knee_names = robot.knee_links
@@ -52,6 +52,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         torso_names = robot.torso_links
         termination_contact_names = robot.terminate_contacts_links
         penalised_contact_names = robot.penalized_contacts_links
+        
 
         # get sorted indices for specific body links
         self.feet_indices = get_body_reindexed_indices_from_substring(
@@ -76,8 +77,14 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.env, robot.name, penalised_contact_names, device=self.device
         )
 
-        a = self.env.load_contact_sensor_idx()
-        return a
+        # get upper body joint indices
+        upper_joint_names = robot.upper_body_joints
+        self.upper_body_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env, robot.name, upper_joint_names, device=self.device
+        )
+
+        # TODO fix this
+        self.env._load_contact_sensor_idx()
 
     def _parse_cfg(self, scenario):
         super()._parse_cfg(scenario)
@@ -343,7 +350,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         self._pre_compute_reward()
         self._compute_reward(tensor_state)
-        self.reset(reset_env_idx)
+        self._reset(reset_env_idx)
 
         # compute obs for actor,  privileged_obs for critic network
         self._compute_observations()
@@ -394,7 +401,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._post_physics_step()
         return self.obs_buf, self.rew_buf, self.reset_buf, self.extra_buf
 
-    def reset(self, env_ids=None):
+    def _reset(self, env_ids=None):
+        """Reset the wrapper."""
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         if len(env_ids) == 0:
@@ -500,73 +508,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
             )
             tensor_states.robots[self.robot.name].root_state[:, 10:13] = self.rand_push_torque
 
-    def _compute_observations(self, tensor_states: TensorState) -> None:
-        q = (
-            tensor_states.robots[self.robot.name].joint_pos - self.default_joint_pd_target
-        ) * self.cfg.normalization.obs_scales.dof_pos
-        dq = tensor_states.robots[self.robot.name].joint_vel * self.cfg.normalization.obs_scales.dof_vel
 
-        wrist_pos = tensor_states.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
-        diff = wrist_pos - self.ref_wrist_pos
-
-        ref_wrist_pos_obs = torch.flatten(self.ref_wrist_pos, start_dim=1)
-        wrist_pos_obs = torch.flatten(wrist_pos, start_dim=1)
-        diff_obs = torch.flatten(diff, start_dim=1)
-
-        self.privileged_obs_buf = torch.cat(
-            (
-                ref_wrist_pos_obs,
-                wrist_pos_obs,
-                q,
-                dq,
-                self.actions,
-                diff_obs,
-            ),
-            dim=-1,
-        )
-
-        obs_buf = torch.cat(
-            (
-                diff_obs,
-                q,
-                dq,
-                self.actions,
-            ),
-            dim=-1,
-        )
-
-        obs_now = obs_buf.clone()
-        self.obs_history.append(obs_now)
-        self.critic_history.append(self.privileged_obs_buf)
-        obs_buf_all = torch.stack([self.obs_history[i] for i in range(self.obs_history.maxlen)], dim=1)
-        self.obs_buf = obs_buf_all.reshape(self.num_envs, -1)
-        self.privileged_obs_buf = torch.cat([self.critic_history[i] for i in range(self.cfg.c_frame_stack)], dim=1)
-        self.privileged_obs_buf = torch.clip(
-            self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
-        )
-
-    def _update_target_wp(self, reset_env_ids):
-        """Update target wrist positions."""
-        self.ref_wrist_pos = (
-            self.target_wp[self.target_wp_i, self.target_wp_j] + self.ori_wrist_pos
-        )  # [num_envs, 2, 7], two hands
-        self.delayed_obs_target_wp = self.target_wp[
-            self.target_wp_i, torch.maximum(self.target_wp_j - self.delayed_obs_target_wp_steps_int, torch.tensor(0))
-        ]
-        resample_i = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
-        if self.common_step_counter % self.target_wp_update_steps_int == 0:
-            self.target_wp_j += 1
-            wp_eps_end_bool = self.target_wp_j >= self.num_wp
-            self.target_wp_j = torch.where(wp_eps_end_bool, torch.zeros_like(self.target_wp_j), self.target_wp_j)
-            resample_i[wp_eps_end_bool.nonzero(as_tuple=False).flatten()] = True
-            self.target_wp_update_steps_int = sample_int_from_float(self.target_wp_update_steps)
-            self.delayed_obs_target_wp_steps_int = sample_int_from_float(self.delayed_obs_target_wp_steps)
-        if self.cfg.humanoid_extra_cfg.resample_on_env_reset:
-            self.target_wp_j[reset_env_ids] = 0
-            resample_i[reset_env_ids] = True
-        self.target_wp_i = torch.where(
-            resample_i, torch.randint(0, self.num_pairs, (self.num_envs,), device=self.device), self.target_wp_i
-        )
+    
 
     def _update_marker_viz(self):
         # convert to world frame
@@ -576,31 +519,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         idx = torch.zeros(pos.shape[0], dtype=torch.long, device=self.device)
         self.marker_viz.visualize(pos, ori, marker_indices=idx)
 
-    def _init_target_wp(self, tensor_state: TensorState) -> None:
-        self.ori_wrist_pos = (
-            tensor_state.robots[self.robot.name].body_state[:, self.wrist_indices, :7].clone()
-        )  # [num_envs, 2, 7], two hands
-        self.target_wp, self.num_pairs, self.num_wp = sample_wp(
-            self.device, num_points=2000000, num_wp=10, ranges=self.command_ranges
-        )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 7]
-        self.target_wp_i = torch.randint(
-            0, self.num_pairs, (self.num_envs,), device=self.device
-        )  # for each env, choose one seq, [num_envs]
-        self.target_wp_j = torch.zeros(
-            self.num_envs, dtype=torch.long, device=self.device
-        )  # for each env, the timestep in the seq is initialized to 0, [num_envs]
-        self.target_wp_dt = 1 / self.cfg.humanoid_extra_cfg.freq
-        self.target_wp_update_steps = self.target_wp_dt / self.dt  # not necessary integer
-        assert self.dt <= self.target_wp_dt, (
-            f"self.dt {self.dt} must be less than self.target_wp_dt {self.target_wp_dt}"
-        )
-        self.target_wp_update_steps_int = sample_int_from_float(self.target_wp_update_steps)
-        self.ref_wrist_pos = None
-        self.ref_action = self.default_joint_pd_target
-        self.delayed_obs_target_wp = None
-        self.delayed_obs_target_wp_steps = self.cfg.humanoid_extra_cfg.delay / self.target_wp_dt
-        self.delayed_obs_target_wp_steps_int = sample_int_from_float(self.delayed_obs_target_wp_steps)
-        self._update_target_wp(torch.tensor([], dtype=torch.long, device=self.device))
+   
 
     def _get_phase(
         self,
