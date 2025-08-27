@@ -86,6 +86,7 @@ class ReachingWrapper(HumanoidBaseWrapper):
         self.privileged_obs_buf = torch.clip(
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
+        self.extra_buf["observations"]["critic"] = self.privileged_obs_buf
 
     def _init_target_wp(self, tensor_state: TensorState) -> None:
         self.ori_wrist_pos = (
