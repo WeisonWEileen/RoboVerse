@@ -108,7 +108,8 @@ class BaseTableHumanoidTaskCfg:
     class RewardCfg:
         """Constants for reward computation."""
 
-        base_height_target: float = 0.728  # for g1
+        # base_height_target: float = 0.728  # for g1
+        base_height_target: float = 0.78  # follow asap
         """target height of the base"""
         min_dist: float = 0.05
         """minimum distance between feet"""

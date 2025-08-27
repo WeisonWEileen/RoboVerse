@@ -10,7 +10,7 @@ class HumanoidReachingCfg(BaseTableHumanoidTaskCfg):
         lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]
     )
     task_name = "reaching"
-    logger = None
+    
 
     reward_weights = {
         "wrist_pos": 5,
@@ -37,3 +37,6 @@ class HumanoidReachingCfg(BaseTableHumanoidTaskCfg):
         self.command_ranges.r_wrist_pos_x = [-0.05, 0.15]
         self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
         self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
+
+
+        # self.ppo_cfg.logger = None

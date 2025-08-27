@@ -23,10 +23,9 @@ class ReachingWrapper(HumanoidBaseWrapper):
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
-        self.wrist_pose = tensor_state.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
+        self.wrist_pose[:] = tensor_state.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
 
     def _compute_observations(self) -> None:
-        """Add observation into states"""
 
         phase = self._get_phase()
 
@@ -146,11 +145,8 @@ class ReachingWrapper(HumanoidBaseWrapper):
 
     def _reward_wrist_pos(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for reaching the target position."""
-        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
-        wrist_pos_diff = (
-            wrist_pos[:, :, :3] - self.ref_wrist_pos[:, :, :3]
-        )  # [num_envs, 2, 3], two hands, position only
-        wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
+        wrist_pos_diff = self.wrist_pose[:, :, :3] - self.ref_wrist_pos[:, :, :3] 
+        wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)
         wrist_pos_error = torch.mean(torch.abs(wrist_pos_diff), dim=1)
         return torch.exp(-4 * wrist_pos_error), wrist_pos_error
 
