@@ -432,3 +432,5 @@ class WalkingWrapper(HumanoidBaseWrapper):
         lin_mismatch = torch.exp(-torch.square(self.base_lin_vel[:, 2]) * 10)
         ang_mismatch = torch.exp(-torch.norm(self.base_ang_vel[:, :2], dim=1) * 5.0)
         return (lin_mismatch + ang_mismatch) / 2.0
+
+

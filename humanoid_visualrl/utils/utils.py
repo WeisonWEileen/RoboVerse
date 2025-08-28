@@ -289,7 +289,8 @@ def get_args():
         use_resnet: bool = False
         use_reaching: bool = False
         checkpoint: int = -1
-        load_run: str = '2025_0827_131435'
+        # load_run: str = "2025_0827_131435"
+        load_run: str = "2025_0828_041626"
         export_policy = False
 
         def __post_init__(self):

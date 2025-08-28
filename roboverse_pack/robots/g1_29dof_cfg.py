@@ -190,4 +190,4 @@ class G1Cfg(RobotCfg):
 
     left_yaw_roll_joints = ["left_hip_yaw_joint", "left_hip_roll_joint"]
     right_yaw_roll_joints = ["right_hip_yaw_joint", "right_hip_roll_joint"]
-    upper_body_joints = ["shoulder", "elbow", "torso"]
+    upper_body_joints = ["shoulder", "elbow", "torso", "waist_pitch_joint", "waist_roll_joint"]
