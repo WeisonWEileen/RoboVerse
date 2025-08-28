@@ -8,8 +8,8 @@ from copy import deepcopy
 import numpy as np
 import torch
 
-from active_vision.cfg.scenario_cfg import BaseTableHumanoidTaskCfg
-from active_vision.utils.utils import (
+from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg
+from humanoid_visualrl.utils.utils import (
     get_body_reindexed_indices_from_substring,
     sample_int_from_float,
     sample_wp,
