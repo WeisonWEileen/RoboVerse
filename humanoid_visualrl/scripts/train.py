@@ -15,35 +15,12 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.utils import configclass
-
-
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
-
-
-from humanoid_visualrl.utils.utils import get_log_dir
+from humanoid_visualrl.utils.utils import get_log_dir, get_cfg_cls, get_env_wrapper_cls, get_args
 
 if __name__ == "__main__":
 
-    @configclass
-    class Args:
-        """Arguments for the static scene."""
-
-        robot: str = "g1"
-        sim: Literal["isaacsim"] = "isaacsim"  # only support isaacsim
-        num_envs: int = 1
-        headless: bool = False
-        num_learning_iterations: int = 10000
-        enable_opencv_display: bool = False
-        use_vision: bool = False
-        use_resnet: bool = False
-        use_reaching: bool = False
-
-        def __post_init__(self):
-            """Post-initialization configuration."""
-            log.info(f"Args: {self}")
-
-    args = tyro.cli(Args)
+    args = get_args()
 
     if args.use_resnet and args.use_vision:
         raise ValueError("use_resnet and use_vision cannot be True at the same time")
@@ -58,18 +35,7 @@ if __name__ == "__main__":
     scenario.lights = []
 
     # look different task cfg
-    if args.use_vision:
-        from humanoid_visualrl.cfg.humanoidVisualRLVisionCfg import BaseTableHumanoidTaskCfg
-    elif args.use_resnet:
-        from humanoid_visualrl.cfg.humanoidVisualRLCfgResnet import HumanoidVisualRLCfgResnet as BaseTableHumanoidTaskCfg
-    elif args.use_reaching:
-        from humanoid_visualrl.cfg.humanoidReaching import HumanoidReachingCfg as BaseTableHumanoidTaskCfg
-    else:
-        from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
-    
-    # if args.:
-    #     task_cfg = BaseTableHumanoidTaskCfg()
-    # else:
+    BaseTableHumanoidTaskCfg = get_cfg_cls(args)
 
     task_cfg = BaseTableHumanoidTaskCfg()
 
@@ -90,19 +56,7 @@ if __name__ == "__main__":
 
     log.info(f"Using simulator: {args.sim}")
 
-    if args.use_resnet:
-        from humanoid_visualrl.wrapper.walking_wrapper_resnet import WalkingWrapperResNet as TaskWrapper
-        env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
-    elif args.use_vision:
-        from humanoid_visualrl.wrapper.walking_wrapper_cnn import WalkingWrapperCNN as TaskWrapper
-        env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
-    elif args.use_reaching:
-        from humanoid_visualrl.wrapper.reaching_wrapper import ReachingWrapper as TaskWrapper
-        env = TaskWrapper(scenario)
-    else:
-        from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
-        env = TaskWrapper(scenario)
-
+    env = get_env_wrapper_cls(args, scenario)
     device = torch.device("cuda")
     log_dir = get_log_dir(args, scenario)
     ppo_runner = OnPolicyRunner(

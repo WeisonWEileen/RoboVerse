@@ -82,6 +82,7 @@ class LeggedRobotRunnerCfg:
     checkpoint = -1
     """checkpoint name"""
     resume_path = None
+    empirical_normalization = False
 
     policy: Policy = Policy()
     algorithm: Algorithm = Algorithm()
