@@ -330,13 +330,14 @@ class BaseTableHumanoidTaskCfg:
     c_frame_stack = 3
 
     # obs
-    num_single_obs = 41  # FIXME hardcode
+    visual_feature_dim: int = 512
+    num_single_obs = num_actions * 3 + visual_feature_dim 
     num_observations = int(frame_stack * num_single_obs)
-    single_num_observations = 3 * num_actions + 6
+    # single_num_observations = 3 * num_actions + 6 + visual_feature_dim
 
     # privileged obs
-    single_num_privileged_obs = 69  # FIXME hardcode
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
+    single_num_privileged_obs = num_actions * 3 + 7 + visual_feature_dim
+    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs + visual_feature_dim)
 
     # control
     action_scale = 0.25

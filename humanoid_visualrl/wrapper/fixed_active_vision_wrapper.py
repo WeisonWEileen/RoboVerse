@@ -17,7 +17,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
-
+from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
@@ -28,11 +28,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        tensor_state = self.env.get_states()
-        self._init_target_wp(tensor_state)
+
         self.image_center_x = self.cfg.camera.width / 2
         self.image_center_y = self.cfg.camera.height / 2
         # self.marker_viz = self.env.init_marker_viz()
+        self.feature_extractor = Reset18Extractor(device=self.device)
 
     def _init_buffers(self):
         super()._init_buffers()
@@ -40,11 +40,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
-        self.cube_z_buf = tensor_state.objects["cube"].root_state[:, 2]
+        self.cube_pose_buf = tensor_state.objects["cube"].root_state[:, :7]
 
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras[self.cfg.camera.name].rgb
+        self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
 
         self.vision_seg_buf = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
@@ -77,30 +78,36 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
         tensor_states = self.env.get_states()
         wrist_pos = tensor_states.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
-        diff = wrist_pos - self.ref_wrist_pos
+        # diff = wrist_pos - self.ref_wrist_pos
 
-        ref_wrist_pos_obs = torch.flatten(self.ref_wrist_pos, start_dim=1)  # [num_envs, 14]
+        # ref_wrist_pos_obs = torch.flatten(self.ref_wrist_pos, start_dim=1)  # [num_envs, 14]
         wrist_pos_obs = torch.flatten(wrist_pos, start_dim=1)  # [num_envs, 14]
-        diff_obs = torch.flatten(diff, start_dim=1)  # [num_envs, 14]
+        # diff_obs = torch.flatten(diff, start_dim=1)  # [num_envs, 14]
+
+        visual_features = self.resnet_features
+        cube_pose_obs = self.cube_pose_buf
 
         self.privileged_obs_buf = torch.cat(
             (
-                ref_wrist_pos_obs,  # 14
-                wrist_pos_obs,  # 14
+                # ref_wrist_pos_obs,  # 14
+                cube_pose_obs,
+                # wrist_pos_obs,  # 14
                 q,  # |A|
                 dq,  # |A|
                 self.actions,  # |A|
-                diff_obs,
+                # diff_obs,
+                visual_features,
             ),
             dim=-1,
         )
 
         obs_buf = torch.cat(
             (
-                diff_obs,  # 3
+                # diff_obs,  # 3
                 q,  # |A|
                 dq,  # |A|
                 self.actions,
+                visual_features,
             ),
             dim=-1,
         )
@@ -139,58 +146,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             resample_i, torch.randint(0, self.num_pairs, (self.num_envs,), device=self.device), self.target_wp_i
         )
 
-    def _update_marker_viz(self):
-        # convert to world frame
-        world_pos = self.ref_wrist_pos[:, :, :3] + self._env_origins[:, None, :3]
-        pos = world_pos.reshape(-1, 3)
-        ori = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).repeat(pos.shape[0], 1)
-        idx = torch.zeros(pos.shape[0], dtype=torch.long, device=self.device)
-        self.marker_viz.visualize(pos, ori, marker_indices=idx)
-
-    def _init_target_wp(self, tensor_state: TensorState) -> None:
-        self.ori_wrist_pos = (
-            tensor_state.robots[self.robot.name].body_state[:, self.wrist_indices, :7].clone()
-        )  # [num_envs, 2, 7], two hands
-        self.target_wp, self.num_pairs, self.num_wp = sample_wp(
-            self.device, num_points=2000000, num_wp=10, ranges=self.command_ranges
-        )  # relative, self.target_wp.shape=[num_pairs, num_wp, 2, 7]
-        self.target_wp_i = torch.randint(
-            0, self.num_pairs, (self.num_envs,), device=self.device
-        )  # for each env, choose one seq, [num_envs]
-        self.target_wp_j = torch.zeros(
-            self.num_envs, dtype=torch.long, device=self.device
-        )  # for each env, the timestep in the seq is initialized to 0, [num_envs]
-        self.target_wp_dt = 1 / self.cfg.humanoid_extra_cfg.freq
-        self.target_wp_update_steps = self.target_wp_dt / self.dt  # not necessary integer
-        assert self.dt <= self.target_wp_dt, (
-            f"self.dt {self.dt} must be less than self.target_wp_dt {self.target_wp_dt}"
-        )
-        self.target_wp_update_steps_int = sample_int_from_float(self.target_wp_update_steps)
-
-        self.ref_wrist_pos = None
-        self.ref_action = self.default_joint_pd_target
-        self.delayed_obs_target_wp = None
-        self.delayed_obs_target_wp_steps = self.cfg.humanoid_extra_cfg.delay / self.target_wp_dt
-        self.delayed_obs_target_wp_steps_int = sample_int_from_float(self.delayed_obs_target_wp_steps)
-        self._update_target_wp(torch.tensor([], dtype=torch.long, device=self.device))
+ 
 
     def _check_reset(self):
         # move 0.05 to config
-        terminate = torch.abs(self.cube_z_buf - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
+        terminate = torch.abs(self.cube_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
         self.reset_buf = self.time_out_buf | terminate
         return self.reset_buf
 
     # ==== reward functions ====
-    # def _reward_wrist_pos(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-    #     """Reward for reaching the target position."""
-    #     wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
-    #     wrist_pos_diff = (
-    #         wrist_pos[:, :, :3] - self.ref_wrist_pos[:, :, :3]
-    #     )  # [num_envs, 2, 3], two hands, position only
-    #     wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
-    #     wrist_pos_error = torch.mean(torch.abs(wrist_pos_diff), dim=1)
-    #     return torch.exp(-4 * wrist_pos_error), wrist_pos_error
-
     def _reward_upper_body_pos(
         self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
     ) -> torch.Tensor:
