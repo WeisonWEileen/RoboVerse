@@ -183,7 +183,7 @@ class G1Cfg(RobotCfg):
     elbow_links: list[str] = ["elbow"]
     wrist_links: list[str] = ["left_wrist_yaw_link", "right_wrist_yaw_link"]  # TODO to be checked
     torso_links: list[str] = ["torso_link"]
-    terminate_contacts_links = ["pelvis", "torso", "waist", "shoulder", "shoulder", "wrist"]
+    terminate_contacts_links = ["pelvis", "torso", "waist", "shoulder", "wrist"]
     penalized_contacts_links: list[str] = ["hip", "knee"]
 
     # joint substrings, to find indices of joints.
