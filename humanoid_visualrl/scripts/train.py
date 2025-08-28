@@ -6,6 +6,8 @@ from typing import Literal
 
 import rootutils
 import torch
+from metasim.scenario.lights import DiskLightCfg, DistantLightCfg, DomeLightCfg
+
 import tyro
 from metasim.scenario.cameras import PinholeCameraCfg
 
@@ -32,7 +34,8 @@ if __name__ == "__main__":
         headless=args.headless,
         num_envs=args.num_envs,
     )
-    scenario.lights = []
+    scenario.lights = [DomeLightCfg(intensity=100.0, color=(0.85, 0.9, 1.0),), DistantLightCfg(intensity=100.0,  polar=35.0, azimuth=60.0, color=(1.0, 0.98, 0.95),),
+DiskLightCfg(intensity=100.0,radius=1.5, pos=(2.0, -2.0, 4.0), rot=(0.7071, 0.7071, 0.0, 0.0), color=(0.95, 0.95, 1.0),),]
 
     # look different task cfg
     BaseTableHumanoidTaskCfg = get_cfg_cls(args)
@@ -45,7 +48,7 @@ if __name__ == "__main__":
         scenario.cameras = []
 
     # add objects
-    scenario.objects = []
+    scenario.objects = task_cfg.objects 
 
     # task assign and override
     scenario.sim_params = task_cfg.sim_params

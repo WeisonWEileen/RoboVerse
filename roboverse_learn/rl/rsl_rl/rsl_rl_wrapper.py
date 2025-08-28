@@ -35,8 +35,10 @@ class RslRlWrapper(VecEnv):
 
         # load simulator handler
         env_class = get_sim_handler_class(SimType(scenario.simulator))
-        contact_force_queries = {"net_contact_force": NetContactForce()}
-        env = env_class(scenario_cfg=scenario, optional_queries=contact_force_queries)
+        # TODO fixme
+        # contact_force_queries = {"net_contact_force": NetContactForce()}
+        # env = env_class(scenario_cfg=scenario, optional_queries=contact_force_queries)
+        env = env_class(scenario_cfg=scenario)
         env.launch()
 
         self.env = env

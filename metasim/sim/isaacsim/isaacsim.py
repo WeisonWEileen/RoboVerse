@@ -124,7 +124,7 @@ class IsaacsimHandler(BaseSimHandler):
     def launch(self) -> None:
         self._init_scene()
         self._load_robots()
-        self._load_sensors()
+        # self._load_sensors()
         self._load_cameras()
         self._load_terrain()
         self._load_objects()
@@ -223,8 +223,14 @@ class IsaacsimHandler(BaseSimHandler):
                 env_ids = torch.tensor(env_ids, device=self.device)
 
             for _, obj in enumerate(self.objects):
-                obj_inst = states.objects[obj.name]
-                root_state = obj_inst.root_state.clone()
+                if obj.fix_base_link:
+                    continue
+                if isinstance(obj, ArticulationObjCfg):
+                    obj_inst = self.scene.articulations[obj.name]
+                else:
+                    obj_inst = self.scene.rigid_objects[obj.name]
+                # root_state = obj_inst.root_state.clone()
+                root_state = states.objects[obj.name].root_state.clone()
                 root_state[:, :3] += self.scene.env_origins
                 obj_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
                 obj_inst.write_root_velocity_to_sim(root_state[env_ids, 7:], env_ids=env_ids)
@@ -490,6 +496,9 @@ class IsaacsimHandler(BaseSimHandler):
                         rigid_props=rigid_props,
                         collision_props=collision_props,
                     ),
+                    init_state=RigidObjectCfg.InitialStateCfg(
+                        pos=obj.default_position,
+                    ),
                 )
             )
             return
@@ -617,37 +626,10 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.sensors["contact_sensor"] = self.contact_sensor
 
     def _load_contact_sensor_idx(self) -> None:
-        body_names = [
-            "pelvis",
-            "left_hip_pitch_link",
-            "left_hip_roll_link",
-            "left_hip_yaw_link",
-            "left_knee_link",
-            "left_ankle_pitch_link",
-            "left_ankle_roll_link",
-            "right_hip_pitch_link",
-            "right_hip_roll_link",
-            "right_hip_yaw_link",
-            "right_knee_link",
-            "right_ankle_pitch_link",
-            "right_ankle_roll_link",
-            "waist_yaw_link",
-            "waist_roll_link",
-            "torso_link",
-            "left_shoulder_pitch_link",
-            "left_shoulder_roll_link",
-            "left_shoulder_yaw_link",
-            "left_elbow_link",
-            "left_wrist_roll_link",
-            "left_wrist_pitch_link",
-            "left_wrist_yaw_link",
-            "right_shoulder_pitch_link",
-            "right_shoulder_roll_link",
-            "right_shoulder_yaw_link",
-            "right_elbow_link",
-            "right_wrist_roll_link",
-            "right_wrist_pitch_link",
-            "right_wrist_yaw_link",]
+        return
+        # the order parsed differs from the order in the urdf
+        body_names = self.robots[0].body_names
+
         self.body_ids, self.body_names = self.scene.articulations[self.robots[0].name].find_bodies(
             body_names, preserve_order=True
         )
@@ -664,25 +646,25 @@ class IsaacsimHandler(BaseSimHandler):
 
         return self.termination_contact_indices
 
-
-
     def find_rigid_body_indice(self, body_name):
-        '''
+        """
         ipdb> self.simulator._robot.find_bodies("left_ankle_link")
         ([16], ['left_ankle_link'])
         ipdb> self.simulator.contact_sensor.find_bodies("left_ankle_link")
         ([4], ['left_ankle_link'])
 
         this function returns the indice of the body in BFS order
-        '''
+        """
         indices, names = self.scene.articulations[self.robots[0].name].find_bodies(body_name)
+        print(indices, names)
         indices = [self.body_ids.index(i) for i in indices]
+        print(indices)
         if len(indices) == 0:
             log.warning(f"Body {body_name} not found in the contact sensor.")
             return None
         elif len(indices) == 1:
             return indices[0]
-        else: # multiple bodies found
+        else:  # multiple bodies found
             log.warning(f"Multiple bodies found for {body_name}.")
             return indices
 
@@ -989,6 +971,7 @@ class IsaacsimHandler(BaseSimHandler):
         obj_inst.write_data_to_sim()
 
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        # TODO: increase performance here
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             body_names = deepcopy(self.scene.articulations[obj_name].body_names)
             if sort:
