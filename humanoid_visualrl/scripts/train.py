@@ -58,10 +58,10 @@ if __name__ == "__main__":
 
     task_cfg = BaseTableHumanoidTaskCfg()
 
-    # if args.use_vision or args.use_resnet or args.use_fixed_gazing:
-    #     scenario.cameras = [task_cfg.camera]
-    # else:
-    scenario.cameras = []
+    if args.use_vision or args.use_resnet or args.use_fixed_gazing:
+        scenario.cameras = [task_cfg.camera]
+    else:
+        scenario.cameras = []
 
     # add objects
     scenario.objects = task_cfg.objects

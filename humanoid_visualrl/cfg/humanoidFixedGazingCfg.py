@@ -359,7 +359,7 @@ class BaseTableHumanoidTaskCfg:
         height=48,
         pos=(1.5, -1.5, 1.5),
         look_at=(0.0, 0.0, 0.0),
-        mount_to="g1_static",
+        mount_to="g1_static/pelvis",
         mount_link="torso_link",
         mount_pos=(0.1, 0.0, 0.9),
         #     quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()

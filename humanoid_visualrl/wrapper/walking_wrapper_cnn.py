@@ -10,21 +10,11 @@ from metasim.types import TensorState
 class WalkingWrapperCNN(HumanoidBaseWrapper):
     """Wrapper for walking tasks."""
 
-    def __init__(self, scenario: ScenarioCfg, enable_opencv_display: bool = False, opencv_fps: int = 30):
+    def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
         self._prepare_ref_indices()
 
-        # Initialize OpenCV renderer for real-time visualization
-        self.enable_opencv_display = enable_opencv_display
-        self.opencv_renderer = None
-        if self.enable_opencv_display:
-            self.opencv_renderer = OpenCVRenderer(
-                window_name="Humanoid First Person View",
-                window_size=(640, 480),  # Upscale from 64x48 to 640x480
-                fps_limit=opencv_fps,
-                enable_recording=True,  # Allow video recording
-                recording_path="humanoid_vision_recording.mp4",
-            )
+
 
     def _prepare_ref_indices(self):
         joint_names = self.env.get_joint_names(self.robot.name)

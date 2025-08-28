@@ -223,22 +223,16 @@ def get_cfg_cls(args: argparse.Namespace):
 def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
     if args.use_resnet:
         from humanoid_visualrl.wrapper.walking_wrapper_resnet import WalkingWrapperResNet as TaskWrapper
-
-        env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
     elif args.use_vision:
         from humanoid_visualrl.wrapper.walking_wrapper_cnn import WalkingWrapperCNN as TaskWrapper
-
-        env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
     elif args.use_reaching:
         from humanoid_visualrl.wrapper.reaching_wrapper import ReachingWrapper as TaskWrapper
-
-        env = TaskWrapper(scenario)
     elif args.use_fixed_reaching or args.use_fixed_gazing:
         from humanoid_visualrl.wrapper.fixed_reaching_active_vision_wrapper import ActiveVisionWrapper as TaskWrapper
     else:
         from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
 
-    env = TaskWrapper(scenario)
+    env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
     
     return env
 

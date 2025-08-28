@@ -14,15 +14,13 @@ from humanoid_visualrl.utils.utils import (
     get_body_reindexed_indices_from_substring,
     get_joint_reindexed_indices_from_substring,
     get_euler_xyz_tensor,
-    sample_int_from_float,
-    sample_wp,
     torch_rand_float,
 )
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
 from metasim.utils.math import quat_rotate_inverse
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
-
+from humanoid_visualrl.utils.opencv_renderer import OpenCVRenderer
 
 class HumanoidBaseWrapper(RslRlWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
@@ -30,7 +28,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
     Note that rsl_rl is designed for parallel training fully on GPU, with robust support for Isaac Gym and Isaac Lab.
     """
 
-    def __init__(self, scenario: ScenarioCfg):
+    def __init__(self, scenario: ScenarioCfg, enable_opencv_display: bool = False, opencv_fps: int = 30):
         super().__init__(scenario)
 
         self._env_origins = self.env.scene.env_origins.clone()
@@ -42,6 +40,18 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         # tensor_state = self.env.get_states()
         self.marker_viz = self.env.init_marker_viz()
+
+        # Initialize OpenCV renderer for real-time visualization
+        self.enable_opencv_display = enable_opencv_display
+        self.opencv_renderer = None
+        if self.enable_opencv_display:
+            self.opencv_renderer = OpenCVRenderer(
+                window_name="Humanoid First Person View",
+                window_size=(640, 480),  # Upscale from 64x48 to 640x480
+                fps_limit=opencv_fps,
+                enable_recording=True,  # Allow video recording
+                recording_path="humanoid_vision_recording.mp4",
+            )
 
     def _parse_indices(self, robot):
         """Parse rigid body indices from robot cfg."""

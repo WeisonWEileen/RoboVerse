@@ -27,8 +27,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     Note that rsl_rl is designed for parallel training fully on GPU, with robust support for Isaac Gym and Isaac Lab.
     """
 
-    def __init__(self, scenario: ScenarioCfg):
-        super().__init__(scenario)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         tensor_state = self.env.get_states()
         self._init_target_wp(tensor_state)
@@ -40,7 +40,22 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
-        # self.wrist_pose[:] = tensor_state.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
+        # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
+        # Convert from uint8 to float and normalize to [0, 1]
+        vision_rgb = tensor_state.cameras[self.cfg.camera.name].rgb
+
+        # Display image in OpenCV window if enabled
+        if self.enable_opencv_display and self.opencv_renderer is not None:
+            # Use the original uint8 RGB image for display (before normalization)
+            # vision_rgb is in format (batch_size, height, width, channels)
+            display_image = vision_rgb[0]  # Take first environment
+
+            # Display the image and check if window is still open
+            window_open = self.opencv_renderer.display(display_image)
+            if not window_open:
+                # User closed the window, disable further display
+                self.enable_opencv_display = False
+                print("OpenCV display window closed by user")
 
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
