@@ -10,10 +10,8 @@ import torch
 
 from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg
 from humanoid_visualrl.utils.utils import (
-    get_body_reindexed_indices_from_substring,
     sample_int_from_float,
     sample_wp,
-    torch_rand_float,
 )
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
@@ -32,6 +30,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         tensor_state = self.env.get_states()
         self._init_target_wp(tensor_state)
+        self.image_center_x = self.cfg.camera.width / 2
+        self.image_center_y = self.cfg.camera.height / 2
         # self.marker_viz = self.env.init_marker_viz()
 
     def _init_buffers(self):
@@ -40,12 +40,27 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
+        self.cube_z_buf = tensor_state.objects["cube"].root_state[:, 2]
+
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras[self.cfg.camera.name].rgb
+        # vision_seg = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
+
+        self.vision_seg_buf = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
+        self.vision_seg_info = tensor_state.cameras[self.cfg.camera.name].instance_id_seg_id2label
+
+        # target_id = info["cube"]
+
+        # Convert single channel to three channels by repeating
+        # vision_seg shape: [1, 96, 128] -> [1, 96, 128, 3]
+        # if vision_seg is not None:
+        #     vision_rgb = vision_seg.unsqueeze(-1).repeat(1, 1, 1, 3)  # Repeat the channel dimension 3 times
+        # else:
+        #     vision_rgb = None
 
         # Display image in OpenCV window if enabled
-        if self.enable_opencv_display and self.opencv_renderer is not None:
+        if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
             # Use the original uint8 RGB image for display (before normalization)
             # vision_rgb is in format (batch_size, height, width, channels)
             display_image = vision_rgb[0]  # Take first environment
@@ -159,16 +174,22 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.delayed_obs_target_wp_steps_int = sample_int_from_float(self.delayed_obs_target_wp_steps)
         self._update_target_wp(torch.tensor([], dtype=torch.long, device=self.device))
 
+    def _check_reset(self):
+        # move 0.05 to config
+        terminate = torch.abs(self.cube_z_buf - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
+        self.reset_buf = self.time_out_buf | terminate
+        return self.reset_buf
+
     # ==== reward functions ====
-    def _reward_wrist_pos(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for reaching the target position."""
-        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
-        wrist_pos_diff = (
-            wrist_pos[:, :, :3] - self.ref_wrist_pos[:, :, :3]
-        )  # [num_envs, 2, 3], two hands, position only
-        wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
-        wrist_pos_error = torch.mean(torch.abs(wrist_pos_diff), dim=1)
-        return torch.exp(-4 * wrist_pos_error), wrist_pos_error
+    # def _reward_wrist_pos(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    #     """Reward for reaching the target position."""
+    #     wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
+    #     wrist_pos_diff = (
+    #         wrist_pos[:, :, :3] - self.ref_wrist_pos[:, :, :3]
+    #     )  # [num_envs, 2, 3], two hands, position only
+    #     wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
+    #     wrist_pos_error = torch.mean(torch.abs(wrist_pos_diff), dim=1)
+    #     return torch.exp(-4 * wrist_pos_error), wrist_pos_error
 
     def _reward_upper_body_pos(
         self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
@@ -200,5 +221,55 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             dim=1,
         )
 
-    def _check_reset(self):
-        self.reset_buf = self.time_out_buf
+    # def _reward_gaze_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    #     """Reward for gazing at the cube."""
+    #     target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
+    #     coords = torch.nonzero(self.vision_seg_buf[0, ..., 0] == target_id)  # (N,2)
+    #     # coords[:,1] 是 x (u)，coords[:,0] 是 y (v)
+
+    #     print(coords)
+
+
+    def _reward_gaze_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for gazing at the cube."""
+        target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
+
+        # 创建掩码：shape (num_envs, height, width)
+        mask = self.vision_seg_buf == target_id
+
+        # 获取图像尺寸
+        height, width = self.vision_seg_buf.shape[1], self.vision_seg_buf.shape[2]
+        # image_center_y, image_center_x = height / 2, width / 2
+
+        # 创建坐标网格
+        y_coords, x_coords = torch.meshgrid(
+            torch.arange(height, device=self.device), torch.arange(width, device=self.device), indexing="ij"
+        )
+
+        # 为每个环境计算加权中心点
+        rewards = torch.zeros(self.num_envs, device=self.device)
+
+        # 计算每个环境的像素数量
+        pixel_counts = mask.sum(dim=(1, 2))  # (num_envs,)
+
+        # 只处理有目标像素的环境
+        valid_envs = pixel_counts > 0
+
+        if valid_envs.any():
+            # 计算加权中心点
+            weighted_y = (mask[valid_envs] * y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+            weighted_x = (mask[valid_envs] * x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+
+            # 归一化
+            center_y = weighted_y / pixel_counts[valid_envs]
+            center_x = weighted_x / pixel_counts[valid_envs]
+
+            # 计算距离
+            distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
+
+            # 计算奖励
+            rewards[valid_envs] = torch.exp(-distance / 50.0)
+
+        return rewards
+
+

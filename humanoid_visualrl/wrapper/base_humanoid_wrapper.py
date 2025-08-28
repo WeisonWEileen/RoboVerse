@@ -351,10 +351,10 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.episode_length_buf += 1
         self.time_out_buf = self.episode_length_buf >= self.cfg.max_episode_length_s / self.dt
         self._post_physics_step_callback()
-        self._check_reset()
-
         tensor_state = self.env.get_states()
         self._refreshed_tensors(tensor_state)
+        self._check_reset()
+
 
         reset_env_idx = self.reset_buf.nonzero(as_tuple=False).flatten().tolist()
 

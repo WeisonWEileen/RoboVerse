@@ -243,7 +243,7 @@ class BaseTableHumanoidTaskCfg:
         ),
         PrimitiveCubeCfg(
             name="cube",
-            size=(0.1, 0.1, 0.1),
+            size=(0.2, 0.2, 0.2),
             color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
             fix_base_link=False,
@@ -287,7 +287,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.4, 0.1, 0.851]),
+                    "pos": torch.tensor([0.5, 0.2, 0.925]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -317,12 +317,13 @@ class BaseTableHumanoidTaskCfg:
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
-        "wrist_pos": 5,
+        # "wrist_pos": 5,
         "upper_body_pos": 0.5,
         "default_joint_pos": 0.5,
         "torques": -1e-5,
         "dof_vel": -5e-4,
         "dof_acc": -1e-7,
+        "gaze_at_cube": 10,
     }
 
     frame_stack = 1
@@ -355,8 +356,9 @@ class BaseTableHumanoidTaskCfg:
 
     camera = PinholeCameraCfg(
         name="camera_first_person",
-        width=64,
-        height=48,
+        data_types=["rgb", "instance_id_seg"],
+        width=128,
+        height=96,
         pos=(1.5, -1.5, 1.5),
         look_at=(0.0, 0.0, 0.0),
         mount_to="g1_static/pelvis",

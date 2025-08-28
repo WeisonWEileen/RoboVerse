@@ -228,7 +228,7 @@ def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
     elif args.use_reaching:
         from humanoid_visualrl.wrapper.reaching_wrapper import ReachingWrapper as TaskWrapper
     elif args.use_fixed_reaching or args.use_fixed_gazing:
-        from humanoid_visualrl.wrapper.fixed_reaching_active_vision_wrapper import ActiveVisionWrapper as TaskWrapper
+        from humanoid_visualrl.wrapper.fixed_active_vision_wrapper import ActiveVisionWrapper as TaskWrapper
     else:
         from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
 
