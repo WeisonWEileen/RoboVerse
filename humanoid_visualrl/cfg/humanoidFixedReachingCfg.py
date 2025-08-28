@@ -156,6 +156,7 @@ class BaseTableHumanoidTaskCfg:
         """number of commands. linear x, linear y, angular velocity, heading"""
         resampling_time: float = 10.0
         """time before command are changed[s]."""
+        heading_command = False
 
     @configclass
     class Normalization:
@@ -317,7 +318,7 @@ class BaseTableHumanoidTaskCfg:
 
     task_name = "fixed_reaching"
 
-    
+
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15

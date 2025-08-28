@@ -157,6 +157,7 @@ class BaseTableHumanoidTaskCfg:
         """number of commands. linear x, linear y, angular velocity, heading"""
         resampling_time: float = 10.0
         """time before command are changed[s]."""
+        heading_command = False
 
     @configclass
     class Normalization:
@@ -234,11 +235,11 @@ class BaseTableHumanoidTaskCfg:
     objects = [
         PrimitiveCubeCfg(
             name="table",
-            size=(0.5, 0.5, 0.05),
+            size=(0.6, 0.6, 0.05),
             color=[0.9, 0.7, 0.7],
             physics=PhysicStateType.RIGIDBODY,
             fix_base_link=True,
-            default_position=(0.3, 0.0, 0.8),
+            default_position=(0.4, 0.0, 0.8),
         ),
         PrimitiveCubeCfg(
             name="cube",
@@ -286,7 +287,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.3, 0.1, 0.851]),
+                    "pos": torch.tensor([0.4, 0.1, 0.851]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -349,3 +350,34 @@ class BaseTableHumanoidTaskCfg:
         self.command_ranges.r_wrist_pos_x = [-0.05, 0.15]
         self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
         self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
+
+    from metasim.scenario.cameras import PinholeCameraCfg
+
+    camera = PinholeCameraCfg(
+        name="camera_first_person",
+        width=64,
+        height=48,
+        pos=(1.5, -1.5, 1.5),
+        look_at=(0.0, 0.0, 0.0),
+        mount_to="g1_static",
+        mount_link="torso_link",
+        mount_pos=(0.1, 0.0, 0.9),
+        #     quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
+        # quat = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])  #
+        mount_quat=(0.8660254037844387, 0.0, 0.49999999999999994, 0.0),
+    )
+
+    @configclass
+    class PushRandomCfg:
+        """Configuration for random push forces."""
+
+        enabled: bool = False
+        """Whether to enable random push forces."""
+        max_push_vel_xy: float = 0.2
+        """Maximum push velocity in xy plane."""
+        max_push_ang_vel: float = 0.4
+        """Maximum push angular velocity."""
+        push_interval: int = 4
+        """Interval in steps for applying random push forces and torques."""
+
+    random_push = PushRandomCfg(enabled=False)

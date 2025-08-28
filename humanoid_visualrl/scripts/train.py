@@ -21,7 +21,6 @@ from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 from humanoid_visualrl.utils.utils import get_log_dir, get_cfg_cls, get_env_wrapper_cls, get_args
 
 if __name__ == "__main__":
-
     args = get_args()
 
     if args.use_resnet and args.use_vision:
@@ -34,21 +33,38 @@ if __name__ == "__main__":
         headless=args.headless,
         num_envs=args.num_envs,
     )
-    scenario.lights = [DomeLightCfg(intensity=100.0, color=(0.85, 0.9, 1.0),), DistantLightCfg(intensity=100.0,  polar=35.0, azimuth=60.0, color=(1.0, 0.98, 0.95),),
-DiskLightCfg(intensity=100.0,radius=1.5, pos=(2.0, -2.0, 4.0), rot=(0.7071, 0.7071, 0.0, 0.0), color=(0.95, 0.95, 1.0),),]
+    scenario.lights = [
+        DomeLightCfg(
+            intensity=100.0,
+            color=(0.85, 0.9, 1.0),
+        ),
+        DistantLightCfg(
+            intensity=100.0,
+            polar=35.0,
+            azimuth=60.0,
+            color=(1.0, 0.98, 0.95),
+        ),
+        DiskLightCfg(
+            intensity=100.0,
+            radius=1.5,
+            pos=(2.0, -2.0, 4.0),
+            rot=(0.7071, 0.7071, 0.0, 0.0),
+            color=(0.95, 0.95, 1.0),
+        ),
+    ]
 
     # look different task cfg
     BaseTableHumanoidTaskCfg = get_cfg_cls(args)
 
     task_cfg = BaseTableHumanoidTaskCfg()
 
-    if args.use_vision or args.use_resnet:
-        scenario.cameras = [task_cfg.camera]
-    else:
-        scenario.cameras = []
+    # if args.use_vision or args.use_resnet or args.use_fixed_gazing:
+    #     scenario.cameras = [task_cfg.camera]
+    # else:
+    scenario.cameras = []
 
     # add objects
-    scenario.objects = task_cfg.objects 
+    scenario.objects = task_cfg.objects
 
     # task assign and override
     scenario.sim_params = task_cfg.sim_params
