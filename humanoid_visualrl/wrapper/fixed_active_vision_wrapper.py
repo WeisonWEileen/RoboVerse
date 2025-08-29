@@ -2,17 +2,10 @@
 # TODO success filter
 # render reset frame to before compute obs
 from __future__ import annotations
-
-from collections import deque
-from copy import deepcopy
-
 import numpy as np
 import torch
 
 from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg
-from humanoid_visualrl.utils.utils import (
-    sample_int_from_float,
-)
 from metasim.types import TensorState
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
@@ -239,7 +232,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     
     def _post_reset_hook(self, env_ids):
         self.cube_pose_buf[env_ids] = self.init_states.objects["cube"].root_state[env_ids, :7]
-        self.resnet_features[env_ids] = torch.zeros(len(env_ids), 512, device=self.device)
+        # self.resnet_features[env_ids] = torch.zeros(len(env_ids), 512, device=self.device)
+        self.resnet_features[env_ids].zero_()  # inplace 更快
 
     def _check_reset(self):
         # move 0.05 to config

@@ -327,7 +327,7 @@ class BaseTableHumanoidTaskCfg:
         "torques": -1e-5,
         "dof_vel": -5e-4,
         "dof_acc": -1e-7,
-        "gaze_at_cube": 30,
+        "gaze_at_cube": 10,
     }
 
     frame_stack = 1
@@ -357,7 +357,7 @@ class BaseTableHumanoidTaskCfg:
         self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
         self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
 
-        self.randomize_cube_y_offset= 0.2
+        self.randomize_cube_y_offset= 0.1
         self.randomize_cube_y_range = 0.1
 
     from metasim.scenario.cameras import PinholeCameraCfg
