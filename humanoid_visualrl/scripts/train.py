@@ -86,9 +86,8 @@ if __name__ == "__main__":
         use_vision=task_cfg.use_vision,
     )
 
-    # if resume:
-    # load previously trained model 
-    resume_path = get_load_path(args, scenario)
-    print(f"Loading model from: {resume_path}")
-    ppo_runner.load(resume_path)
+    if args.resume:
+        resume_path = get_load_path(args, scenario)
+        log.info(f"Loading model from: {resume_path}")
+        ppo_runner.load(resume_path)
     ppo_runner.learn(num_learning_iterations=args.num_learning_iterations)

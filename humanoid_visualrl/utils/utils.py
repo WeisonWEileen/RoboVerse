@@ -295,6 +295,7 @@ def get_args():
         # load_run: str = "2025_0827_131435"
         load_run: str = "2025_0828_041626"
         export_policy = False
+        resume: bool = False
 
         def __post_init__(self):
             """Post-initialization configuration."""

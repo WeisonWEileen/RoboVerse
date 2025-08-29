@@ -289,7 +289,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.5, 0.2, 0.925]),
+                    "pos": torch.tensor([0.5, 0.0, 0.925]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -355,8 +355,7 @@ class BaseTableHumanoidTaskCfg:
         self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
         self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
 
-        self.randomize_cube_x_range = self.init_states[0]["objects"]["cube"]["pos"][0]
-
+        self.randomize_cube_y_range = 0.2
 
     from metasim.scenario.cameras import PinholeCameraCfg
 
@@ -389,5 +388,3 @@ class BaseTableHumanoidTaskCfg:
         """Interval in steps for applying random push forces and torques."""
 
     random_push = PushRandomCfg(enabled=False)
-
-
