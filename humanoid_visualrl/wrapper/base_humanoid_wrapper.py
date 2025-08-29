@@ -410,6 +410,10 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._physics_step(action)
         self._post_physics_step()
         return self.obs_buf, self.rew_buf, self.reset_buf, self.extra_buf
+    
+    def _pre_reset_hook(self, env_ids):
+        """Hook method for subclasses to add custom logic before resetting."""
+        pass
 
     def _reset(self, env_ids=None):
         """Reset the wrapper."""
@@ -417,6 +421,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
             env_ids = list(range(self.num_envs))
         if len(env_ids) == 0:
             return
+        self._pre_reset_hook(env_ids)
         self.env.set_states(self.init_states, env_ids)
         self._resample_commands(env_ids)
 

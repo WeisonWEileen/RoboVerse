@@ -22,7 +22,7 @@ class G1StaticCfg(RobotCfg):
     collapse_fixed_joints: bool = True
 
     actuators: dict[str, BaseActuatorCfg] = {
-        "waist_yaw_joint": BaseActuatorCfg(stiffness=2000, damping=50),
+        "waist_yaw_joint": BaseActuatorCfg(stiffness=400, damping=5),
         "left_shoulder_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "left_shoulder_roll_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "left_shoulder_yaw_joint": BaseActuatorCfg(stiffness=40, damping=10),

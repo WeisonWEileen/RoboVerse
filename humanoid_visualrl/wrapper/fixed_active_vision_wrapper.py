@@ -11,13 +11,11 @@ import torch
 from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg
 from humanoid_visualrl.utils.utils import (
     sample_int_from_float,
-    sample_wp,
 )
-from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
-from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
+
 
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
@@ -27,7 +25,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
 
         self.image_center_x = self.cfg.camera.width / 2
         self.image_center_y = self.cfg.camera.height / 2
@@ -81,7 +78,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # diff = wrist_pos - self.ref_wrist_pos
 
         # ref_wrist_pos_obs = torch.flatten(self.ref_wrist_pos, start_dim=1)  # [num_envs, 14]
-        wrist_pos_obs = torch.flatten(wrist_pos, start_dim=1)  # [num_envs, 14]
+        # wrist_pos_obs = torch.flatten(wrist_pos, start_dim=1)  # [num_envs, 14]
         # diff_obs = torch.flatten(diff, start_dim=1)  # [num_envs, 14]
 
         visual_features = self.resnet_features
@@ -122,6 +119,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
 
+        self.extra_buf["observations"]["critic"] = self.privileged_obs_buf
+
     def _update_target_wp(self, reset_env_ids):
         """Update target wrist positions."""
         # self.target_wp_i specifies which seq to use for each env, and self.target_wp_j specifies the timestep in the seq
@@ -146,7 +145,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             resample_i, torch.randint(0, self.num_pairs, (self.num_envs,), device=self.device), self.target_wp_i
         )
 
- 
+
+    def _pre_reset_hook(self, env_ids=None):
+        # randomly set x of cube
+        self.init_states.objects["cube"].root_state[env_ids, 0] = (
+            (torch.rand(len(env_ids)) - 0.5) * 2 * self.cfg.randomize_cube_x_range
+        )
+
 
     def _check_reset(self):
         # move 0.05 to config
@@ -184,15 +189,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.square((self.last_dof_vel - self.dof_vel) / self.dt),
             dim=1,
         )
-
-    # def _reward_gaze_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-    #     """Reward for gazing at the cube."""
-    #     target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
-    #     coords = torch.nonzero(self.vision_seg_buf[0, ..., 0] == target_id)  # (N,2)
-    #     # coords[:,1] 是 x (u)，coords[:,0] 是 y (v)
-
-    #     print(coords)
-
 
     def _reward_gaze_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for gazing at the cube."""
@@ -235,5 +231,3 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             rewards[valid_envs] = torch.exp(-distance / 50.0)
 
         return rewards
-
-

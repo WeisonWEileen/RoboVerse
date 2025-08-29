@@ -47,9 +47,6 @@ class RslRlWrapper(VecEnv):
         self.use_vision = scenario.task.use_vision
 
 
-
-
-
     def _init_buffers(self):
         """Initialize buffers for rsl_rl compatibility."""
         # Initialize observation buffers

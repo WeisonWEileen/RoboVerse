@@ -67,7 +67,7 @@ class LeggedRobotRunnerCfg:
     """max number of iterations"""
 
     # logging
-    # logger: str = "wandb"
+    logger: str = "wandb"
     wandb_project: str = "active_vision"
 
     save_interval = 1000
@@ -317,8 +317,6 @@ class BaseTableHumanoidTaskCfg:
     action_scale = 0.25
 
     task_name = "fixed_reaching"
-
-
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15

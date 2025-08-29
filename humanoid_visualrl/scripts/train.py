@@ -18,7 +18,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from metasim.scenario.scenario import ScenarioCfg
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
-from humanoid_visualrl.utils.utils import get_log_dir, get_cfg_cls, get_env_wrapper_cls, get_args
+from humanoid_visualrl.utils.utils import get_log_dir, get_cfg_cls, get_env_wrapper_cls, get_args, get_load_path
 
 if __name__ == "__main__":
     args = get_args()
@@ -85,4 +85,10 @@ if __name__ == "__main__":
         log_dir=log_dir,
         use_vision=task_cfg.use_vision,
     )
+
+    # if resume:
+    # load previously trained model 
+    resume_path = get_load_path(args, scenario)
+    print(f"Loading model from: {resume_path}")
+    ppo_runner.load(resume_path)
     ppo_runner.learn(num_learning_iterations=args.num_learning_iterations)

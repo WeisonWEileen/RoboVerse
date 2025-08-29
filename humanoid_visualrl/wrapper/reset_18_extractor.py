@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
+
 class Reset18Extractor:
     def __init__(self, device: torch.device):
         """Initialize ResNet-18 as a frozen feature extractor."""
@@ -24,8 +25,6 @@ class Reset18Extractor:
 
         # # Feature dimension: ResNet-18 outputs 512-dim features
         # self.resnet_feature_dim = 512
-
-
 
     def extract_visual_features(self, rgb_images):
         """Extract features from RGB images using ResNet-18.

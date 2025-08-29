@@ -14,6 +14,8 @@ from metasim.utils import configclass
 
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.constants import PhysicStateType
+
+
 @configclass
 class LeggedRobotRunnerCfg:
     """Configuration for PPO."""
@@ -48,7 +50,7 @@ class LeggedRobotRunnerCfg:
         """Entropy coefficient."""
         num_learning_epochs = 5
         """Number of learning epochs."""
-        num_mini_batches = 4
+        num_mini_batches = 8
         """mini batch size = num_envs*n_steps / num_mini_batches"""
         learning_rate = 1.0e-3
         schedule = "adaptive"
@@ -68,15 +70,15 @@ class LeggedRobotRunnerCfg:
     """max number of iterations"""
 
     # logging
-    # logger: str = "wandb"
+    logger: str = "wandb"
     wandb_project: str = "active_vision"
 
-    save_interval = 1000
+    save_interval = 100
     """save interval for checkpoints"""
     experiment_name = "test"
     """experiment name"""
     run_name = ""
-    resume = False
+    resume = True
     """resume from checkpoint"""
     load_run = -1
     """load run number"""
@@ -199,7 +201,7 @@ class BaseTableHumanoidTaskCfg:
     """PPO config."""
     normalization = Normalization()
     """Normalization config."""
-    decimation: int = 10
+    decimation: int = 5
     """Decimation pd control loop."""
     num_obs: int = 124
     """Number of observations."""
@@ -250,7 +252,7 @@ class BaseTableHumanoidTaskCfg:
             default_position=(0.3, 0.1, 0.851),
         ),
     ]
-    # cameras 
+    # cameras
     """objects in the environment"""
     traj_filepath = None
     """path to the trajectory file"""
@@ -331,13 +333,13 @@ class BaseTableHumanoidTaskCfg:
 
     # obs
     visual_feature_dim: int = 512
-    num_single_obs = num_actions * 3 + visual_feature_dim 
+    num_single_obs = num_actions * 3 + visual_feature_dim
     num_observations = int(frame_stack * num_single_obs)
     # single_num_observations = 3 * num_actions + 6 + visual_feature_dim
 
     # privileged obs
     single_num_privileged_obs = num_actions * 3 + 7 + visual_feature_dim
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs + visual_feature_dim)
+    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
     # control
     action_scale = 0.25
@@ -352,6 +354,9 @@ class BaseTableHumanoidTaskCfg:
         self.command_ranges.r_wrist_pos_x = [-0.05, 0.15]
         self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
         self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
+
+        self.randomize_cube_x_range = self.init_states[0]["objects"]["cube"]["pos"][0]
+
 
     from metasim.scenario.cameras import PinholeCameraCfg
 
@@ -384,3 +389,5 @@ class BaseTableHumanoidTaskCfg:
         """Interval in steps for applying random push forces and torques."""
 
     random_push = PushRandomCfg(enabled=False)
+
+
