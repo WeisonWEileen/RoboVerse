@@ -194,7 +194,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         # episode length buffer
         self.episode_length_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
-        self.time_out_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.timeout_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.reset_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
 
         # store globally for reset update and pass to obs and privileged_obs
@@ -343,18 +343,17 @@ class HumanoidBaseWrapper(RslRlWrapper):
             torch.norm(contact_forces[:, self.env.termination_contact_indices, :], dim=-1) > 1.0,
             dim=1,
         )
-        self.reset_buf = torch.logical_or(self.time_out_buf, reset_buf)
+        self.reset_buf = torch.logical_or(self.timeout_buf, reset_buf)
 
     def _post_physics_step(self):
         """After physics step, compute reward, get obs and privileged_obs, resample command."""
         self.common_step_counter += 1
         self.episode_length_buf += 1
-        self.time_out_buf = self.episode_length_buf >= self.cfg.max_episode_length_s / self.dt
+        self.timeout_buf = self.episode_length_buf >= self.cfg.max_episode_length_s / self.dt
         self._post_physics_step_callback()
         tensor_state = self.env.get_states()
         self._refreshed_tensors(tensor_state)
         self._check_reset()
-
 
         reset_env_idx = self.reset_buf.nonzero(as_tuple=False).flatten().tolist()
 
@@ -415,6 +414,10 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """Hook method for subclasses to add custom logic before resetting."""
         pass
 
+    def _post_reset_hook(self, env_ids):
+        """Hook method for subclasses to add custom logic after resetting."""
+        pass
+
     def _reset(self, env_ids=None):
         """Reset the wrapper."""
         if env_ids is None:
@@ -437,6 +440,13 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.last_dof_vel[env_ids] = 0.0
         self.episode_length_buf[env_ids] = 0
         self.feet_air_time[env_ids] = 0.0
+
+        # 
+        self.dof_pos[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids]
+        self.dof_vel[env_ids] = 0.0
+
+        self._post_reset_hook(env_ids)
+
 
         
         self.base_quat[env_ids] = (

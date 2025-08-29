@@ -4,7 +4,7 @@
     "dockerComposeFile": "../docker-compose.yml",
     "service": "metasim",
     "workspaceFolder": "/home/${localEnv:USER}/RoboVerse",
-    "customizations": {
+"customizations": {
         "vscode": {
             "extensions": [
                 "ms-python.python",

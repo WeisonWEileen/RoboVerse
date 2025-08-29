@@ -70,7 +70,7 @@ class LeggedRobotRunnerCfg:
     """max number of iterations"""
 
     # logging
-    logger: str = "wandb"
+    # logger: str = "wandb"
     wandb_project: str = "active_vision"
 
     save_interval = 100
@@ -91,6 +91,8 @@ class LeggedRobotRunnerCfg:
 
     policy: Policy = Policy()
     algorithm: Algorithm = Algorithm()
+
+    empirical_normalization = False
 
 
 @configclass
@@ -245,7 +247,7 @@ class BaseTableHumanoidTaskCfg:
         ),
         PrimitiveCubeCfg(
             name="cube",
-            size=(0.2, 0.2, 0.2),
+            size=(0.15, 0.15, 0.15),
             color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
             fix_base_link=False,
@@ -257,7 +259,7 @@ class BaseTableHumanoidTaskCfg:
     traj_filepath = None
     """path to the trajectory file"""
     # TODO read form max_episode_length_s and divide s
-    max_episode_length_s: int = 8
+    max_episode_length_s: int = 6
     """maximum episode length in seconds"""
     episode_length: int = 2400
     """episode length in steps"""
@@ -298,15 +300,15 @@ class BaseTableHumanoidTaskCfg:
                     "pos": torch.tensor([0.0, 0.0, 0.78]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
-                        "waist_yaw": 0.0,
-                        "left_shoulder_pitch": 0.0,
-                        "left_shoulder_roll": 0.0,
-                        "left_shoulder_yaw": 0.0,
-                        "left_elbow": 0.0,
-                        "right_shoulder_pitch": 0.0,
-                        "right_shoulder_roll": 0.0,
-                        "right_shoulder_yaw": 0.0,
-                        "right_elbow": 0.0,
+                        "waist_yaw_joint": 0.0,
+                        "left_shoulder_pitch_joint": 0.0,
+                        "left_shoulder_roll_joint": 0.0,
+                        "left_shoulder_yaw_joint": 0.0,
+                        "left_elbow_joint": 1.45,
+                        "right_shoulder_pitch_joint": 0.0,
+                        "right_shoulder_roll_joint": 0.0,
+                        "right_shoulder_yaw_joint": 0.0,
+                        "right_elbow_joint": 1.45,
                     },
                 },
             },
@@ -320,12 +322,12 @@ class BaseTableHumanoidTaskCfg:
 
     reward_weights: dict[str, float] = {
         # "wrist_pos": 5,
-        "upper_body_pos": 0.5,
-        "default_joint_pos": 0.5,
+        "upper_body_pos": 0.1,
+        # "default_joint_pos": 0.5,
         "torques": -1e-5,
         "dof_vel": -5e-4,
         "dof_acc": -1e-7,
-        "gaze_at_cube": 10,
+        "gaze_at_cube": 30,
     }
 
     frame_stack = 1
@@ -355,7 +357,8 @@ class BaseTableHumanoidTaskCfg:
         self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
         self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
 
-        self.randomize_cube_y_range = 0.2
+        self.randomize_cube_y_offset= 0.2
+        self.randomize_cube_y_range = 0.1
 
     from metasim.scenario.cameras import PinholeCameraCfg
 

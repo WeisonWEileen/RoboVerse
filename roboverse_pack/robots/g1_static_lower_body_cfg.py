@@ -22,7 +22,7 @@ class G1StaticCfg(RobotCfg):
     collapse_fixed_joints: bool = True
 
     actuators: dict[str, BaseActuatorCfg] = {
-        "waist_yaw_joint": BaseActuatorCfg(stiffness=400, damping=5),
+        "waist_yaw_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "left_shoulder_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "left_shoulder_roll_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "left_shoulder_yaw_joint": BaseActuatorCfg(stiffness=40, damping=10),
@@ -45,7 +45,7 @@ class G1StaticCfg(RobotCfg):
     }
 
     torque_limits: dict[str, float] = {  # = target angles [rad] when action = 0.0
-        "waist_yaw_joint": 88,
+        "waist_yaw_joint": 25,
         "left_shoulder_pitch_joint": 25,
         "left_shoulder_roll_joint": 25,
         "left_shoulder_yaw_joint": 25,
@@ -61,11 +61,13 @@ class G1StaticCfg(RobotCfg):
         "left_shoulder_pitch_joint": 0.0,
         "left_shoulder_roll_joint": 0.0,
         "left_shoulder_yaw_joint": 0.0,
-        "left_elbow_joint": 0.0,
+        # "left_elbow_joint": 0.0,
+        "left_elbow_joint": 1.45,
         "right_shoulder_pitch_joint": 0.0,
         "right_shoulder_roll_joint": 0.0,
         "right_shoulder_yaw_joint": 0.0,
-        "right_elbow_joint": 0.0,
+        # "right_elbow_joint": 0.0,
+        "right_elbow_joint": 1.45,
     }
 
     control_type: dict[str, Literal["position", "effort"]] = {

@@ -58,6 +58,7 @@ if __name__ == "__main__":
 
     task_cfg = BaseTableHumanoidTaskCfg()
 
+
     if args.use_vision or args.use_resnet or args.use_fixed_gazing:
         scenario.cameras = [task_cfg.camera]
     else:
@@ -78,6 +79,9 @@ if __name__ == "__main__":
     env = get_env_wrapper_cls(args, scenario)
     device = torch.device("cuda")
     log_dir = get_log_dir(args, scenario)
+
+    if args.wandb:
+        env.train_cfg["logger"] = "wandb"
     ppo_runner = OnPolicyRunner(
         env=env,
         train_cfg=env.train_cfg,

@@ -1,5 +1,6 @@
 """A humanoid base wrapper for skillBench tasks."""
-
+# TODO success filter
+# render reset frame to before compute obs
 from __future__ import annotations
 
 from collections import deque
@@ -28,12 +29,23 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.image_center_x = self.cfg.camera.width / 2
         self.image_center_y = self.cfg.camera.height / 2
+        self.done_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         # self.marker_viz = self.env.init_marker_viz()
         self.feature_extractor = Reset18Extractor(device=self.device)
+
+        self.pixel_reward_offset = torch.exp(torch.tensor([-self.cfg.camera.width / 2.0 / 50.0], device=self.device))
+        self.left_right_flag = 1
 
     def _init_buffers(self):
         super()._init_buffers()
         # self.wrist_pose = torch.zeros(self.num_envs, 2, 7, device=self.device)
+
+        height, width = self.cfg.camera.height, self.cfg.camera.width
+
+        # 创建坐标网格
+        self.y_coords, self.x_coords = torch.meshgrid(
+            torch.arange(height, device=self.device), torch.arange(width, device=self.device), indexing="ij"
+        )
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
@@ -42,11 +54,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras[self.cfg.camera.name].rgb
+        self.vision_rgb_buf = vision_rgb
         self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
 
         self.vision_seg_buf = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
         self.vision_seg_info = tensor_state.cameras[self.cfg.camera.name].instance_id_seg_id2label
+
+        self._compute_pixel_distance()
 
         # target_id = info["cube"]
 
@@ -58,23 +73,114 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         #     vision_rgb = None
 
         # Display image in OpenCV window if enabled
-        if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
-            # Use the original uint8 RGB image for display (before normalization)
-            # vision_rgb is in format (batch_size, height, width, channels)
-            display_image = vision_rgb[0]  # Take first environment
+        # if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
+        #     # Use the original uint8 RGB image for display (before normalization)
+        #     # vision_rgb is in format (batch_size, height, width, channels)
+        #     display_image = vision_rgb[0]  # Take first environment
 
-            # Display the image and check if window is still open
-            window_open = self.opencv_renderer.display(display_image)
-            if not window_open:
-                # User closed the window, disable further display
-                self.enable_opencv_display = False
-                print("OpenCV display window closed by user")
+        #     # Display the image and check if window is still open
+        #     window_open = self.opencv_renderer.display(display_image)
+        #     if not window_open:
+        #         # User closed the window, disable further display
+        #         self.enable_opencv_display = False
+        #         print("OpenCV display window closed by user")
+
+    def _compute_pixel_distance(self):
+        target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
+
+        # 创建掩码：shape (num_envs, height, width)
+        mask = self.vision_seg_buf == target_id
+
+        # 为每个环境计算加权中心点
+        self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
+
+        # 计算每个环境的像素数量
+        pixel_counts = mask.sum(dim=(1, 2))
+
+        # 只处理有目标像素的环境
+        valid_envs = pixel_counts > 0
+
+        if valid_envs.any():
+            # 计算加权中心点
+            weighted_y = (mask[valid_envs] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+            weighted_x = (mask[valid_envs] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+
+            # 归一化
+            center_y = weighted_y / pixel_counts[valid_envs]
+            center_x = weighted_x / pixel_counts[valid_envs]
+
+            # 计算距离
+            # distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
+            # since now we have no pitch dof for waist, we only consider x pixel distance
+            distance = torch.sqrt((center_x - self.image_center_x) ** 2)
+
+            # 计算奖励
+            self.pixel_rewards_buf[valid_envs] = torch.exp(-distance / 50.0)
+            # print(f"rewards: {rewards[0]}")
+
+            # 在env 0的图像上绘制坐标点
+            if 0 in torch.where(valid_envs)[0] and self.enable_opencv_display:
+                # 找到env 0在valid_envs中的索引
+                env_0_idx = torch.where(valid_envs)[0] == 0
+                if env_0_idx.any():
+                    env_0_pos = torch.where(env_0_idx)[0][0]
+                    # 获取env 0的中心点坐标
+                    center_x_0 = int(center_x[env_0_pos].item())
+                    center_y_0 = int(center_y[env_0_pos].item())
+
+                    # 获取env 0的RGB图像并转换为numpy格式用于绘制
+                    import cv2
+
+                    rgb_image = self.vision_rgb_buf[0].cpu().numpy()  # shape: (H, W, C)
+
+                    # 确保图像是uint8格式
+                    if rgb_image.dtype != np.uint8:
+                        rgb_image = (rgb_image * 255).astype(np.uint8)
+
+                    # 绘制计算出的中心点（红色圆圈）
+                    cv2.circle(rgb_image, (center_x_0, center_y_0), 5, (0, 0, 255), -1)  # 红色实心圆
+
+                    # 绘制图像中心点（绿色圆圈）
+                    cv2.circle(
+                        rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+                    )  # 绿色实心圆
+
+                    # 绘制连接线
+                    cv2.line(
+                        rgb_image,
+                        (center_x_0, center_y_0),
+                        (int(self.image_center_x), int(self.image_center_y)),
+                        (255, 255, 0),
+                        1,
+                    )  # 黄色线
+
+                    # 更新显示缓冲区
+                    # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
+
+                    if (
+                        self.enable_opencv_display
+                        and self.opencv_renderer is not None
+                        and self.vision_rgb_buf is not None
+                    ):
+                        # Use the original uint8 RGB image for display (before normalization)
+                        # vision_rgb is in format (batch_size, height, width, channels)
+                        # display_image = self.vision_rgb_buf[0]  # Take first environment
+
+                        # Display the image and check if window is still open
+                        window_open = self.opencv_renderer.display(rgb_image)
+                        if not window_open:
+                            # User closed the window, disable further display
+                            self.enable_opencv_display = False
+                            print("OpenCV display window closed by user")
+
+        # if pixel distance is less than 10, done
+        self.done_buf = self.pixel_rewards_buf > 0.85
 
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
-        tensor_states = self.env.get_states()
-        wrist_pos = tensor_states.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
+        # tensor_states = self.env.get_states()
+        # wrist_pos = tensor_states.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
         # diff = wrist_pos - self.ref_wrist_pos
 
         # ref_wrist_pos_obs = torch.flatten(self.ref_wrist_pos, start_dim=1)  # [num_envs, 14]
@@ -121,41 +227,30 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.extra_buf["observations"]["critic"] = self.privileged_obs_buf
 
-    def _update_target_wp(self, reset_env_ids):
-        """Update target wrist positions."""
-        # self.target_wp_i specifies which seq to use for each env, and self.target_wp_j specifies the timestep in the seq
-        self.ref_wrist_pos = (
-            self.target_wp[self.target_wp_i, self.target_wp_j] + self.ori_wrist_pos
-        )  # [num_envs, 2, 7], two hands
-        self.delayed_obs_target_wp = self.target_wp[
-            self.target_wp_i, torch.maximum(self.target_wp_j - self.delayed_obs_target_wp_steps_int, torch.tensor(0))
-        ]
-        resample_i = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
-        if self.common_step_counter % self.target_wp_update_steps_int == 0:
-            self.target_wp_j += 1
-            wp_eps_end_bool = self.target_wp_j >= self.num_wp
-            self.target_wp_j = torch.where(wp_eps_end_bool, torch.zeros_like(self.target_wp_j), self.target_wp_j)
-            resample_i[wp_eps_end_bool.nonzero(as_tuple=False).flatten()] = True
-            self.target_wp_update_steps_int = sample_int_from_float(self.target_wp_update_steps)
-            self.delayed_obs_target_wp_steps_int = sample_int_from_float(self.delayed_obs_target_wp_steps)
-        if self.cfg.humanoid_extra_cfg.resample_on_env_reset:
-            self.target_wp_j[reset_env_ids] = 0
-            resample_i[reset_env_ids] = True
-        self.target_wp_i = torch.where(
-            resample_i, torch.randint(0, self.num_pairs, (self.num_envs,), device=self.device), self.target_wp_i
-        )
-
     def _pre_reset_hook(self, env_ids=None):
         # randomly set x of cube
+        self.left_right_flag = self.left_right_flag * -1
         self.init_states.objects["cube"].root_state[env_ids, 1] = (
-            (torch.rand(len(env_ids), device=self.device) - 0.5) * 2 * self.cfg.randomize_cube_y_range
-        )
+            torch.rand(len(env_ids), device=self.device) * self.cfg.randomize_cube_y_range
+            + self.cfg.randomize_cube_y_offset
+        ) * self.left_right_flag
+        self.done_buf[env_ids] = False
+        # self.pixel_rewards_buf[env_ids] = 0.0
+    
+    def _post_reset_hook(self, env_ids):
+        self.cube_pose_buf[env_ids] = self.init_states.objects["cube"].root_state[env_ids, :7]
+        self.resnet_features[env_ids] = torch.zeros(len(env_ids), 512, device=self.device)
 
     def _check_reset(self):
         # move 0.05 to config
         terminate = torch.abs(self.cube_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
-        self.reset_buf = self.time_out_buf | terminate
+        self.reset_buf = self.timeout_buf | terminate | self.done_buf
         return self.reset_buf
+
+    # def _reset(self, env_ids=None):
+    #     super()._reset(env_ids)
+    #     self.resnet_features[env_ids] = torch.zeros(len(env_ids), 512, device=self.device)
+
 
     # ==== reward functions ====
     def _reward_upper_body_pos(
@@ -190,42 +285,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _reward_gaze_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for gazing at the cube."""
-        target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
 
-        # 创建掩码：shape (num_envs, height, width)
-        mask = self.vision_seg_buf == target_id
-
-        # 获取图像尺寸
-        height, width = self.vision_seg_buf.shape[1], self.vision_seg_buf.shape[2]
-        # image_center_y, image_center_x = height / 2, width / 2
-
-        # 创建坐标网格
-        y_coords, x_coords = torch.meshgrid(
-            torch.arange(height, device=self.device), torch.arange(width, device=self.device), indexing="ij"
-        )
-
-        # 为每个环境计算加权中心点
-        rewards = torch.zeros(self.num_envs, device=self.device)
-
-        # 计算每个环境的像素数量
-        pixel_counts = mask.sum(dim=(1, 2))  # (num_envs,)
-
-        # 只处理有目标像素的环境
-        valid_envs = pixel_counts > 0
-
-        if valid_envs.any():
-            # 计算加权中心点
-            weighted_y = (mask[valid_envs] * y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
-            weighted_x = (mask[valid_envs] * x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
-
-            # 归一化
-            center_y = weighted_y / pixel_counts[valid_envs]
-            center_x = weighted_x / pixel_counts[valid_envs]
-
-            # 计算距离
-            distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
-
-            # 计算奖励
-            rewards[valid_envs] = torch.exp(-distance / 50.0)
-
-        return rewards
+        # return self.pixel_rewards_buf - self.pixel_reward_offset
+        return self.pixel_rewards_buf

@@ -90,7 +90,7 @@ class OpenCVRenderer:
             self.recording_active = False
             print("Recording stopped")
 
-    def _preprocess_image(self, image: torch.Tensor) -> np.ndarray:
+    def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
         """Preprocess the image tensor for OpenCV display.
 
         Args:
@@ -99,25 +99,27 @@ class OpenCVRenderer:
         Returns:
             Processed numpy array ready for OpenCV display
         """
-        # Handle batch dimension
-        if image.dim() == 4:
-            # Take the first image in the batch
-            image = image[0]
-        elif image.dim() == 3:
-            pass  # Single image, no batch dimension
-        else:
-            raise ValueError(f"Unexpected image dimensions: {image.shape}")
 
-        # Convert to numpy
-        if isinstance(image, torch.Tensor):
-            # Move to CPU if on GPU
-            if image.is_cuda:
-                image = image.cpu()
-            image_np = image.numpy()
-        else:
-            image_np = np.array(image)
+        # # Handle batch dimension
+        # if image.dim() == 4:
+        #     # Take the first image in the batch
+        #     image = image[0]
+        # elif image.dim() == 3:
+        #     pass  # Single image, no batch dimension
+        # else:
+        #     raise ValueError(f"Unexpected image dimensions: {image.shape}")
+
+        # # Convert to numpy
+        # if isinstance(image, torch.Tensor):
+        #     # Move to CPU if on GPU
+        #     if image.is_cuda:
+        #         image = image.cpu()
+        #     image_np = image.numpy()
+        # else:
+        #     image_np = np.array(image)
 
         # Ensure uint8 format
+        image_np = image
         if image_np.dtype != np.uint8:
             # If the image is normalized [0, 1], scale to [0, 255]
             if image_np.max() <= 1.0:
@@ -154,12 +156,13 @@ class OpenCVRenderer:
     def _add_info_overlay(self, image_np: np.ndarray) -> np.ndarray:
         """Add information overlay to the image."""
         # Add FPS counter
-        fps_text = f"FPS: {self.display_fps:.1f}"
-        cv2.putText(image_np, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        # fps_text = f"FPS: {self.display_fps:.1f}"
+        # cv2.putText(image_np, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
         # Add frame counter
-        frame_text = f"Frame: {self.frame_count}"
-        cv2.putText(image_np, frame_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        if self.frame_count % 100 == 0:
+            frame_text = f"Frame: {self.frame_count}"
+            cv2.putText(image_np, frame_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
         # Add recording indicator
         if self.recording_active:
@@ -169,7 +172,7 @@ class OpenCVRenderer:
 
         return image_np
 
-    def display(self, image: torch.Tensor, force_update: bool = False) -> bool:
+    def display(self, image: np.ndarray, force_update: bool = False) -> bool:
         """Display an image in the OpenCV window.
 
         Args:
@@ -192,13 +195,13 @@ class OpenCVRenderer:
             self.create_window()
 
         # Preprocess the image
-        try:
-            image_np = self._preprocess_image(image)
-            image_np = self._resize_image(image_np)
-            image_np = self._add_info_overlay(image_np)
-        except Exception as e:
-            print(f"Error preprocessing image: {e}")
-            return True
+        # try:
+        image_np = self._preprocess_image(image)
+        image_np = self._resize_image(image_np)
+        image_np = self._add_info_overlay(image_np)
+        # except Exception as e:
+        #     print(f"Error preprocessing image: {e}")
+        #     return True
 
         # Display the image
         cv2.imshow(self.window_name, image_np)
@@ -212,11 +215,11 @@ class OpenCVRenderer:
         self.frame_count += 1
 
         # Update FPS calculation
-        if self.frame_count % self.fps_update_interval == 0:
-            if hasattr(self, "_fps_start_time"):
-                elapsed = current_time - self._fps_start_time
-                self.display_fps = self.fps_update_interval / elapsed
-            self._fps_start_time = current_time
+        # if self.frame_count % self.fps_update_interval == 0:
+            # if hasattr(self, "_fps_start_time"):
+                # elapsed = current_time - self._fps_start_time
+                # self.display_fps = self.fps_update_interval / elapsed
+            # self._fps_start_time = current_time
 
         # Handle window events and check if window is still open
         key = cv2.waitKey(1) & 0xFF

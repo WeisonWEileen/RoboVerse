@@ -35,7 +35,11 @@ def play(args):
     task_cfg.commands.curriculum = False
     task_cfg.ppo_cfg.resume = True
     # add objects
-    scenario.objects = []
+    scenario.objects = task_cfg.objects
+    if args.use_vision or args.use_resnet or args.use_fixed_gazing:
+        scenario.cameras = [task_cfg.camera]
+    else:
+        scenario.cameras = []
 
     # task assign and override
     scenario.sim_params = task_cfg.sim_params
@@ -70,8 +74,19 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, export_jit_path)
         print("Exported policy as jit script to: ", export_jit_path)
 
+    # env.init_states.objects["cube"].root_state[0, :1] = 0.2
+    env.init_states.objects["cube"].root_state[0, 1] = 0.0
+    # breakpoint()
+    env.env.set_states(env.init_states)
+
     for i in range(1000):
         # set fixed command
+        if i == 200:
+            env.init_states.objects["cube"].root_state[0, 1] = 2.0
+        elif i == -200:
+            env.init_states.objects["cube"].root_state[0, 1] = 2.0
+
+        env.env.set_states(env.init_states)
         env.commands[:, 0] = 1.0
         env.commands[:, 1] = 0.0
         env.commands[:, 2] = 0.0
