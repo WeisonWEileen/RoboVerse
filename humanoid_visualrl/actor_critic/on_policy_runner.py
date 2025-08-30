@@ -77,9 +77,7 @@ class OnPolicyRunner:
 
         policy_class = eval(self.policy_cfg.pop("class_name"))
         # TODO: hard code here
-        policy: ActorCriticCNN = policy_class(num_obs, num_privileged_obs, self.env.num_actions, **self.policy_cfg).to(
-            self.device
-        )
+        policy: ActorCriticCNN = policy_class(num_obs, num_privileged_obs, self.env.num_actions, **self.policy_cfg).to(self.device)
 
         # resolve dimension of rnd gated state
         if "rnd_cfg" in self.alg_cfg and self.alg_cfg["rnd_cfg"] is not None:

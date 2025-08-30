@@ -60,7 +60,7 @@ class LeggedRobotRunnerCfg:
         max_grad_norm = 1.0
         class_name = "PPO"
 
-    class_name = "ActorCritic"
+    # class_name = "ActorCritic"
     """Policy class name."""
     algorithm_class_name = "PPO"
     """Algorithm class name."""
@@ -196,8 +196,8 @@ class BaseTableHumanoidTaskCfg:
     """Command Ranges for random command sampling when training."""
     commands = CommandsConfig()
     """Configuration for command generation."""
-
-    use_vision: bool = False
+    # whether to use vision observation inside policy
+    use_vision: bool = True
     """Whether to use vision observations."""
     ppo_cfg: LeggedRobotRunnerCfg = LeggedRobotRunnerCfg()
     """PPO config."""
@@ -335,31 +335,27 @@ class BaseTableHumanoidTaskCfg:
     c_frame_stack = 3
 
     # obs
-    visual_feature_dim: int = 512
-    num_single_obs = num_actions * 3 + visual_feature_dim
-    num_observations = int(frame_stack * num_single_obs)
-    # single_num_observations = 3 * num_actions + 6 + visual_feature_dim
+    visual_dim: int = 512
 
-    # privileged obs
-    single_num_privileged_obs = num_actions * 3 + 7 + visual_feature_dim
-    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
+    if use_vision:
+        num_single_obs = num_actions * 3 
+        num_observations: int = int(frame_stack * num_single_obs)
+        single_num_privileged_obs: int =  num_actions * 3 + 7 
+        num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
+    else:
+        num_single_obs = num_actions * 3 + visual_dim
+        num_observations = int(frame_stack * num_single_obs)
+        # single_num_observations = 3 * num_actions + 6 + visual_dim
+
+        # privileged obs
+        single_num_privileged_obs = num_actions * 3 + 7 + visual_dim
+        num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
     # control
     action_scale = 0.25
 
     task_name = "fixed_gazing"
 
-    def __post_init__(self):
-        self.command_ranges.wrist_max_radius = 0.15
-        self.command_ranges.l_wrist_pos_x = [-0.05, 0.15]
-        self.command_ranges.l_wrist_pos_y = [-0.05, 0.15]
-        self.command_ranges.l_wrist_pos_z = [-0.15, 0.15]
-        self.command_ranges.r_wrist_pos_x = [-0.05, 0.15]
-        self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
-        self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
-
-        self.randomize_cube_y_offset= 0.1
-        self.randomize_cube_y_range = 0.1
 
     from metasim.scenario.cameras import PinholeCameraCfg
 
@@ -392,3 +388,19 @@ class BaseTableHumanoidTaskCfg:
         """Interval in steps for applying random push forces and torques."""
 
     random_push = PushRandomCfg(enabled=False)
+
+    def __post_init__(self):
+        self.command_ranges.wrist_max_radius = 0.15
+        self.command_ranges.l_wrist_pos_x = [-0.05, 0.15]
+        self.command_ranges.l_wrist_pos_y = [-0.05, 0.15]
+        self.command_ranges.l_wrist_pos_z = [-0.15, 0.15]
+        self.command_ranges.r_wrist_pos_x = [-0.05, 0.15]
+        self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
+        self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
+
+        # self.randomize_cube_y_offset = 0.1
+        self.randomize_cube_y_range = 0.2
+
+
+        if self.use_vision:
+            self.ppo_cfg.policy.class_name = "ActorCriticCNN"

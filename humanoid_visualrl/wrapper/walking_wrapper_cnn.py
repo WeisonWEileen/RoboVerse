@@ -31,7 +31,7 @@ class WalkingWrapperCNN(HumanoidBaseWrapper):
 
     def _init_buffers(self):
         super()._init_buffers()
-        self.obs_buf_state = torch.zeros(self.num_envs, self.cfg.num_obs_state, device=self.device)
+        self.obs_buf_state = torch.zeros(self.num_envs, self.cfg.num_observations, device=self.device)
         # self.vision_buf = torch.zeros(self.num_envs, 3, 48, 64, device=self.device)
         self.obs_buf = (self.obs_buf_state, self.vision_buf)
 

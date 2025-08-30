@@ -204,15 +204,15 @@ def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
 
 
 def get_cfg_cls(args: argparse.Namespace):
-    if args.use_vision:
-        from humanoid_visualrl.cfg.humanoidVisualRLVisionCfg import BaseTableHumanoidTaskCfg
-    elif args.use_resnet:
-        from humanoid_visualrl.cfg.humanoidVisualRLCfgResnet import (
-            HumanoidVisualRLCfgResnet as BaseTableHumanoidTaskCfg,
-        )
-    elif args.use_reaching:
-        from humanoid_visualrl.cfg.humanoidReaching import HumanoidReachingCfg as BaseTableHumanoidTaskCfg
-    elif args.use_fixed_reaching:
+    # if args.use_vision:
+    #     from humanoid_visualrl.cfg.humanoidVisualRLVisionCfg import BaseTableHumanoidTaskCfg
+    # elif args.use_resnet:
+    #     from humanoid_visualrl.cfg.humanoidVisualRLCfgResnet import (
+    #         HumanoidVisualRLCfgResnet as BaseTableHumanoidTaskCfg,
+    #     )
+    # elif args.use_reaching:
+    #     from humanoid_visualrl.cfg.humanoidReaching import HumanoidReachingCfg as BaseTableHumanoidTaskCfg
+    if args.use_fixed_reaching:
         from humanoid_visualrl.cfg.humanoidFixedReachingCfg import BaseTableHumanoidTaskCfg as BaseTableHumanoidTaskCfg
     elif args.use_fixed_gazing:
         from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg as BaseTableHumanoidTaskCfg
@@ -221,14 +221,17 @@ def get_cfg_cls(args: argparse.Namespace):
     return BaseTableHumanoidTaskCfg
 
 def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
-    if args.use_resnet:
-        from humanoid_visualrl.wrapper.walking_wrapper_resnet import WalkingWrapperResNet as TaskWrapper
-    elif args.use_vision:
-        from humanoid_visualrl.wrapper.walking_wrapper_cnn import WalkingWrapperCNN as TaskWrapper
-    elif args.use_reaching:
+    # if args.use_resnet: #
+    #     from humanoid_visualrl.wrapper.walking_wrapper_resnet import WalkingWrapperResNet as TaskWrapper
+    # elif args.use_vision: # cnn walking test
+    #     from humanoid_visualrl.wrapper.walking_wrapper_cnn import WalkingWrapperCNN as TaskWrapper
+    if args.use_reaching:
         from humanoid_visualrl.wrapper.reaching_wrapper import ReachingWrapper as TaskWrapper
     elif args.use_fixed_reaching or args.use_fixed_gazing:
-        from humanoid_visualrl.wrapper.fixed_active_vision_wrapper import ActiveVisionWrapper as TaskWrapper
+        if args.use_vision:
+            from humanoid_visualrl.wrapper.fixed_active_vision_wrapper_cnn import ActiveVisionWrapper as TaskWrapper
+        else:
+            from humanoid_visualrl.wrapper.fixed_active_vision_wrapper import ActiveVisionWrapper as TaskWrapper
     else:
         from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
 

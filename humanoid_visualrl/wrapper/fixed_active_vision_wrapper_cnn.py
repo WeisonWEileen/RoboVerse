@@ -1,4 +1,4 @@
-"""A wrapper for fixed upper body and use frozen resnet18 outside the policy class"""
+"""A wrapper for fixed upper body and use cnn inside the policy class"""
 
 # TODO success filter
 # render reset frame to before compute obs
@@ -29,11 +29,19 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.pixel_reward_offset = torch.exp(torch.tensor([-self.cfg.camera.width / 2.0 / 50.0], device=self.device))
 
+        self.sucess_thres = (
+            torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
+        ).item()
 
-        self.sucess_thres = (torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset).item()
+        self._reset(list(range(self.num_envs)))
 
     def _init_buffers(self):
         super()._init_buffers()
+        self.obs_buf_state = torch.zeros(self.num_envs, self.cfg.num_observations, device=self.device)
+        self.vision_buf = torch.zeros(
+            self.num_envs, 3, self.cfg.camera.height, self.cfg.camera.width, device=self.device
+        )
+        self.obs_buf = (self.obs_buf_state, self.vision_buf)
         # self.wrist_pose = torch.zeros(self.num_envs, 2, 7, device=self.device)
 
         height, width = self.cfg.camera.height, self.cfg.camera.width
@@ -43,6 +51,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.arange(height, device=self.device), torch.arange(width, device=self.device), indexing="ij"
         )
 
+        self.cube_pose_buf = self.init_states.objects["cube"].root_state[:, :7].clone()
+
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
         self.cube_pose_buf = tensor_state.objects["cube"].root_state[:, :7]
@@ -51,7 +61,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras[self.cfg.camera.name].rgb
         self.vision_rgb_buf = vision_rgb
-        self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
+        # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
 
         self.vision_seg_buf = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
@@ -175,15 +185,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
-        # tensor_states = self.env.get_states()
-        # wrist_pos = tensor_states.robots[self.robot.name].body_state[:, self.wrist_indices, :7]
-        # diff = wrist_pos - self.ref_wrist_pos
 
-        # ref_wrist_pos_obs = torch.flatten(self.ref_wrist_pos, start_dim=1)  # [num_envs, 14]
-        # wrist_pos_obs = torch.flatten(wrist_pos, start_dim=1)  # [num_envs, 14]
-        # diff_obs = torch.flatten(diff, start_dim=1)  # [num_envs, 14]
-
-        visual_features = self.resnet_features
+        # visual_features = self.resnet_features
         cube_pose_obs = self.cube_pose_buf
 
         self.privileged_obs_buf = torch.cat(
@@ -195,7 +198,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 dq,  # |A|
                 self.actions,  # |A|
                 # diff_obs,
-                visual_features,
+                # visual_features,
             ),
             dim=-1,
         )
@@ -206,7 +209,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 q,  # |A|
                 dq,  # |A|
                 self.actions,
-                visual_features,
+                # visual_features,
             ),
             dim=-1,
         )
@@ -221,7 +224,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
 
-        self.extra_buf["observations"]["critic"] = self.privileged_obs_buf
+        self.obs_buf = (self.obs_buf_state, self.vision_buf)
+
+        self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_buf)
 
     def _pre_reset_hook(self, env_ids=None):
         # randomly set y of cube in range (-randomize_cube_y_range, randomize_cube_y_range)
@@ -229,12 +234,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.rand(len(env_ids), device=self.device) * 2.0 - 1.0
         ) * self.cfg.randomize_cube_y_range
         self.done_buf[env_ids] = False
-        # self.pixel_rewards_buf[env_ids] = 0.0
 
     def _post_reset_hook(self, env_ids):
         self.cube_pose_buf[env_ids] = self.init_states.objects["cube"].root_state[env_ids, :7]
-        # self.resnet_features[env_ids] = torch.zeros(len(env_ids), 512, device=self.device)
-        self.resnet_features[env_ids].zero_()  # inplace 更快
 
     def _check_reset(self):
         # move 0.05 to config
