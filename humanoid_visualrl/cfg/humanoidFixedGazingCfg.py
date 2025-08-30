@@ -259,7 +259,8 @@ class BaseTableHumanoidTaskCfg:
     traj_filepath = None
     """path to the trajectory file"""
     # TODO read form max_episode_length_s and divide s
-    max_episode_length_s: int = 6
+    # max_episode_length_s: int = 6
+    max_episode_length_s: int = 4
     """maximum episode length in seconds"""
     episode_length: int = 2400
     """episode length in steps"""
@@ -327,7 +328,7 @@ class BaseTableHumanoidTaskCfg:
         "torques": -1e-5,
         "dof_vel": -5e-4,
         "dof_acc": -1e-7,
-        "gaze_at_cube": 10,
+        "gaze_at_cube": 25,
     }
 
     frame_stack = 1

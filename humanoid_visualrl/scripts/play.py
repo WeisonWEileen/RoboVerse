@@ -16,6 +16,7 @@ from humanoid_visualrl.utils.utils import (
     get_env_wrapper_cls,
 )
 
+from loguru import logger as log
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 
 
@@ -81,19 +82,24 @@ def play(args):
 
     for i in range(1000):
         # set fixed command
-        if i == 200:
-            env.init_states.objects["cube"].root_state[0, 1] = 2.0
-        elif i == -200:
-            env.init_states.objects["cube"].root_state[0, 1] = 2.0
+        if i == 0:
+            env.init_states.objects["cube"].root_state[0, 1] = -0.15
+            env.env.set_states(env.init_states)
 
-        env.env.set_states(env.init_states)
+        if i == 200:
+            env.init_states.objects["cube"].root_state[0, 1] = 0.15
+            env.env.set_states(env.init_states)
         env.commands[:, 0] = 1.0
         env.commands[:, 1] = 0.0
         env.commands[:, 2] = 0.0
         env.commands[:, 3] = 0.0
 
         actions = policy(obs.detach())
-        obs, _, _, _ = env.step(actions.detach())
+        # print(actions)
+        # breakpoint()
+        # for i in task_cfg.decimation:
+        obs, rewards, dones, infos = env.step(actions.detach())
+        log.info(f"step: {i}")
 
 
 if __name__ == "__main__":

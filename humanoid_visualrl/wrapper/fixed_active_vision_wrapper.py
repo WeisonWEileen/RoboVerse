@@ -29,6 +29,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.pixel_reward_offset = torch.exp(torch.tensor([-self.cfg.camera.width / 2.0 / 50.0], device=self.device))
         self.left_right_flag = 1
 
+
+        self.sucess_thres = (torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset).item()
+
     def _init_buffers(self):
         super()._init_buffers()
         # self.wrist_pose = torch.zeros(self.num_envs, 2, 7, device=self.device)
@@ -105,10 +108,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # 计算距离
             # distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
             # since now we have no pitch dof for waist, we only consider x pixel distance
-            distance = torch.sqrt((center_x - self.image_center_x) ** 2)
+            distance = torch.abs(center_x - self.image_center_x)
 
             # 计算奖励
-            self.pixel_rewards_buf[valid_envs] = torch.exp(-distance / 50.0)
+            self.pixel_rewards_buf[valid_envs] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
             # print(f"rewards: {rewards[0]}")
 
             # 在env 0的图像上绘制坐标点
@@ -167,7 +170,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                             print("OpenCV display window closed by user")
 
         # if pixel distance is less than 10, done
-        self.done_buf = self.pixel_rewards_buf > 0.85
+        self.done_buf = self.pixel_rewards_buf > self.sucess_thres
 
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
@@ -238,7 +241,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _check_reset(self):
         # move 0.05 to config
         terminate = torch.abs(self.cube_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
-        self.reset_buf = self.timeout_buf | terminate | self.done_buf
+        self.reset_buf = self.timeout_buf | terminate
+        # self.reset_buf = self.timeout_buf | terminate | self.done_buf
         return self.reset_buf
 
     # def _reset(self, env_ids=None):
