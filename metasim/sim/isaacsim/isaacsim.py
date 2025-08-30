@@ -347,7 +347,7 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_seg_id2label=instance_seg_id2label,
                 instance_id_seg=instance_id_seg_data,
                 instance_id_seg_id2label=instance_id_seg_id2label,
-                pos=camera_inst.data.pos_w,
+                pos=(camera_inst.data.pos_w - self.scene.env_origins),
                 quat_world=camera_inst.data.quat_w_world,
                 intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
