@@ -184,11 +184,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if pixel distance is less than 10, done
         self.done_buf = self.pixel_rewards_buf > self.sucess_thres
 
-    def _reset(self, env_ids=None):
-        super()._reset(env_ids)
-        # reset vision buf
-        # self.vision_rgb_buf= self.env.scene.sensors[self.cfg.camera.name].data.output["rgb"]
-        # self.vision_seg_buf = self.env.scene.sensors[self.cfg.camera.name].data.output["instance_id_segmentation_fast"]
 
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
@@ -225,8 +220,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         obs_now = obs_buf.clone()
         self.obs_history.append(obs_now)
         self.critic_history.append(self.privileged_obs_buf)
-        obs_buf_all = torch.stack([self.obs_history[i] for i in range(self.obs_history.maxlen)], dim=1)
-        self.obs_buf = obs_buf_all.reshape(self.num_envs, -1)
+        # obs_buf_all = torch.stack([self.obs_history[i] for i in range(self.obs_history.maxlen)], dim=1)
+        self.obs_buf = obs_now.reshape(self.num_envs, -1)
         self.privileged_obs_buf = torch.cat([self.critic_history[i] for i in range(self.cfg.c_frame_stack)], dim=1)
         self.privileged_obs_buf = torch.clip(
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
@@ -245,6 +240,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _post_reset_hook(self, env_ids):
         self.cube_pose_buf[env_ids] = self.init_states.objects["cube"].root_state[env_ids, :7]
+        self.env.scene.sensors["camera_first_person"].update(dt=0)
+        self.env.sim.render()
+        self.vision_rgb_buf[env_ids] = (
+            self.env.scene.sensors["camera_first_person"].data.output["rgb"][env_ids].permute(0, 3, 1, 2).float()
+            / 255.0
+        )
 
     def _check_reset(self):
         # move 0.05 to config

@@ -22,6 +22,7 @@ from metasim.utils.math import quat_rotate_inverse
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
 from humanoid_visualrl.utils.opencv_renderer import OpenCVRenderer
 
+
 class HumanoidBaseWrapper(RslRlWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
 
@@ -62,7 +63,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         torso_names = robot.torso_links
         termination_contact_names = robot.terminate_contacts_links
         penalised_contact_names = robot.penalized_contacts_links
-        
 
         # get sorted indices for specific body links
         self.feet_indices = get_body_reindexed_indices_from_substring(
@@ -409,7 +409,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._physics_step(action)
         self._post_physics_step()
         return self.obs_buf, self.rew_buf, self.reset_buf, self.extra_buf
-    
+
     def _pre_reset_hook(self, env_ids):
         """Hook method for subclasses to add custom logic before resetting."""
         pass
@@ -441,16 +441,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.episode_length_buf[env_ids] = 0
         self.feet_air_time[env_ids] = 0.0
 
-        # 
+        #
         self.dof_pos[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids]
         self.dof_vel[env_ids] = 0.0
 
-
-
         self._post_reset_hook(env_ids)
 
-
-        
         self.base_quat[env_ids] = (
             torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device, dtype=torch.float32)
             .unsqueeze(0)
@@ -535,9 +531,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             )
             tensor_states.robots[self.robot.name].root_state[:, 10:13] = self.rand_push_torque
 
-
-    
-
     def _update_marker_viz(self):
         # convert to world frame
         world_pos = self.ref_wrist_pos[:, :, :3] + self._env_origins[:, None, :3]
@@ -545,8 +538,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         ori = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).repeat(pos.shape[0], 1)
         idx = torch.zeros(pos.shape[0], dtype=torch.long, device=self.device)
         self.marker_viz.visualize(pos, ori, marker_indices=idx)
-
-   
 
     def _get_phase(
         self,
