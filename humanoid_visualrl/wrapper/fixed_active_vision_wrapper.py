@@ -29,8 +29,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.pixel_reward_offset = torch.exp(torch.tensor([-self.cfg.camera.width / 2.0 / 50.0], device=self.device))
 
-
-        self.sucess_thres = (torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset).item()
+        self.sucess_thres = (
+            torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
+        ).item()
 
     def _init_buffers(self):
         super()._init_buffers()

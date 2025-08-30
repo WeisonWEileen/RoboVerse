@@ -445,6 +445,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.dof_pos[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids]
         self.dof_vel[env_ids] = 0.0
 
+
+
         self._post_reset_hook(env_ids)
 
 

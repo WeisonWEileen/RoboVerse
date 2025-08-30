@@ -1,6 +1,7 @@
 """A wrapper for fixed upper body and use cnn inside the policy class"""
 
 # TODO success filter
+# TODO add vision buf into HumanoidBaseWrapper
 # render reset frame to before compute obs
 from __future__ import annotations
 import numpy as np
@@ -10,6 +11,8 @@ from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCf
 from metasim.types import TensorState
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
+
+import cv2
 
 
 class ActiveVisionWrapper(HumanoidBaseWrapper):
@@ -38,10 +41,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _init_buffers(self):
         super()._init_buffers()
         self.obs_buf_state = torch.zeros(self.num_envs, self.cfg.num_observations, device=self.device)
-        self.vision_buf = torch.zeros(
+        self.vision_rgb_buf = torch.zeros(
             self.num_envs, 3, self.cfg.camera.height, self.cfg.camera.width, device=self.device
         )
-        self.obs_buf = (self.obs_buf_state, self.vision_buf)
+        self.obs_buf = (self.obs_buf_state, self.vision_rgb_buf)
         # self.wrist_pose = torch.zeros(self.num_envs, 2, 7, device=self.device)
 
         height, width = self.cfg.camera.height, self.cfg.camera.width
@@ -60,7 +63,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras[self.cfg.camera.name].rgb
-        self.vision_rgb_buf = vision_rgb
+        self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2).float() / 255.0
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
 
@@ -135,9 +138,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     center_y_0 = int(center_y[env_0_pos].item())
 
                     # 获取env 0的RGB图像并转换为numpy格式用于绘制
-                    import cv2
 
-                    rgb_image = self.vision_rgb_buf[0].cpu().numpy()  # shape: (H, W, C)
+                    rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
 
                     # 确保图像是uint8格式
                     if rgb_image.dtype != np.uint8:
@@ -182,6 +184,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if pixel distance is less than 10, done
         self.done_buf = self.pixel_rewards_buf > self.sucess_thres
 
+    def _reset(self, env_ids=None):
+        super()._reset(env_ids)
+        # reset vision buf
+        # self.vision_rgb_buf= self.env.scene.sensors[self.cfg.camera.name].data.output["rgb"]
+        # self.vision_seg_buf = self.env.scene.sensors[self.cfg.camera.name].data.output["instance_id_segmentation_fast"]
+
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
@@ -224,9 +232,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
 
-        self.obs_buf = (self.obs_buf_state, self.vision_buf)
+        self.obs_buf = (self.obs_buf_state, self.vision_rgb_buf)
 
-        self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_buf)
+        self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
 
     def _pre_reset_hook(self, env_ids=None):
         # randomly set y of cube in range (-randomize_cube_y_range, randomize_cube_y_range)
