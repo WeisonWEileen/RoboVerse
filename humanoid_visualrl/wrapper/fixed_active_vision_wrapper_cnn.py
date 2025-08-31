@@ -13,6 +13,7 @@ from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 
 import cv2
+from metasim.utils.math import quat_apply
 
 
 class ActiveVisionWrapper(HumanoidBaseWrapper):
@@ -184,7 +185,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if pixel distance is less than 10, done
         self.done_buf = self.pixel_rewards_buf > self.sucess_thres
 
-
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
@@ -289,8 +289,44 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             dim=1,
         )
 
-    def _reward_gaze_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    def _reward_pixel_norm_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for gazing at the cube."""
 
         # return self.pixel_rewards_buf - self.pixel_reward_offset
         return self.pixel_rewards_buf
+
+    def _reward_look_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for looking at the cube."""
+        # 获取相机的世界坐标位置 (num_envs, 3)
+        camera_pos = tensor_state.cameras[self.cfg.camera.name].pos
+
+        # 获取立方体的世界坐标位置 (num_envs, 3)
+        cube_pos = tensor_state.objects["cube"].root_state[:, :3]
+
+        # 计算从相机到立方体的方向向量 (num_envs, 3)
+        direction_vec = cube_pos - camera_pos
+        direction_vec = direction_vec / (torch.norm(direction_vec, dim=1, keepdim=True) + 1e-8)  # 归一化
+
+        # 获取相机的朝向向量 (num_envs, 3)
+        # 相机的朝向通常是+X方向（根据CameraState的注释）
+        camera_quat = tensor_state.cameras[self.cfg.camera.name].quat_world  # (num_envs, 4) - (w, x, y, z)
+        # 将相机的+X轴方向向量转换到世界坐标系
+        camera_forward = torch.tensor([1.0, 0.0, 0.0], device=self.device).expand(self.num_envs, 3)
+        camera_vec = quat_apply(camera_quat, camera_forward)  # 应用四元数旋转
+
+        # 计算两个向量的点积，得到相似度 (num_envs,)
+        dot_product = torch.sum(direction_vec * camera_vec, dim=1)
+
+        # 将点积转换为奖励 - 当相机完全对准立方体时点积为1，奖励最大
+        # 使用平滑的奖励函数：当dot_product接近1时奖励接近1
+        reward = torch.clamp(dot_product, min=0.0)  # 只考虑正向的对准
+
+        return reward
+
+    def _update_marker_viz(self, position : torch.Tensor, orientation : torch.Tensor):
+        # cupdate
+        world_pos = position + self._env_origins[:, None, :3]
+        pos = world_pos.reshape(-1, 3)
+        ori = orientation.repeat(pos.shape[0], 1)
+        idx = torch.zeros(pos.shape[0], dtype=torch.long, device=self.device)
+        self.marker_viz.visualize(pos, ori, marker_indices=idx)

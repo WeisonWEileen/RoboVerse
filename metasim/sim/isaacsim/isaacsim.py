@@ -26,7 +26,7 @@ from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 class IsaacsimHandler(BaseSimHandler):
     """
@@ -856,12 +856,17 @@ class IsaacsimHandler(BaseSimHandler):
 
         marker_cfg = VisualizationMarkersCfg(
             prim_path="/Visuals/myMarkers",
-            markers={
-                "sphere": sim_utils.SphereCfg(
-                    radius=0.05,
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
+                markers={
+                # "sphere": sim_utils.SphereCfg(
+                #     radius=0.05,
+                #     visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),),
+                "arrow_x":  sim_utils.UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                    scale=(1.0, 0.5, 0.5),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)
                 ),
-            },
+            )
+        }
         )
         self._marker_viz = VisualizationMarkers(marker_cfg)
         return self._marker_viz

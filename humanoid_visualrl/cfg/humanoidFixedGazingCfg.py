@@ -328,7 +328,8 @@ class BaseTableHumanoidTaskCfg:
         "torques": -1e-5,
         "dof_vel": -5e-4,
         "dof_acc": -1e-7,
-        "gaze_at_cube": 25,
+        "pixel_norm_at_cube": 25,
+        "look_at_cube": 25,
     }
 
     frame_stack = 1
@@ -338,9 +339,9 @@ class BaseTableHumanoidTaskCfg:
     visual_dim: int = 512
 
     if use_vision:
-        num_single_obs = num_actions * 3 
+        num_single_obs = num_actions * 3
         num_observations: int = int(frame_stack * num_single_obs)
-        single_num_privileged_obs: int =  num_actions * 3 + 7 
+        single_num_privileged_obs: int = num_actions * 3 + 7
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
     else:
         num_single_obs = num_actions * 3 + visual_dim
@@ -355,7 +356,6 @@ class BaseTableHumanoidTaskCfg:
     action_scale = 0.25
 
     task_name = "fixed_gazing"
-
 
     from metasim.scenario.cameras import PinholeCameraCfg
 
@@ -400,7 +400,6 @@ class BaseTableHumanoidTaskCfg:
 
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_y_range = 0.2
-
 
         if self.use_vision:
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"

@@ -8,6 +8,7 @@ import torch
 
 from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg
 from metasim.types import TensorState
+from metasim.utils.math import quat_apply
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 
@@ -279,8 +280,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             dim=1,
         )
 
-    def _reward_gaze_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    def _reward_pixel_norm_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for gazing at the cube."""
-
         # return self.pixel_rewards_buf - self.pixel_reward_offset
         return self.pixel_rewards_buf
+

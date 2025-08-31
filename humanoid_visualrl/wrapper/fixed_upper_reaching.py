@@ -110,7 +110,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
 
     def _update_marker_viz(self):
-        # convert to world frame
+        # cupdate 
         world_pos = self.ref_wrist_pos[:, :, :3] + self._env_origins[:, None, :3]
         pos = world_pos.reshape(-1, 3)
         ori = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).repeat(pos.shape[0], 1)
