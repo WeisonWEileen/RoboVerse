@@ -27,6 +27,7 @@ from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
+
 class IsaacsimHandler(BaseSimHandler):
     """
     Handler for Isaac Lab simulation environment.
@@ -669,7 +670,9 @@ class IsaacsimHandler(BaseSimHandler):
 
     def _load_lights(self) -> None:
         import isaaclab.sim as sim_utils
+        from isaaclab.assets import AssetBaseCfg
         from isaaclab.sim.spawners import spawn_light
+        from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
         from metasim.scenario.lights import (
             CylinderLightCfg,
@@ -678,9 +681,6 @@ class IsaacsimHandler(BaseSimHandler):
             DomeLightCfg,
             SphereLightCfg,
         )
-
-        from isaaclab.assets import AssetBaseCfg
-        from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
         sky_light = AssetBaseCfg(
             prim_path="/World/skyLight",
@@ -1007,7 +1007,7 @@ class IsaacsimHandler(BaseSimHandler):
         camera_inst = TiledCamera(
             TiledCameraCfg(
                 # update_period
-                # TODO: check necessary and performance 
+                # TODO: check necessary and performance
                 # update_period=self.physics_dt * self.scenario.decimation,
                 prim_path=prim_path,
                 offset=offset,
@@ -1022,7 +1022,7 @@ class IsaacsimHandler(BaseSimHandler):
                 height=camera.height,
                 colorize_instance_segmentation=False,
                 colorize_instance_id_segmentation=False,
-                update_latest_camera_pose = True,
+                update_latest_camera_pose=True,
             )
         )
         self.scene.sensors[camera.name] = camera_inst

@@ -3,8 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""
-This script demonstrates how to add and simulate on-board sensors for a robot.
+"""This script demonstrates how to add and simulate on-board sensors for a robot.
 
 We add the following sensors on the quadruped robot, ANYmal-C (ANYbotics):
 
@@ -39,9 +38,8 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import torch
-
 import isaaclab.sim as sim_utils
+import torch
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
 from isaaclab.sensors import CameraCfg, ContactSensorCfg, RayCasterCfg, patterns
@@ -155,7 +153,6 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
 
 def main():
     """Main function."""
-
     # Initialize the simulation context
     sim_cfg = sim_utils.SimulationCfg(dt=0.005, device=args_cli.device)
     sim = sim_utils.SimulationContext(sim_cfg)

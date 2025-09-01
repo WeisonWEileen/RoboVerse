@@ -1,12 +1,14 @@
+import copy
+from typing import Literal
+
 import numpy as np
 import torch
+import tyro
 from loguru import logger as log
 
 from metasim.sim.base import BaseSimHandler
-import copy
-from typing import Literal
-import tyro
 from metasim.utils import configclass
+
 
 def get_body_reindexed_indices_from_substring(
     sim_handler: BaseSimHandler, obj_name: str, body_names: list[str], device
@@ -185,13 +187,14 @@ def sample_wp(device, num_points, num_wp, ranges):
 
 
 import argparse
-from metasim.scenario.scenario import ScenarioCfg
 import datetime
 import os
 
+from metasim.scenario.scenario import ScenarioCfg
+
+
 def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     """Get the log directory."""
-
     robot_name = args.robot
     task_name = scenario.task.task_name
     task_name = f"{robot_name}_{task_name}"
@@ -220,6 +223,7 @@ def get_cfg_cls(args: argparse.Namespace):
         from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
     return BaseTableHumanoidTaskCfg
 
+
 def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
     # if args.use_resnet: #
     #     from humanoid_visualrl.wrapper.walking_wrapper_resnet import WalkingWrapperResNet as TaskWrapper
@@ -240,9 +244,9 @@ def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
 
     return env
 
+
 def get_load_root_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     """Get the root directory to load the model from."""
-
     robot_name = args.robot
     task_name = scenario.task.task_name
     task_name = f"{robot_name}_{task_name}"
@@ -259,9 +263,9 @@ def get_export_jit_path(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     os.makedirs(exported_root_dir, exist_ok=True)
     return f"{load_root}/exported/model_exported_jit.pt"
 
+
 def get_load_path(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     """Get the path to load the model from."""
-
     load_root = get_load_root_dir(args, scenario)
     if args.checkpoint == -1:
         models = [file for file in os.listdir(load_root) if "model" in file]
@@ -271,6 +275,7 @@ def get_load_path(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     else:
         load_path = f"{load_root}/{args.checkpoint}"
     return load_path
+
 
 def export_policy_as_jit(actor_critic, path, filename=None):
     """Export the policy as a JIT model."""

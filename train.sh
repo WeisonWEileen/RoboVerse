@@ -26,4 +26,3 @@ python ./humanoid_visualrl/scripts/train.py \
 #     --robot g1_static \
 #     --enable_opencv_display \
 #     --wandb
-

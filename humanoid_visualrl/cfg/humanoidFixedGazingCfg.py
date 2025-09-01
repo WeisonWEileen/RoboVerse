@@ -7,13 +7,12 @@ from typing import Callable
 
 import torch
 
+from metasim.constants import PhysicStateType
+from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.types import TensorState
 from metasim.utils import configclass
-
-from metasim.scenario.objects import PrimitiveCubeCfg
-from metasim.constants import PhysicStateType
 
 
 @configclass

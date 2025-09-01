@@ -4,17 +4,16 @@
 # TODO add vision buf into HumanoidBaseWrapper
 # render reset frame to before compute obs
 from __future__ import annotations
+
+import cv2
 import numpy as np
 import torch
 
 from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg
-from metasim.types import TensorState
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
-
-import cv2
+from metasim.types import TensorState
 from metasim.utils.math import quat_apply
-from loguru import logger as log
 
 
 class ActiveVisionWrapper(HumanoidBaseWrapper):

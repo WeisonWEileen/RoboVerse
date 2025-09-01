@@ -8,19 +8,18 @@ from copy import deepcopy
 import numpy as np
 import torch
 
-from metasim.utils.math import quat_apply
 from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
+from humanoid_visualrl.utils.opencv_renderer import OpenCVRenderer
 from humanoid_visualrl.utils.utils import (
     get_body_reindexed_indices_from_substring,
-    get_joint_reindexed_indices_from_substring,
     get_euler_xyz_tensor,
+    get_joint_reindexed_indices_from_substring,
     torch_rand_float,
 )
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
-from metasim.utils.math import quat_rotate_inverse
+from metasim.utils.math import quat_apply, quat_rotate_inverse
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
-from humanoid_visualrl.utils.opencv_renderer import OpenCVRenderer
 
 
 class HumanoidBaseWrapper(RslRlWrapper):
