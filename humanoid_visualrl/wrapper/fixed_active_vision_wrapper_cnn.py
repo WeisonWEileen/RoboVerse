@@ -1,4 +1,4 @@
-"""A wrapper for fixed upper body and use cnn inside the policy class"""
+"""A wrapper for fixed upper body and use cnn inside the policy class."""
 
 # TODO success filter
 # TODO add vision buf into HumanoidBaseWrapper
@@ -14,6 +14,7 @@ from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 
 import cv2
 from metasim.utils.math import quat_apply
+from loguru import logger as log
 
 
 class ActiveVisionWrapper(HumanoidBaseWrapper):
@@ -28,7 +29,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.image_center_x = self.cfg.camera.width / 2
         self.image_center_y = self.cfg.camera.height / 2
         self.done_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
-        # self.marker_viz = self.env.init_marker_viz()
+        self.marker_viz = self.env.init_marker_viz()
         self.feature_extractor = Reset18Extractor(device=self.device)
 
         self.pixel_reward_offset = torch.exp(torch.tensor([-self.cfg.camera.width / 2.0 / 50.0], device=self.device))
@@ -86,14 +87,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
         #     # Use the original uint8 RGB image for display (before normalization)
         #     # vision_rgb is in format (batch_size, height, width, channels)
-        #     display_image = vision_rgb[0]  # Take first environment
+        #     display_image = vision_rgb[0].cpu().numpy()  # Take first environment
 
         #     # Display the image and check if window is still open
+
         #     window_open = self.opencv_renderer.display(display_image)
         #     if not window_open:
         #         # User closed the window, disable further display
         #         self.enable_opencv_display = False
-        #         print("OpenCV display window closed by user")
+        #         log.info("OpenCV display window closed by user")
 
     def _compute_pixel_distance(self):
         target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
@@ -291,7 +293,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _reward_pixel_norm_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for gazing at the cube."""
-
         # return self.pixel_rewards_buf - self.pixel_reward_offset
         return self.pixel_rewards_buf
 
@@ -321,12 +322,79 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 使用平滑的奖励函数：当dot_product接近1时奖励接近1
         reward = torch.clamp(dot_product, min=0.0)  # 只考虑正向的对准
 
+        self._update_marker_viz(camera_pos, camera_quat, direction_vec)
+
         return reward
 
-    def _update_marker_viz(self, position : torch.Tensor, orientation : torch.Tensor):
+    def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
         # cupdate
-        world_pos = position + self._env_origins[:, None, :3]
-        pos = world_pos.reshape(-1, 3)
-        ori = orientation.repeat(pos.shape[0], 1)
-        idx = torch.zeros(pos.shape[0], dtype=torch.long, device=self.device)
-        self.marker_viz.visualize(pos, ori, marker_indices=idx)
+        world_pos = position + self._env_origins[:, :3]
+        # move up  0.5 to be clear to see
+        world_pos[:, 2] += 0.5
+        pos = world_pos
+
+        # 准备两组标记：相机方向（蓝色）和指向立方体的方向（红色）
+        # 相机方向使用 camera_quat
+        camera_ori = orientation.repeat(pos.shape[0], 1)
+
+        # 指向立方体的方向：从 direction_vec 创建四元数
+        # direction_vec 已经是归一化的，我们需要将其转换为四元数
+        # 假设默认方向是 +X 轴，计算从 +X 轴到 direction_vec 的旋转四元数
+        default_forward = torch.tensor([1.0, 0.0, 0.0], device=self.device).expand(self.num_envs, 3)
+
+        # 计算旋转轴 (cross product)
+        cross = torch.cross(default_forward, direction_vec, dim=1)
+        # 计算旋转角度 (dot product)
+        dot = torch.sum(default_forward * direction_vec, dim=1)
+
+        # 处理平行向量的情况
+        cross_norm = torch.norm(cross, dim=1, keepdim=True)
+        cross_normalized = cross / (cross_norm + 1e-8)
+
+        # 计算四元数的 sin(θ/2) 和 cos(θ/2)
+        # θ = arccos(dot), 所以 cos(θ/2) = sqrt((1 + cos(θ))/2), sin(θ/2) = sqrt((1 - cos(θ))/2)
+        cos_half_angle = torch.sqrt((1 + dot) / 2).unsqueeze(1)
+        sin_half_angle = torch.sqrt((1 - dot) / 2).unsqueeze(1)
+
+        # 构建四元数 [w, x, y, z]
+        direction_quat = torch.cat(
+            [
+                cos_half_angle,  # w
+                cross_normalized * sin_half_angle,  # x, y, z
+            ],
+            dim=1,
+        )
+
+        # 处理完全相反的向量情况 (dot ≈ -1)
+        opposite_mask = dot < -0.999
+        if opposite_mask.any():
+            # 选择一个垂直轴进行180度旋转
+            perp_axis = torch.zeros_like(direction_vec)
+            perp_axis[opposite_mask, 1] = 1.0  # 使用Y轴
+            direction_quat[opposite_mask] = torch.cat(
+                [
+                    torch.zeros(opposite_mask.sum(), 1, device=self.device),  # w = 0 (180度旋转)
+                    perp_axis[opposite_mask],  # x, y, z
+                ],
+                dim=1,
+            )
+
+        # 处理完全相同的向量情况 (dot ≈ 1)
+        same_mask = dot > 0.999
+        if same_mask.any():
+            direction_quat[same_mask] = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).expand(
+                same_mask.sum(), 4
+            )
+
+        direction_ori = direction_quat.repeat(pos.shape[0], 1)
+
+        # 创建标记索引：0 表示相机方向（蓝色），1 表示指向立方体的方向（红色）
+        camera_idx = torch.zeros(pos.shape[0], dtype=torch.long, device=self.device)
+        direction_idx = torch.ones(pos.shape[0], dtype=torch.long, device=self.device)
+
+        # 合并位置、方向和索引
+        all_pos = torch.cat([pos, pos], dim=0)  # 每个位置重复两次
+        all_ori = torch.cat([camera_ori, direction_ori], dim=0)  # 相机方向 + 指向立方体方向
+        all_idx = torch.cat([camera_idx, direction_idx], dim=0)  # 0 = 蓝色, 1 = 红色
+
+        self.marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)

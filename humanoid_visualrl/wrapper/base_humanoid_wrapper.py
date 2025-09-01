@@ -40,7 +40,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._init_buffers()
 
         # tensor_state = self.env.get_states()
-        self.marker_viz = self.env.init_marker_viz()
 
         # Initialize OpenCV renderer for real-time visualization
         self.enable_opencv_display = enable_opencv_display
@@ -94,7 +93,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         )
 
         # TODO fix this
-        self.env._load_contact_sensor_idx()
+        # self.env._load_contact_sensor_idx()
 
     def _parse_cfg(self, scenario):
         super()._parse_cfg(scenario)

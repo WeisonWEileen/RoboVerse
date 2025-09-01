@@ -232,11 +232,12 @@ def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
             from humanoid_visualrl.wrapper.fixed_active_vision_wrapper_cnn import ActiveVisionWrapper as TaskWrapper
         else:
             from humanoid_visualrl.wrapper.fixed_active_vision_wrapper import ActiveVisionWrapper as TaskWrapper
+        env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
     else:
         from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
 
-    env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
-    
+        env = TaskWrapper(scenario)
+
     return env
 
 def get_load_root_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:

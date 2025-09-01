@@ -26,7 +26,6 @@ from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 class IsaacsimHandler(BaseSimHandler):
     """
@@ -626,7 +625,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.sensors["contact_sensor"] = self.contact_sensor
 
     def _load_contact_sensor_idx(self) -> None:
-        return
+        # return
         # the order parsed differs from the order in the urdf
         body_names = self.robots[0].body_names
 
@@ -853,20 +852,22 @@ class IsaacsimHandler(BaseSimHandler):
         """Define markers with various different shapes."""
         import isaaclab.sim as sim_utils
         from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+        from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
         marker_cfg = VisualizationMarkersCfg(
             prim_path="/Visuals/myMarkers",
-                markers={
-                # "sphere": sim_utils.SphereCfg(
-                #     radius=0.05,
-                #     visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),),
-                "arrow_x":  sim_utils.UsdFileCfg(
+            markers={
+                "arrow_a": sim_utils.UsdFileCfg(
                     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-                    scale=(1.0, 0.5, 0.5),
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)
+                    scale=(0.1, 0.1, 0.25),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)),
                 ),
-            )
-        }
+                "arrow_b": sim_utils.UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                    scale=(0.1, 0.1, 0.25),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 0.5, 1.0)),
+                ),
+            },
         )
         self._marker_viz = VisualizationMarkers(marker_cfg)
         return self._marker_viz
@@ -1005,6 +1006,9 @@ class IsaacsimHandler(BaseSimHandler):
 
         camera_inst = TiledCamera(
             TiledCameraCfg(
+                # update_period
+                # TODO: check necessary and performance 
+                # update_period=self.physics_dt * self.scenario.decimation,
                 prim_path=prim_path,
                 offset=offset,
                 data_types=[data_type_map[dt] for dt in camera.data_types],
@@ -1018,6 +1022,7 @@ class IsaacsimHandler(BaseSimHandler):
                 height=camera.height,
                 colorize_instance_segmentation=False,
                 colorize_instance_id_segmentation=False,
+                update_latest_camera_pose = True,
             )
         )
         self.scene.sensors[camera.name] = camera_inst
