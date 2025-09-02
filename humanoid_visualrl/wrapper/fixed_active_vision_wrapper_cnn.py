@@ -82,18 +82,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         #     vision_rgb = None
 
         # Display image in OpenCV window if enabled
-        if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
-            # Use the original uint8 RGB image for display (before normalization)
-            # vision_rgb is in format (batch_size, height, width, channels)
-            display_image = vision_rgb[0].cpu().numpy()  # Take first environment
+        # if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
+        #     # Use the original uint8 RGB image for display (before normalization)
+        #     # vision_rgb is in format (batch_size, height, width, channels)
+        #     display_image = vision_rgb[0].cpu().numpy()  # Take first environment
 
-            # Display the image and check if window is still open
+        #     # Display the image and check if window is still open
 
-            window_open = self.opencv_renderer.display(display_image)
-            if not window_open:
-                # User closed the window, disable further display
-                self.enable_opencv_display = False
-                log.info("OpenCV display window closed by user")
+        #     window_open = self.opencv_renderer.display(display_image)
+        #     if not window_open:
+        #         # User closed the window, disable further display
+        #         self.enable_opencv_display = False
+        #         log.info("OpenCV display window closed by user")
 
     def _compute_pixel_distance(self):
         target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
@@ -320,7 +320,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 使用平滑的奖励函数：当dot_product接近1时奖励接近1
         reward = torch.clamp(dot_product, min=0.0)  # 只考虑正向的对准
 
-        self._update_marker_viz(camera_pos, camera_quat, direction_vec)
+        # self._update_marker_viz(camera_pos, camera_quat, direction_vec)
 
         return reward
 
@@ -329,7 +329,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # world_pos = position + self._env_origins[:, :3]
         world_pos = position + self._env_origins[:, :3]
         # move up  0.5 to be clear to see
-        # world_pos[:, 2] += 0.5
+        world_pos[:, 2] -= 0.7
         pos = world_pos
 
         # 准备两组标记：相机方向（蓝色）和指向立方体的方向（红色）
