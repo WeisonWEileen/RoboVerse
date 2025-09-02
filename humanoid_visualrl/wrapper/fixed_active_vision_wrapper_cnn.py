@@ -14,7 +14,7 @@ from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 from metasim.types import TensorState
 from metasim.utils.math import quat_apply
-
+from loguru import logger as log
 
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
@@ -28,7 +28,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.image_center_x = self.cfg.camera.width / 2
         self.image_center_y = self.cfg.camera.height / 2
         self.done_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
-        self.marker_viz = self.env.init_marker_viz()
         self.feature_extractor = Reset18Extractor(device=self.device)
 
         self.pixel_reward_offset = torch.exp(torch.tensor([-self.cfg.camera.width / 2.0 / 50.0], device=self.device))
@@ -83,18 +82,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         #     vision_rgb = None
 
         # Display image in OpenCV window if enabled
-        # if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
-        #     # Use the original uint8 RGB image for display (before normalization)
-        #     # vision_rgb is in format (batch_size, height, width, channels)
-        #     display_image = vision_rgb[0].cpu().numpy()  # Take first environment
+        if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
+            # Use the original uint8 RGB image for display (before normalization)
+            # vision_rgb is in format (batch_size, height, width, channels)
+            display_image = vision_rgb[0].cpu().numpy()  # Take first environment
 
-        #     # Display the image and check if window is still open
+            # Display the image and check if window is still open
 
-        #     window_open = self.opencv_renderer.display(display_image)
-        #     if not window_open:
-        #         # User closed the window, disable further display
-        #         self.enable_opencv_display = False
-        #         log.info("OpenCV display window closed by user")
+            window_open = self.opencv_renderer.display(display_image)
+            if not window_open:
+                # User closed the window, disable further display
+                self.enable_opencv_display = False
+                log.info("OpenCV display window closed by user")
 
     def _compute_pixel_distance(self):
         target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
@@ -327,9 +326,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
         # cupdate
+        # world_pos = position + self._env_origins[:, :3]
         world_pos = position + self._env_origins[:, :3]
         # move up  0.5 to be clear to see
-        world_pos[:, 2] += 0.5
+        # world_pos[:, 2] += 0.5
         pos = world_pos
 
         # 准备两组标记：相机方向（蓝色）和指向立方体的方向（红色）
@@ -396,4 +396,4 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         all_ori = torch.cat([camera_ori, direction_ori], dim=0)  # 相机方向 + 指向立方体方向
         all_idx = torch.cat([camera_idx, direction_idx], dim=0)  # 0 = 蓝色, 1 = 红色
 
-        self.marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)
+        self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)

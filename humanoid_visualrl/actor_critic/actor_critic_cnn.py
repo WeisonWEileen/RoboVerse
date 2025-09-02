@@ -77,18 +77,17 @@ class ActorCriticCNN(nn.Module):
         # )
 
         self.vision_encoder = nn.Sequential(
-        nn.Conv2d(3, 64, kernel_size=8, stride=4),   # (96×128) → (23×31), C=64
-        nn.ReLU(inplace=True),
-        nn.Conv2d(64, 128, kernel_size=4, stride=2), # (23×31) → (10×14), C=128
-        nn.ReLU(inplace=True),
-        nn.Conv2d(128, 64, kernel_size=3, stride=1), # (10×14) → (8×12),  C=64
-        nn.ReLU(inplace=True),
-
-        # ↓↓↓ 新增 ↓↓↓
-        nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=64
-        nn.Flatten(),                  # (B, 64)
-        nn.Linear(64, 512),            # 压缩 / 投影到 512 维
-        nn.ReLU(inplace=True),
+            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
+            nn.ReLU(inplace=True),
+            # ↓↓↓ 新增 ↓↓↓
+            nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=64
+            nn.Flatten(),  # (B, 64)
+            nn.Linear(64, 512),  # 压缩 / 投影到 512 维
+            nn.ReLU(inplace=True),
         )
 
         # FIXME hard code here
@@ -201,7 +200,8 @@ class ActorCriticCNN(nn.Module):
 
     def evaluate(self, critic_observations, **kwargs):
         state, vision = critic_observations
-        vision_fea = self.vision_encoder(vision)
+        with torch.no_grad():
+            vision_fea = self.vision_encoder(vision)
         inputs = torch.cat([state, vision_fea], dim=-1)
         if self.obs_context_len != 1:
             inputs = inputs[..., -1, :]
