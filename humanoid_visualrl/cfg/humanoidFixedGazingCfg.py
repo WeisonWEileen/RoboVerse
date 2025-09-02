@@ -332,7 +332,7 @@ class BaseTableHumanoidTaskCfg:
     }
 
     frame_stack = 1
-    c_frame_stack = 3
+    c_frame_stack = 1
 
     # obs
     visual_dim: int = 512

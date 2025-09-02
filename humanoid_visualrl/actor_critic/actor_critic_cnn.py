@@ -28,7 +28,7 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-import numpy as np
+# import numpy as np
 
 import torch
 import torch.nn as nn
@@ -177,7 +177,8 @@ class ActorCriticCNN(nn.Module):
 
     def act(self, observations, **kwargs):
         state, vision = observations
-        vision_fea = self.vision_encoder(vision)
+        with torch.no_grad():
+            vision_fea = self.vision_encoder(vision)
         inputs = torch.cat([state, vision_fea], dim=-1)
         if self.obs_context_len != 1:
             inputs = inputs[..., -1, :]
@@ -200,8 +201,8 @@ class ActorCriticCNN(nn.Module):
 
     def evaluate(self, critic_observations, **kwargs):
         state, vision = critic_observations
-        with torch.no_grad():
-            vision_fea = self.vision_encoder(vision)
+        # with torch.no_grad():
+        vision_fea = self.vision_encoder(vision)
         inputs = torch.cat([state, vision_fea], dim=-1)
         if self.obs_context_len != 1:
             inputs = inputs[..., -1, :]

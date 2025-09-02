@@ -94,7 +94,10 @@ def play(args):
         env.commands[:, 2] = 0.0
         env.commands[:, 3] = 0.0
 
-        actions = policy(obs.detach())
+        if args.use_vision:
+            actions = policy(obs)
+        else:
+            actions = policy(obs.detach())
         # print(actions)
         # breakpoint()
         # for i in task_cfg.decimation:
