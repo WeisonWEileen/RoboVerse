@@ -16,6 +16,9 @@ from metasim.types import TensorState
 from metasim.utils.math import quat_apply
 from loguru import logger as log
 
+from metasim.utils.dict import deep_get
+
+
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
 
@@ -38,6 +41,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self._reset(list(range(self.num_envs)))
 
+        # get segmatic id
+        # tensor_state = self.env.get_states()
+    # TODO hard code for now
+        self.target_id = 2
+
     def _init_buffers(self):
         super()._init_buffers()
         self.obs_buf_state = torch.zeros(self.num_envs, self.cfg.num_observations, device=self.device)
@@ -56,6 +64,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.cube_pose_buf = self.init_states.objects["cube"].root_state[:, :7].clone()
 
+        self.vision_seg_buf = torch.zeros(self.num_envs, self.cfg.camera.height, self.cfg.camera.width, device=self.device, dtype=torch.int32)
+
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
         self.cube_pose_buf = tensor_state.objects["cube"].root_state[:, :7]
@@ -67,7 +77,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
 
-        self.vision_seg_buf = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
+        self.vision_seg_buf = tensor_state.cameras[self.cfg.camera.name].semantic_seg_data
         self.vision_seg_info = tensor_state.cameras[self.cfg.camera.name].instance_id_seg_id2label
 
         self._compute_pixel_distance()
@@ -82,24 +92,24 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         #     vision_rgb = None
 
         # Display image in OpenCV window if enabled
-        # if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
-        #     # Use the original uint8 RGB image for display (before normalization)
-        #     # vision_rgb is in format (batch_size, height, width, channels)
-        #     display_image = vision_rgb[0].cpu().numpy()  # Take first environment
+        if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
+            # Use the original uint8 RGB image for display (before normalization)
+            # vision_rgb is in format (batch_size, height, width, channels)
+            display_image = vision_rgb[0].cpu().numpy()  # Take first environment
 
-        #     # Display the image and check if window is still open
+            # Display the image and check if window is still open
 
-        #     window_open = self.opencv_renderer.display(display_image)
-        #     if not window_open:
-        #         # User closed the window, disable further display
-        #         self.enable_opencv_display = False
-        #         log.info("OpenCV display window closed by user")
+            window_open = self.opencv_renderer.display(display_image)
+            if not window_open:
+                # User closed the window, disable further display
+                self.enable_opencv_display = False
+                log.info("OpenCV display window closed by user")
 
     def _compute_pixel_distance(self):
-        target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
+        # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
 
         # 创建掩码：shape (num_envs, height, width)
-        mask = self.vision_seg_buf == target_id
+        mask = (self.vision_seg_buf == self.target_id)
 
         # 为每个环境计算加权中心点
         self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
@@ -129,61 +139,61 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # print(f"rewards: {rewards[0]}")
 
             # 在env 0的图像上绘制坐标点
-            if 0 in torch.where(valid_envs)[0] and self.enable_opencv_display:
-                # 找到env 0在valid_envs中的索引
-                env_0_idx = torch.where(valid_envs)[0] == 0
-                if env_0_idx.any():
-                    env_0_pos = torch.where(env_0_idx)[0][0]
-                    # 获取env 0的中心点坐标
-                    center_x_0 = int(center_x[env_0_pos].item())
-                    center_y_0 = int(center_y[env_0_pos].item())
+        #     if 0 in torch.where(valid_envs)[0] and self.enable_opencv_display:
+        #         # 找到env 0在valid_envs中的索引
+        #         env_0_idx = torch.where(valid_envs)[0] == 0
+        #         if env_0_idx.any():
+        #             env_0_pos = torch.where(env_0_idx)[0][0]
+        #             # 获取env 0的中心点坐标
+        #             center_x_0 = int(center_x[env_0_pos].item())
+        #             center_y_0 = int(center_y[env_0_pos].item())
 
-                    # 获取env 0的RGB图像并转换为numpy格式用于绘制
+        #             # 获取env 0的RGB图像并转换为numpy格式用于绘制
 
-                    rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
+        #             rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
 
-                    # 确保图像是uint8格式
-                    if rgb_image.dtype != np.uint8:
-                        rgb_image = (rgb_image * 255).astype(np.uint8)
+        #             # 确保图像是uint8格式
+        #             if rgb_image.dtype != np.uint8:
+        #                 rgb_image = (rgb_image * 255).astype(np.uint8)
 
-                    # 绘制计算出的中心点（红色圆圈）
-                    cv2.circle(rgb_image, (center_x_0, center_y_0), 5, (0, 0, 255), -1)  # 红色实心圆
+        #             # 绘制计算出的中心点（红色圆圈）
+        #             cv2.circle(rgb_image, (center_x_0, center_y_0), 5, (0, 0, 255), -1)  # 红色实心圆
 
-                    # 绘制图像中心点（绿色圆圈）
-                    cv2.circle(
-                        rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
-                    )  # 绿色实心圆
+        #             # 绘制图像中心点（绿色圆圈）
+        #             cv2.circle(
+        #                 rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+        #             )  # 绿色实心圆
 
-                    # 绘制连接线
-                    cv2.line(
-                        rgb_image,
-                        (center_x_0, center_y_0),
-                        (int(self.image_center_x), int(self.image_center_y)),
-                        (255, 255, 0),
-                        1,
-                    )  # 黄色线
+        #             # 绘制连接线
+        #             cv2.line(
+        #                 rgb_image,
+        #                 (center_x_0, center_y_0),
+        #                 (int(self.image_center_x), int(self.image_center_y)),
+        #                 (255, 255, 0),
+        #                 1,
+        #             )  # 黄色线
 
-                    # 更新显示缓冲区
-                    # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
+        #             # 更新显示缓冲区
+        #             # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
 
-                    if (
-                        self.enable_opencv_display
-                        and self.opencv_renderer is not None
-                        and self.vision_rgb_buf is not None
-                    ):
-                        # Use the original uint8 RGB image for display (before normalization)
-                        # vision_rgb is in format (batch_size, height, width, channels)
-                        # display_image = self.vision_rgb_buf[0]  # Take first environment
+        #             if (
+        #                 self.enable_opencv_display
+        #                 and self.opencv_renderer is not None
+        #                 and self.vision_rgb_buf is not None
+        #             ):
+        #                 # Use the original uint8 RGB image for display (before normalization)
+        #                 # vision_rgb is in format (batch_size, height, width, channels)
+        #                 # display_image = self.vision_rgb_buf[0]  # Take first environment
 
-                        # Display the image and check if window is still open
-                        window_open = self.opencv_renderer.display(rgb_image)
-                        if not window_open:
-                            # User closed the window, disable further display
-                            self.enable_opencv_display = False
-                            print("OpenCV display window closed by user")
+        #                 # Display the image and check if window is still open
+        #                 window_open = self.opencv_renderer.display(rgb_image)
+        #                 if not window_open:
+        #                     # User closed the window, disable further display
+        #                     self.enable_opencv_display = False
+        #                     print("OpenCV display window closed by user")
 
-        # if pixel distance is less than 10, done
-        self.done_buf = self.pixel_rewards_buf > self.sucess_thres
+        # # if pixel distance is less than 10, done
+        # self.done_buf = self.pixel_rewards_buf > self.sucess_thres
 
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
@@ -242,10 +252,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.cube_pose_buf[env_ids] = self.init_states.objects["cube"].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
         self.env.sim.render()
-        self.vision_rgb_buf[env_ids] = (
-            self.env.scene.sensors["camera_first_person"].data.output["rgb"][env_ids].permute(0, 3, 1, 2).float()
-            / 255.0
-        )
+        camera_data = self.env.scene.sensors["camera_first_person"].data.output
+        self.vision_rgb_buf[env_ids] = camera_data["rgb"][env_ids].permute(0, 3, 1, 2).float() / 255.0
+        # 添加分割数据的更新
+        self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
 
     def _check_reset(self):
         # move 0.05 to config

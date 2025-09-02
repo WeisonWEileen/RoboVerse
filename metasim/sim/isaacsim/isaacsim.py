@@ -334,14 +334,19 @@ class IsaacsimHandler(BaseSimHandler):
             camera_inst = self.scene.sensors[camera.name]
             rgb_data = camera_inst.data.output.get("rgb", None)
             depth_data = camera_inst.data.output.get("depth", None)
+            semantic_seg_data = camera_inst.data.output.get("semantic_segmentation", None)
+            # semantic_seg_id2label = camera_inst.data.info['semantic_segmentation']
+            semantic_seg_id2label = deep_get(camera_inst.data.info, "semantic_segmentation", "idToLabels")
             instance_seg_data = deep_get(camera_inst.data.output, "instance_segmentation_fast")
             instance_seg_id2label = deep_get(camera_inst.data.info, "instance_segmentation_fast", "idToLabels")
             instance_id_seg_data = deep_get(camera_inst.data.output, "instance_id_segmentation_fast")
             instance_id_seg_id2label = deep_get(camera_inst.data.info, "instance_id_segmentation_fast", "idToLabels")
-            if instance_seg_data is not None:
-                instance_seg_data = instance_seg_data.squeeze(-1)
-            if instance_id_seg_data is not None:
-                instance_id_seg_data = instance_id_seg_data.squeeze(-1)
+            if semantic_seg_data is not None:
+                semantic_seg_data = semantic_seg_data.squeeze(-1)
+            # if instance_seg_data is not None:
+            #     instance_seg_data = instance_seg_data.squeeze(-1)
+            # if instance_id_seg_data is not None:
+            #     instance_id_seg_data = instance_id_seg_data.squeeze(-1)
             camera_states[camera.name] = CameraState(
                 rgb=rgb_data,
                 depth=depth_data,
@@ -349,6 +354,8 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_seg_id2label=instance_seg_id2label,
                 instance_id_seg=instance_id_seg_data,
                 instance_id_seg_id2label=instance_id_seg_id2label,
+                semantic_seg_data=semantic_seg_data,
+                semantic_seg_id2label=semantic_seg_id2label,
                 pos=(camera_inst.data.pos_w - self.scene.env_origins),
                 quat_world=camera_inst.data.quat_w_world,
                 intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
@@ -486,6 +493,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         ## Primitive object
         if isinstance(obj, PrimitiveCubeCfg):
+            semantic_tags = [("class", "cube")] if obj.name == "cube" else None
             self.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
                     prim_path=prim_path,
@@ -497,6 +505,7 @@ class IsaacsimHandler(BaseSimHandler):
                         ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
+                        semantic_tags=semantic_tags,
                     ),
                     init_state=RigidObjectCfg.InitialStateCfg(
                         pos=obj.default_position,
@@ -995,6 +1004,7 @@ class IsaacsimHandler(BaseSimHandler):
         data_type_map = {
             "rgb": "rgb",
             "depth": "depth",
+            "semantic_seg": "semantic_segmentation",
             "instance_seg": "instance_segmentation_fast",
             "instance_id_seg": "instance_id_segmentation_fast",
         }
@@ -1022,6 +1032,7 @@ class IsaacsimHandler(BaseSimHandler):
                 ),
                 width=camera.width,
                 height=camera.height,
+                colorize_semantic_segmentation=False,
                 colorize_instance_segmentation=False,
                 colorize_instance_id_segmentation=False,
                 update_latest_camera_pose=True,

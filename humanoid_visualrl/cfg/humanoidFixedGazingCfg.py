@@ -327,8 +327,8 @@ class BaseTableHumanoidTaskCfg:
         "torques": -1e-5,
         "dof_vel": -5e-4,
         "dof_acc": -1e-7,
-        "pixel_norm_at_cube": 25,
-        "look_at_cube": 25,
+        "pixel_norm_at_cube": 100,
+        # "look_at_cube": 25,
     }
 
     frame_stack = 1
@@ -360,7 +360,8 @@ class BaseTableHumanoidTaskCfg:
 
     camera = PinholeCameraCfg(
         name="camera_first_person",
-        data_types=["rgb", "instance_id_seg"],
+        # data_types=["rgb", "instance_id_seg"],
+        data_types=["rgb",  "semantic_seg"],
         width=128,
         height=96,
         pos=(1.5, -1.5, 1.5),

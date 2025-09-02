@@ -131,6 +131,8 @@ class CameraState:
     """
     intrinsics: torch.Tensor | None = None  # TODO: remove N
     """Intrinsics matrix of the camera. Shape is (num_envs, 3, 3)."""
+    semantic_seg_data: torch.Tensor | None = None  # TODO: remove N
+    semantic_seg_id2label: dict[int, str] | None = None
 
     @property
     def quat_ros(self) -> torch.Tensor:

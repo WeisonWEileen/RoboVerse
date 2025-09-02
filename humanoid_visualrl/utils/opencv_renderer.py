@@ -216,10 +216,10 @@ class OpenCVRenderer:
 
         # Update FPS calculation
         # if self.frame_count % self.fps_update_interval == 0:
-            # if hasattr(self, "_fps_start_time"):
-                # elapsed = current_time - self._fps_start_time
-                # self.display_fps = self.fps_update_interval / elapsed
-            # self._fps_start_time = current_time
+        # if hasattr(self, "_fps_start_time"):
+        # elapsed = current_time - self._fps_start_time
+        # self.display_fps = self.fps_update_interval / elapsed
+        # self._fps_start_time = current_time
 
         # Handle window events and check if window is still open
         key = cv2.waitKey(1) & 0xFF
