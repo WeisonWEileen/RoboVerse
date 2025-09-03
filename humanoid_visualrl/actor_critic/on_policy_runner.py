@@ -456,10 +456,20 @@ class OnPolicyRunner:
 
         # save model
         torch.save(saved_dict, path)
+        if self.use_vision:
+            vision_saved_dict = {
+                "vision_state_dict": self.alg.vision_encoder.vision_state_dict(),
+                "optimizer_state_dict": self.alg.optimizer.state_dict(),
+                "iter": self.current_learning_iteration,
+                "infos": infos,
+            }
+            torch.save(vision_saved_dict, path.replace(".pt", "_vision.pt"))
+
 
         # upload model to external logging service
         if self.logger_type in ["neptune", "wandb"] and not self.disable_logs:
             self.writer.save_model(path, self.current_learning_iteration)
+
 
     def load(self, path: str, load_optimizer: bool = True):
         loaded_dict = torch.load(path, weights_only=False)
