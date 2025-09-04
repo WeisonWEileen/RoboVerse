@@ -17,7 +17,6 @@ from metasim.utils.math import quat_apply
 from loguru import logger as log
 
 
-
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
 
@@ -42,7 +41,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # get segmatic id
         # tensor_state = self.env.get_states()
-    # TODO hard code for now
+        # TODO hard code for now
         self.target_id = 2
 
     def _init_buffers(self):
@@ -63,7 +62,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.cube_pose_buf = self.init_states.objects["cube"].root_state[:, :7].clone()
 
-        self.vision_seg_buf = torch.zeros(self.num_envs, self.cfg.camera.height, self.cfg.camera.width, device=self.device, dtype=torch.int32)
+        self.vision_seg_buf = torch.zeros(
+            self.num_envs, self.cfg.camera.height, self.cfg.camera.width, device=self.device, dtype=torch.int32
+        )
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
@@ -108,7 +109,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
 
         # 创建掩码：shape (num_envs, height, width)
-        mask = (self.vision_seg_buf == self.target_id)
+        mask = self.vision_seg_buf == self.target_id
 
         # 为每个环境计算加权中心点
         self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
@@ -170,10 +171,21 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         (int(self.image_center_x), int(self.image_center_y)),
                         (255, 255, 0),
                         1,
-                    )  # 黄色线
+                    )  
 
                     # 更新显示缓冲区
                     # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
+
+                    # distance_0 = distance[env_0_pos].item()
+                    # distance_text = f"Distance: {distance_0:.1f} px"
+                    # font = cv2.FONT_HERSHEY_SIMPLEX
+                    # font_scale = 0.6
+                    # font_color = (255, 255, 255)  # 白色文字
+                    # font_thickness = 2
+                    # text_x, text_y = 10, 25
+
+                    # cv2.putText(rgb_image, distance_text, (text_x, text_y), 
+                    #           font, font_scale, font_color, font_thickness)
 
                     if (
                         self.enable_opencv_display

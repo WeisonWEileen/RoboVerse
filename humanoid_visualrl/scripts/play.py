@@ -78,18 +78,30 @@ def play(args):
     # env.init_states.objects["cube"].root_state[0, :1] = 0.2
     env.init_states.objects["cube"].root_state[0, 1] = 0.0
     # breakpoint()
+    env.cfg.max_episode_length_s = 100000
     env.env.set_states(env.init_states)
 
+    reset_interval = 75
     for i in range(1000):
         # set fixed command
-        if i == 0:
-            env.init_states.objects["cube"].root_state[0, 1] = -0.15
-            env.env.set_states(env.init_states)
-
-        if i == 200:
-            env.init_states.objects["cube"].root_state[0, 1] = 0.15
-            env.env.set_states(env.init_states)
-        env.commands[:, 0] = 1.0
+        if i % reset_interval == 0:
+            if i == 0:
+                env.init_states.objects["cube"].root_state[0, 1] = 0.15
+            if i == reset_interval:
+                env.init_states.objects["cube"].root_state[0, 1] = 0.075
+            if i == 2 * reset_interval:
+                env.init_states.objects["cube"].root_state[0, 1] = 0.0
+            if i == 3 * reset_interval:
+                env.init_states.objects["cube"].root_state[0, 1] = -0.075
+            if i == 4 * reset_interval:
+                env.init_states.objects["cube"].root_state[0, 1] = -0.15
+            # env.init_states.objects["cube"].root_state[0, 1] *= -1
+            env._reset([0])
+            env._compute_observations()
+        # if i == 200:
+        #     env.init_states.objects["cube"].root_state[0, 1] = 0.15
+        #     env.env.set_states(env.init_states)
+        env.commands[:, 0] = 0.0
         env.commands[:, 1] = 0.0
         env.commands[:, 2] = 0.0
         env.commands[:, 3] = 0.0

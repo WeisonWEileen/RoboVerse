@@ -22,6 +22,7 @@ from rsl_rl.modules import (
     StudentTeacherRecurrent,
 )
 from humanoid_visualrl.actor_critic.actor_critic_cnn import ActorCriticCNN
+from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn import ActorCriticCNNRecurrent
 from rsl_rl.utils import store_code_state
 
 
@@ -266,7 +267,7 @@ class OnPolicyRunner:
                         if self.alg.rnd:
                             cur_ereward_sum += rewards
                             cur_ireward_sum += intrinsic_rewards  # type: ignore
-                            cur_reward_sum += rewards + intrinsic_rewards
+                            cur_reward_sum += rewards + intrinsic_rewards   
                         else:
                             cur_reward_sum += rewards
                         # Update episode length
@@ -456,14 +457,14 @@ class OnPolicyRunner:
 
         # save model
         torch.save(saved_dict, path)
-        if self.use_vision:
-            vision_saved_dict = {
-                "vision_state_dict": self.alg.vision_encoder.vision_state_dict(),
-                "optimizer_state_dict": self.alg.optimizer.state_dict(),
-                "iter": self.current_learning_iteration,
-                "infos": infos,
-            }
-            torch.save(vision_saved_dict, path.replace(".pt", "_vision.pt"))
+        # if self.use_vision:
+        #     vision_saved_dict = {
+        #         "vision_state_dict": self.alg.vision_encoder.vision_state_dict(),
+        #         "optimizer_state_dict": self.alg.optimizer.state_dict(),
+        #         "iter": self.current_learning_iteration,
+        #         "infos": infos,
+        #     }
+        #     torch.save(vision_saved_dict, path.replace(".pt", "_vision.pt"))
 
 
         # upload model to external logging service

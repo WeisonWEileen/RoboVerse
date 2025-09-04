@@ -189,9 +189,13 @@ class ActorCriticCNN(nn.Module):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations):
+        state, vision = observations
+        with torch.no_grad():
+            vision_fea = self.vision_encoder(vision)
+        inputs = torch.cat([state, vision_fea], dim=-1)
         if self.obs_context_len != 1:
-            observations = observations[..., -1, :]
-        actions_mean = self.actor(observations)
+            inputs = inputs[..., -1, :]
+        actions_mean = self.actor(inputs)
         return actions_mean
 
     def freeze(self):

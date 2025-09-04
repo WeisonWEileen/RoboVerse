@@ -338,6 +338,22 @@ class RolloutStorage:
                 hid_a_batch = hid_a_batch[0] if len(hid_a_batch) == 1 else hid_a_batch
                 hid_c_batch = hid_c_batch[0] if len(hid_c_batch) == 1 else hid_c_batch
 
+                if self.observations_vision is not None:
+                    obs_vision_batch = self.observations_vision[:, first_traj:last_traj]
+                    yield (
+                        (obs_batch, obs_vision_batch),
+                        (privileged_obs_batch, obs_vision_batch),
+                        actions_batch,
+                        values_batch,
+                        advantages_batch,
+                        returns_batch,
+                        old_actions_log_prob_batch,
+                        old_mu_batch,
+                        old_sigma_batch,
+                        (hid_a_batch, hid_c_batch),
+                        masks_batch,
+                        rnd_state_batch,
+                    )
                 yield obs_batch, privileged_obs_batch, actions_batch, values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
                     hid_a_batch,
                     hid_c_batch,

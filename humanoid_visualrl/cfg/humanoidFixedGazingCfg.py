@@ -72,7 +72,7 @@ class LeggedRobotRunnerCfg:
     # logger: str = "wandb"
     wandb_project: str = "active_vision"
 
-    save_interval = 100
+    save_interval = 2
     """save interval for checkpoints"""
     experiment_name = "test"
     """experiment name"""
@@ -197,6 +197,7 @@ class BaseTableHumanoidTaskCfg:
     """Configuration for command generation."""
     # whether to use vision observation inside policy
     use_vision: bool = True
+    use_rnn: bool = True
     """Whether to use vision observations."""
     ppo_cfg: LeggedRobotRunnerCfg = LeggedRobotRunnerCfg()
     """PPO config."""
@@ -404,3 +405,5 @@ class BaseTableHumanoidTaskCfg:
 
         if self.use_vision:
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"
+            if self.use_rnn:
+                self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrent"

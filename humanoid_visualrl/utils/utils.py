@@ -234,6 +234,8 @@ def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
     elif args.use_fixed_reaching or args.use_fixed_gazing:
         if args.use_vision:
             from humanoid_visualrl.wrapper.fixed_active_vision_wrapper_cnn import ActiveVisionWrapper as TaskWrapper
+            # if args.use_rnn:
+            #     from humanoid_visualrl.wrapper.fixed_active_vision_wrapper_rnn import ActiveVisionWrapperRNN as TaskWrapper
         else:
             from humanoid_visualrl.wrapper.fixed_active_vision_wrapper import ActiveVisionWrapper as TaskWrapper
         env = TaskWrapper(scenario, enable_opencv_display=args.enable_opencv_display)
@@ -273,7 +275,7 @@ def get_load_path(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
         model = models[-1]
         load_path = f"{load_root}/{model}"
     else:
-        load_path = f"{load_root}/{args.checkpoint}"
+        load_path = f"{load_root}/model_{args.checkpoint}.pt"
     return load_path
 
 
