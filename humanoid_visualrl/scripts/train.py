@@ -20,6 +20,10 @@ from metasim.scenario.scenario import ScenarioCfg
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 from humanoid_visualrl.utils.utils import get_log_dir, get_cfg_cls, get_env_wrapper_cls, get_args, get_load_path
 
+import shutil
+import os
+
+
 if __name__ == "__main__":
     args = get_args()
 
@@ -54,9 +58,9 @@ if __name__ == "__main__":
     ]
 
     # look different task cfg
-    BaseTableHumanoidTaskCfg = get_cfg_cls(args)
+    task_cfg, cfg_file_path = get_cfg_cls(args)
 
-    task_cfg = BaseTableHumanoidTaskCfg()
+     
 
 
     if args.use_vision or args.use_resnet or args.use_fixed_gazing:
@@ -76,9 +80,13 @@ if __name__ == "__main__":
 
     log.info(f"Using simulator: {args.sim}")
 
-    env = get_env_wrapper_cls(args, scenario)
+    env, env_file_path = get_env_wrapper_cls(args, scenario)
     device = torch.device("cuda")
     log_dir = get_log_dir(args, scenario)
+
+    # copy cfg and env file to log_dir
+    shutil.copy(cfg_file_path, os.path.join(log_dir, "cfg.py"))
+    shutil.copy(env_file_path, os.path.join(log_dir, "env.py"))
 
     if args.wandb:
         env.train_cfg["logger"] = "wandb"

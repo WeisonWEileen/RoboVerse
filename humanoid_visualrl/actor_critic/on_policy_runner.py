@@ -78,7 +78,9 @@ class OnPolicyRunner:
 
         policy_class = eval(self.policy_cfg.pop("class_name"))
         # TODO: hard code here
-        policy: ActorCriticCNN = policy_class(num_obs, num_privileged_obs, self.env.num_actions, **self.policy_cfg).to(self.device)
+        policy: ActorCriticCNN = policy_class(num_obs, num_privileged_obs, self.env.num_actions, **self.policy_cfg).to(
+            self.device
+        )
 
         # resolve dimension of rnd gated state
         if "rnd_cfg" in self.alg_cfg and self.alg_cfg["rnd_cfg"] is not None:
@@ -245,9 +247,7 @@ class OnPolicyRunner:
                     # perform normalization
                     obs = self.obs_normalizer(obs)
                     if self.privileged_obs_type is not None:
-                        privileged_obs = self.privileged_obs_normalizer(
-                            infos["observations"][self.privileged_obs_type]
-                        )
+                        privileged_obs = self.privileged_obs_normalizer(infos["observations"][self.privileged_obs_type])
                     else:
                         privileged_obs = obs
 
@@ -267,7 +267,7 @@ class OnPolicyRunner:
                         if self.alg.rnd:
                             cur_ereward_sum += rewards
                             cur_ireward_sum += intrinsic_rewards  # type: ignore
-                            cur_reward_sum += rewards + intrinsic_rewards   
+                            cur_reward_sum += rewards + intrinsic_rewards
                         else:
                             cur_reward_sum += rewards
                         # Update episode length
@@ -466,11 +466,9 @@ class OnPolicyRunner:
         #     }
         #     torch.save(vision_saved_dict, path.replace(".pt", "_vision.pt"))
 
-
         # upload model to external logging service
         if self.logger_type in ["neptune", "wandb"] and not self.disable_logs:
             self.writer.save_model(path, self.current_learning_iteration)
-
 
     def load(self, path: str, load_optimizer: bool = True):
         loaded_dict = torch.load(path, weights_only=False)

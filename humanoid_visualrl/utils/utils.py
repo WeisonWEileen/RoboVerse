@@ -221,7 +221,13 @@ def get_cfg_cls(args: argparse.Namespace):
         from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg as BaseTableHumanoidTaskCfg
     else:
         from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
-    return BaseTableHumanoidTaskCfg
+    cfg = BaseTableHumanoidTaskCfg()
+    import inspect
+
+    # 获取环境类定义所在的文件路径
+    cfg_file_path = inspect.getfile(cfg.__class__)
+    log.info(f"Environment class file: {cfg_file_path}")
+    return cfg, cfg_file_path
 
 
 def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
@@ -243,8 +249,15 @@ def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
         from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
 
         env = TaskWrapper(scenario)
+    
+    import inspect
 
-    return env
+    # 获取环境类定义所在的文件路径
+    env_file_path = inspect.getfile(env.__class__)
+    print(f"Environment class file: {env_file_path}")
+
+
+    return env, env_file_path
 
 
 def get_load_root_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
