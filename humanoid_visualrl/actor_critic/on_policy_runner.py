@@ -23,6 +23,7 @@ from rsl_rl.modules import (
 )
 from humanoid_visualrl.actor_critic.actor_critic_cnn import ActorCriticCNN
 from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn import ActorCriticCNNRecurrent
+from humanoid_visualrl.actor_critic.actor_critic_resnet import ActorCriticResnet
 from rsl_rl.utils import store_code_state
 
 
@@ -467,8 +468,8 @@ class OnPolicyRunner:
         #     torch.save(vision_saved_dict, path.replace(".pt", "_vision.pt"))
 
         # upload model to external logging service
-        if self.logger_type in ["neptune", "wandb"] and not self.disable_logs:
-            self.writer.save_model(path, self.current_learning_iteration)
+        # if self.logger_type in ["neptune", "wandb"] and not self.disable_logs:
+        #     self.writer.save_model(path, self.current_learning_iteration)
 
     def load(self, path: str, load_optimizer: bool = True):
         loaded_dict = torch.load(path, weights_only=False)

@@ -3,7 +3,7 @@ from __future__ import annotations
 """Base class for legged-gym style legged-robot tasks."""
 
 from dataclasses import MISSING
-from typing import Callable
+from typing import Callable, Literal
 
 import torch
 
@@ -13,6 +13,7 @@ from metasim.scenario.robot import RobotCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.types import TensorState
 from metasim.utils import configclass
+from loguru import logger as log
 
 
 @configclass
@@ -72,7 +73,7 @@ class LeggedRobotRunnerCfg:
     # logger: str = "wandb"
     wandb_project: str = "active_vision"
 
-    save_interval = 2
+    save_interval = 100
     """save interval for checkpoints"""
     experiment_name = "test"
     """experiment name"""
@@ -198,6 +199,7 @@ class BaseTableHumanoidTaskCfg:
     # whether to use vision observation inside policy
     use_vision: bool = True
     use_rnn: bool = True
+    actor_critic_class: Literal["use_vision", "use_rnn", "use_resnet"] = "use_resnet"
     """Whether to use vision observations."""
     ppo_cfg: LeggedRobotRunnerCfg = LeggedRobotRunnerCfg()
     """PPO config."""
@@ -403,7 +405,15 @@ class BaseTableHumanoidTaskCfg:
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_y_range = 0.2
 
-        if self.use_vision:
+        self.actor_critic_class = "use_rnn"
+
+        if self.actor_critic_class == "use_vision":
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"
-            if self.use_rnn:
-                self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrent"
+        if self.actor_critic_class == "use_resnet":
+            self.ppo_cfg.policy.class_name = "ActorCriticResnet"
+        if self.actor_critic_class == "use_rnn":
+            self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrent"
+        
+        log.info("================================================")
+        log.info(f"USING {self.actor_critic_class} ACTOR CRITIC CLASS")
+        log.info("================================================")
