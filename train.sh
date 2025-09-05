@@ -1,10 +1,13 @@
 # train with walking
 
 python ./humanoid_visualrl/scripts/train.py \
-    --num_envs 1 \
-    # --headless \
+    --num_envs 256 \
+    --headless \
+    --wandb \
+    --robot "g1_static" \
+    --use_fixed_gazing \
+    --use_vision \
     # --enable_opencv_display \
-    # --wandb
 
 
 # for pixel gaze reward and resnet18 encoder

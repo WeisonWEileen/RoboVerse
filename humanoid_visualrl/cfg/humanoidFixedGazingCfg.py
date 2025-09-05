@@ -325,9 +325,9 @@ class BaseTableHumanoidTaskCfg:
         # "wrist_pos": 5,
         "upper_body_pos": 0.1,
         # "default_joint_pos": 0.5,
-        "torques": -1e-5,
+        # "torques": -1e-5,
         "dof_vel": -5e-4,
-        "dof_acc": -1e-7,
+        # "dof_acc": -1e-7,
         "pixel_norm_at_cube": 100,
         # "look_at_cube": 25,
     }
