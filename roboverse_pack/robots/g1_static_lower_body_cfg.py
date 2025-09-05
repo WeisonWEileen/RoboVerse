@@ -45,29 +45,29 @@ class G1StaticCfg(RobotCfg):
         "right_elbow_joint": (-1.0472, 2.0944),
     }
 
-    # torque_limits: dict[str, float] = {  # = target angles [rad] when action = 0.0
-    #     "waist_yaw_joint": 25,
-    #     "left_shoulder_pitch_joint": 25,
-    #     "left_shoulder_roll_joint": 25,
-    #     "left_shoulder_yaw_joint": 25,
-    #     "left_elbow_joint": 25,
-    #     "right_shoulder_pitch_joint": 25,
-    #     "right_shoulder_roll_joint": 25,
-    #     "right_shoulder_yaw_joint": 25,
-    #     "right_elbow_joint": 25,
-    # }
-
     torque_limits: dict[str, float] = {  # = target angles [rad] when action = 0.0
         "waist_yaw_joint": 25,
-        "left_shoulder_pitch_joint": 0,
-        "left_shoulder_roll_joint": 0,
-        "left_shoulder_yaw_joint": 0,
-        "left_elbow_joint": 0,
-        "right_shoulder_pitch_joint": 0,
-        "right_shoulder_roll_joint": 0,
-        "right_shoulder_yaw_joint": 0,
-        "right_elbow_joint": 0,
+        "left_shoulder_pitch_joint": 25,
+        "left_shoulder_roll_joint": 25,
+        "left_shoulder_yaw_joint": 25,
+        "left_elbow_joint": 25,
+        "right_shoulder_pitch_joint": 25,
+        "right_shoulder_roll_joint": 25,
+        "right_shoulder_yaw_joint": 25,
+        "right_elbow_joint": 25,
     }
+
+    # torque_limits: dict[str, float] = {  # = target angles [rad] when action = 0.0
+    #     "waist_yaw_joint": 25,
+    #     "left_shoulder_pitch_joint": 0,
+    #     "left_shoulder_roll_joint": 0,
+    #     "left_shoulder_yaw_joint": 0,
+    #     "left_elbow_joint": 0,
+    #     "right_shoulder_pitch_joint": 0,
+    #     "right_shoulder_roll_joint": 0,
+    #     "right_shoulder_yaw_joint": 0,
+    #     "right_elbow_joint": 0,
+    # }
 
     default_joint_positions: dict[str, float] = {  # = target angles [rad] when action = 0.0
         "waist_yaw_joint": 0.0,

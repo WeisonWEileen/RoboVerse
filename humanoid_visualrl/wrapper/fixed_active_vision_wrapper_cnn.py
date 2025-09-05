@@ -254,7 +254,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _pre_reset_hook(self, env_ids=None):
         # randomly set y of cube in range (-randomize_cube_y_range, randomize_cube_y_range)
         # if self.cfg.randomize_cube_y = True
-        return
         self.init_states.objects["cube"].root_state[env_ids, 1] = (
             torch.rand(len(env_ids), device=self.device) * 2.0 - 1.0
         ) * self.cfg.randomize_cube_y_range

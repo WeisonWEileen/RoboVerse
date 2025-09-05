@@ -82,7 +82,7 @@ def play(args):
         # set fixed command
         if i % reset_interval == 0:
             if i == 0:
-                env.init_states.objects["cube"].root_state[0, 1] = -0.15
+                env.init_states.objects["cube"].root_state[0, 1] = 0.075
                 # env.init_states.objects["cube"].root_state[0, 1] = 0.15
             # if i == reset_interval:
             #     env.init_states.objects["cube"].root_state[0, 1] = 0.075

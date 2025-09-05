@@ -7,11 +7,11 @@ python ./humanoid_visualrl/scripts/train.py \
     --robot "g1_static" \
     --use_fixed_gazing \
     --use_vision \
+    # --enable_opencv_display 
     # --resume 
     # --load_run "2025_0905_013206" \
     # --checkpoint 556 \
 
-    # --enable_opencv_display \
 
 
 # for pixel gaze reward and resnet18 encoder
