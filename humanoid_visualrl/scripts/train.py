@@ -60,9 +60,6 @@ if __name__ == "__main__":
     # look different task cfg
     task_cfg, cfg_file_path = get_cfg_cls(args)
 
-     
-
-
     if args.use_vision or args.use_resnet or args.use_fixed_gazing:
         scenario.cameras = [task_cfg.camera]
     else:

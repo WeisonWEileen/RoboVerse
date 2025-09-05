@@ -31,8 +31,8 @@ def play(args):
     )
     scenario.num_envs = 1
 
-    BaseTableHumanoidTaskCfg = get_cfg_cls(args)
-    task_cfg = BaseTableHumanoidTaskCfg()
+     
+    task_cfg, _ = get_cfg_cls(args)
     task_cfg.commands.curriculum = False
     task_cfg.ppo_cfg.resume = True
     # add objects
@@ -54,7 +54,7 @@ def play(args):
     # scenario.task.random.push.enabled = False
 
     log_dir = get_log_dir(args, scenario)
-    env = get_env_wrapper_cls(args, scenario)
+    env, _ = get_env_wrapper_cls(args, scenario)
     load_path = get_load_path(args, scenario)
 
     obs, _ = env.get_observations()
@@ -87,14 +87,14 @@ def play(args):
         if i % reset_interval == 0:
             if i == 0:
                 env.init_states.objects["cube"].root_state[0, 1] = 0.15
-            if i == reset_interval:
-                env.init_states.objects["cube"].root_state[0, 1] = 0.075
-            if i == 2 * reset_interval:
-                env.init_states.objects["cube"].root_state[0, 1] = 0.0
-            if i == 3 * reset_interval:
-                env.init_states.objects["cube"].root_state[0, 1] = -0.075
-            if i == 4 * reset_interval:
-                env.init_states.objects["cube"].root_state[0, 1] = -0.15
+            # if i == reset_interval:
+            #     env.init_states.objects["cube"].root_state[0, 1] = 0.075
+            # if i == 2 * reset_interval:
+            #     env.init_states.objects["cube"].root_state[0, 1] = 0.0
+            # if i == 3 * reset_interval:
+            #     env.init_states.objects["cube"].root_state[0, 1] = -0.075
+            # if i == 4 * reset_interval:
+            #     env.init_states.objects["cube"].root_state[0, 1] = -0.15
             # env.init_states.objects["cube"].root_state[0, 1] *= -1
             env._reset([0])
             env._compute_observations()

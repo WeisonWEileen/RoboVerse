@@ -1,1 +1,10 @@
-/home/panwei/conda/envs/metasim_isaacsim/bin/python /home/panwei/RoboVerse/humanoid_visualrl/scripts/play.py --num_envs 1 --use_vision --use_fixed_gazing --use_rnn --robot g1_static --enable_opencv_display --load_run 2025_0902_060104 --checkpoint 2600
+python ./humanoid_visualrl/scripts/play.py \
+    --num_envs 1 \
+    --robot "g1_static" \
+    --use_fixed_gazing \
+    --use_vision \
+    --resume \
+    --load_run "2025_0905_013206" \
+    --checkpoint 556 \
+    --enable_opencv_display 
+    # --wandb \
