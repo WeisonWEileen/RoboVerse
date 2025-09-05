@@ -39,7 +39,7 @@ class RolloutStorage:
         actions_shape,
         rnd_state_shape=None,
         device="cpu",
-        obs_vision_shape=None
+        obs_vision_shape=None,
     ):
         # store inputs
         self.training_type = training_type
@@ -53,7 +53,11 @@ class RolloutStorage:
 
         # Core
         self.observations = torch.zeros(num_transitions_per_env, num_envs, *obs_shape, device=self.device)
-        self.observations_vision = torch.zeros(num_transitions_per_env, num_envs, *obs_vision_shape, device=self.device) if obs_vision_shape is not None else None
+        self.observations_vision = (
+            torch.zeros(num_transitions_per_env, num_envs, *obs_vision_shape, device=self.device)
+            if obs_vision_shape is not None
+            else None
+        )
         if privileged_obs_shape is not None:
             self.privileged_observations = torch.zeros(
                 num_transitions_per_env, num_envs, *privileged_obs_shape, device=self.device
@@ -102,7 +106,6 @@ class RolloutStorage:
             self.observations[self.step].copy_(transition.observations)
 
         if self.privileged_observations is not None:
-
             if isinstance(transition.privileged_observations, tuple):
                 state_obs, vision_obs = transition.privileged_observations
                 self.privileged_observations[self.step].copy_(state_obs)
@@ -189,9 +192,13 @@ class RolloutStorage:
                 privileged_observations = self.privileged_observations[i]
             else:
                 privileged_observations = self.observations[i]
-            yield self.observations[i], privileged_observations, self.actions[i], self.privileged_actions[
-                i
-            ], self.dones[i]
+            yield (
+                self.observations[i],
+                privileged_observations,
+                self.actions[i],
+                self.privileged_actions[i],
+                self.dones[i],
+            )
 
     # for reinforcement learning with feedforward networks
     def mini_batch_generator(self, num_mini_batches, num_epochs=8):
@@ -267,10 +274,23 @@ class RolloutStorage:
                         rnd_state_batch,
                     )
                 else:
-                    yield obs_batch, privileged_observations_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
-                    None,
-                    None,
-                ), None, rnd_state_batch
+                    yield (
+                        obs_batch,
+                        privileged_observations_batch,
+                        actions_batch,
+                        target_values_batch,
+                        advantages_batch,
+                        returns_batch,
+                        old_actions_log_prob_batch,
+                        old_mu_batch,
+                        old_sigma_batch,
+                        (
+                            None,
+                            None,
+                        ),
+                        None,
+                        rnd_state_batch,
+                    )
 
     # for reinfrocement learning with recurrent networks
     def recurrent_mini_batch_generator(self, num_mini_batches, num_epochs=8):
@@ -286,6 +306,11 @@ class RolloutStorage:
             padded_rnd_state_trajectories, _ = split_and_pad_trajectories(self.rnd_state, self.dones)
         else:
             padded_rnd_state_trajectories = None
+
+        if self.observations_vision is not None:
+            padded_obs_vision_trajectories, _ = split_and_pad_trajectories(self.observations_vision, self.dones)
+        else:
+            padded_obs_vision_trajectories = None
 
         mini_batch_size = self.num_envs // num_mini_batches
         for ep in range(num_epochs):
@@ -339,7 +364,7 @@ class RolloutStorage:
                 hid_c_batch = hid_c_batch[0] if len(hid_c_batch) == 1 else hid_c_batch
 
                 if self.observations_vision is not None:
-                    obs_vision_batch = self.observations_vision[:, first_traj:last_traj]
+                    obs_vision_batch = padded_obs_vision_trajectories[:, first_traj:last_traj]
                     yield (
                         (obs_batch, obs_vision_batch),
                         (privileged_obs_batch, obs_vision_batch),
@@ -354,9 +379,23 @@ class RolloutStorage:
                         masks_batch,
                         rnd_state_batch,
                     )
-                yield obs_batch, privileged_obs_batch, actions_batch, values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
-                    hid_a_batch,
-                    hid_c_batch,
-                ), masks_batch, rnd_state_batch
+                else:
+                    yield (
+                        obs_batch,
+                        privileged_obs_batch,
+                        actions_batch,
+                        values_batch,
+                        advantages_batch,
+                        returns_batch,
+                        old_actions_log_prob_batch,
+                        old_mu_batch,
+                        old_sigma_batch,
+                        (
+                            hid_a_batch,
+                            hid_c_batch,
+                        ),
+                        masks_batch,
+                        rnd_state_batch,
+                    )
 
                 first_traj = last_traj
