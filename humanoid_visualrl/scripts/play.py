@@ -49,11 +49,7 @@ def play(args):
     scenario.task = task_cfg
     scenario.env_spacing = task_cfg.env_spacing
 
-    # scenario.task.random.friction.enabled = False
-    # scenario.task.random.mass.enabled = False
-    # scenario.task.random.push.enabled = False
-
-    log_dir = get_log_dir(args, scenario)
+    # log_dir = get_log_dir(args, scenario)
     env, _ = get_env_wrapper_cls(args, scenario)
     load_path = get_load_path(args, scenario)
 
@@ -63,7 +59,7 @@ def play(args):
         env=env,
         train_cfg=env.train_cfg,
         device=device,
-        log_dir=log_dir,
+        # log_dir=log_dir,
         use_vision=args.use_vision,
     )
     ppo_runner.load(load_path)
@@ -82,11 +78,12 @@ def play(args):
     env.env.set_states(env.init_states)
 
     reset_interval = 75
-    for i in range(1000):
+    for i in range(10000):
         # set fixed command
         if i % reset_interval == 0:
             if i == 0:
-                env.init_states.objects["cube"].root_state[0, 1] = 0.15
+                env.init_states.objects["cube"].root_state[0, 1] = -0.15
+                # env.init_states.objects["cube"].root_state[0, 1] = 0.15
             # if i == reset_interval:
             #     env.init_states.objects["cube"].root_state[0, 1] = 0.075
             # if i == 2 * reset_interval:
@@ -96,8 +93,8 @@ def play(args):
             # if i == 4 * reset_interval:
             #     env.init_states.objects["cube"].root_state[0, 1] = -0.15
             # env.init_states.objects["cube"].root_state[0, 1] *= -1
-            env._reset([0])
-            env._compute_observations()
+                env._reset([0])
+                env._compute_observations()
         # if i == 200:
         #     env.init_states.objects["cube"].root_state[0, 1] = 0.15
         #     env.env.set_states(env.init_states)
@@ -115,6 +112,8 @@ def play(args):
         # for i in task_cfg.decimation:
         obs, rewards, dones, infos = env.step(actions.detach())
         log.info(f"step: {i}")
+
+    env.env.close()
 
 
 if __name__ == "__main__":

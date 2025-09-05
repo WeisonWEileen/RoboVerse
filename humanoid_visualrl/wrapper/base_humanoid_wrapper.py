@@ -336,12 +336,13 @@ class HumanoidBaseWrapper(RslRlWrapper):
         #     torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1.0, dim=1
         # )
         # reindex = self.env.get_body_reindex(self.robot.name)
-        contact_forces = self.env.contact_sensor.data.net_forces_w
-        reset_buf = torch.any(
-            torch.norm(contact_forces[:, self.env.termination_contact_indices, :], dim=-1) > 1.0,
-            dim=1,
-        )
-        self.reset_buf = torch.logical_or(self.timeout_buf, reset_buf)
+        # contact_forces = self.env.contact_sensor.data.net_forces_w
+        # reset_buf = torch.any(
+        #     torch.norm(contact_forces[:, self.env.termination_contact_indices, :], dim=-1) > 1.0,
+        #     dim=1,
+        # )
+        # self.reset_buf = torch.logical_or(self.timeout_buf, reset_buf)
+        self.reset_buf = self.timeout_buf
 
     def _post_physics_step(self):
         """After physics step, compute reward, get obs and privileged_obs, resample command."""
