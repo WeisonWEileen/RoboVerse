@@ -324,7 +324,7 @@ class BaseTableHumanoidTaskCfg:
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
-        "upper_body_pos": 0.01,
+        "upper_body_pos": 0.1,
         "dof_vel": -5e-4,
         "pixel_norm_at_cube": 100,
     }
@@ -359,7 +359,7 @@ class BaseTableHumanoidTaskCfg:
     camera = PinholeCameraCfg(
         name="camera_first_person",
         # data_types=["rgb", "instance_id_seg"],
-        data_types=["rgb",  "semantic_seg"],
+        data_types=["rgb", "semantic_seg"],
         width=128,
         height=96,
         pos=(1.5, -1.5, 1.5),
@@ -388,6 +388,8 @@ class BaseTableHumanoidTaskCfg:
 
     random_push = PushRandomCfg(enabled=False)
 
+    randomization =  True
+
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
         self.command_ranges.l_wrist_pos_x = [-0.05, 0.15]
@@ -408,7 +410,7 @@ class BaseTableHumanoidTaskCfg:
             self.ppo_cfg.policy.class_name = "ActorCriticResnet"
         if self.actor_critic_class == "use_rnn":
             self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrent"
-        
+
         log.info("================================================")
         log.info(f"USING {self.actor_critic_class} ACTOR CRITIC CLASS")
         log.info("================================================")

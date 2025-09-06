@@ -48,7 +48,7 @@ def play(args):
     scenario.render_interval = scenario.decimation
     scenario.task = task_cfg
     scenario.env_spacing = task_cfg.env_spacing
-
+    task_cfg.randomization = False
     # log_dir = get_log_dir(args, scenario)
     env, _ = get_env_wrapper_cls(args, scenario)
     load_path = get_load_path(args, scenario)
@@ -82,8 +82,8 @@ def play(args):
         # set fixed command
         if i % reset_interval == 0:
             if i == 0:
-                env.init_states.objects["cube"].root_state[0, 1] = 0.075
-                # env.init_states.objects["cube"].root_state[0, 1] = 0.15
+                # env.init_states.objects["cube"].root_state[0, 1] = 0.075
+                env.init_states.objects["cube"].root_state[0, 1] = 0.15
             # if i == reset_interval:
             #     env.init_states.objects["cube"].root_state[0, 1] = 0.075
             # if i == 2 * reset_interval:
