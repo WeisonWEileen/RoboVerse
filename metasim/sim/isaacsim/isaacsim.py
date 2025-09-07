@@ -28,6 +28,10 @@ from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 
 
+import omni
+import weakref
+
+
 class IsaacsimHandler(BaseSimHandler):
     """
     Handler for Isaac Lab simulation environment.
@@ -52,6 +56,50 @@ class IsaacsimHandler(BaseSimHandler):
         self._step_counter = 0
         self._is_closed = False
         self._render_interval = self.scenario.render_interval
+
+        if self.headless:
+            self._render_viewport = False
+        else:
+            self._render_viewport = True
+
+    def _init_keyboard(self) -> None:
+        import carb
+
+        self._appwindow = omni.appwindow.get_default_app_window()
+        self._input = carb.input.acquire_input_interface()
+        self._keyboard = self._appwindow.get_keyboard()
+        self._keyboard_sub = self._input.subscribe_to_keyboard_events(
+            self._keyboard,
+            lambda event, *args, obj=weakref.proxy(self): obj._on_keyboard_event(event, *args),
+        )
+
+    def __del__(self):
+        """Release the keyboard interface."""
+        self._input.unsubscribe_from_keyboard_events(self._keyboard, self._keyboard_sub)
+        self._keyboard_sub = None
+
+    def _on_keyboard_event(self, event, *args, **kwargs):
+        import carb
+        from isaaclab.sim import SimulationContext
+
+        if event.input == carb.input.KeyboardInput.V:
+            if event.type == carb.input.KeyboardEventType.KEY_PRESS:
+                self._render_viewport = not self._render_viewport
+            
+            if not self._render_viewport:
+                if self.sim.has_rtx_sensors():
+                    self.sim.set_render_mode(SimulationContext.RenderMode.PARTIAL_RENDERING)
+                else:
+                    self.sim.set_render_mode(SimulationContext.RenderMode.NO_RENDERING)
+            else:
+                self.sim.set_render_mode(SimulationContext.RenderMode.FULL_RENDERING)
+
+
+
+        # if event.type == carb.input.KeyboardEventType.KEY_PRESS:
+        #     if event.input.name == "V":
+
+        return True
 
     def _init_scene(self) -> None:
         """
@@ -157,6 +205,10 @@ class IsaacsimHandler(BaseSimHandler):
         for query_name, query_type in self.optional_queries.items():
             query_type.bind_handler(self)
 
+        # Initialize keyboard input for toggling rendering (e.g., with 'V') when not headless
+        if self.sim.has_gui():
+            self._init_keyboard()
+
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
@@ -171,6 +223,8 @@ class IsaacsimHandler(BaseSimHandler):
     def __del__(self):
         """Cleanup for the environment."""
         self.close()
+        self._input.unsubscribe_from_keyboard_events(self._keyboard, self._keyboard_sub)
+        self._keyboard_sub = None
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
         # if states is list[DictEnvState], iterate over it and set state
@@ -397,11 +451,19 @@ class IsaacsimHandler(BaseSimHandler):
             )
 
     def _simulate(self):
+        from isaaclab.sim import SimulationContext
+
+        # is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         self.scene.write_data_to_sim()
         self.sim.step(render=False)
         if self._step_counter % self._render_interval == 0 and is_rendering:
+            # if self._render_viewport:
             self.sim.render()
+            # log.info("1")
+            # else:
+            # self.sim.render(SimulationContext.RenderMode.PARTIAL_RENDERING)
+            # log.info("2")
         self.scene.update(dt=self.physics_dt)
 
         # Ensure camera pose is correct, especially for the first few frames

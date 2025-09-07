@@ -1,14 +1,14 @@
 # train with walking
 
 python ./humanoid_visualrl/scripts/train.py \
-    --num_envs 256 \
-    --headless \
+    --num_envs 64 \
     --wandb \
     --robot "g1_static" \
     --use_fixed_gazing \
     --use_vision \
-    # --enable_opencv_display 
+    --enable_opencv_display 
     # --resume 
+    # --headless \
     # --load_run "2025_0905_013206" \
     # --checkpoint 556 \
 
@@ -33,3 +33,4 @@ python ./humanoid_visualrl/scripts/train.py \
 #     --robot g1_static \
 #     --enable_opencv_display \
 #     --wandb
+

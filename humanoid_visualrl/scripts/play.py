@@ -12,7 +12,6 @@ from humanoid_visualrl.utils.utils import (
     get_args,
     get_export_jit_path,
     get_load_path,
-    get_log_dir,
     get_env_wrapper_cls,
 )
 
@@ -50,20 +49,19 @@ def play(args):
     scenario.env_spacing = task_cfg.env_spacing
     task_cfg.randomization = False
     # log_dir = get_log_dir(args, scenario)
-    env, _ = get_env_wrapper_cls(args, scenario)
+    env_wrapper, _ = get_env_wrapper_cls(args, scenario)
     load_path = get_load_path(args, scenario)
 
-    obs, _ = env.get_observations()
     # load policy
     ppo_runner = OnPolicyRunner(
-        env=env,
-        train_cfg=env.train_cfg,
+        env=env_wrapper,
+        train_cfg=env_wrapper.train_cfg,
         device=device,
         # log_dir=log_dir,
         use_vision=args.use_vision,
     )
     ppo_runner.load(load_path)
-    policy = ppo_runner.get_inference_policy(device=env.device)
+    policy = ppo_runner.get_inference_policy(device=env_wrapper.device)
 
     # export policy as a jit module (used to run it from C++)
     if args.export_policy:
@@ -72,10 +70,11 @@ def play(args):
         print("Exported policy as jit script to: ", export_jit_path)
 
     # env.init_states.objects["cube"].root_state[0, :1] = 0.2
-    env.init_states.objects["cube"].root_state[0, 1] = 0.0
+    env_wrapper.init_states.objects["cube"].root_state[0, 1] = 0.0
     # breakpoint()
-    env.cfg.max_episode_length_s = 100000
-    env.env.set_states(env.init_states)
+    env_wrapper.cfg.max_episode_length_s = 100000
+    env_wrapper.env.set_states(env_wrapper.init_states)
+    obs, _ = env_wrapper.get_observations()
 
     reset_interval = 75
     for i in range(10000):
@@ -83,7 +82,7 @@ def play(args):
         if i % reset_interval == 0:
             if i == 0:
                 # env.init_states.objects["cube"].root_state[0, 1] = 0.075
-                env.init_states.objects["cube"].root_state[0, 1] = 0.15
+                env_wrapper.init_states.objects["cube"].root_state[0, 1] = 0.15
             # if i == reset_interval:
             #     env.init_states.objects["cube"].root_state[0, 1] = 0.075
             # if i == 2 * reset_interval:
@@ -93,15 +92,18 @@ def play(args):
             # if i == 4 * reset_interval:
             #     env.init_states.objects["cube"].root_state[0, 1] = -0.15
             # env.init_states.objects["cube"].root_state[0, 1] *= -1
-                env._reset([0])
-                env._compute_observations()
+                env_wrapper._reset([0])
+                env_wrapper._compute_observations()
+                ppo_runner.alg.policy.reset([0])
+
+                
         # if i == 200:
         #     env.init_states.objects["cube"].root_state[0, 1] = 0.15
         #     env.env.set_states(env.init_states)
-        env.commands[:, 0] = 0.0
-        env.commands[:, 1] = 0.0
-        env.commands[:, 2] = 0.0
-        env.commands[:, 3] = 0.0
+        # env.commands[:, 0] = 0.0
+        # env.commands[:, 1] = 0.0
+        # env.commands[:, 2] = 0.0
+        # env.commands[:, 3] = 0.0
 
         if args.use_vision:
             actions = policy(obs)
@@ -110,10 +112,10 @@ def play(args):
         # print(actions)
         # breakpoint()
         # for i in task_cfg.decimation:
-        obs, rewards, dones, infos = env.step(actions.detach())
+        obs, rewards, dones, infos = env_wrapper.step(actions.detach())
         log.info(f"step: {i}")
 
-    env.env.close()
+    env_wrapper.env.close()
 
 
 if __name__ == "__main__":

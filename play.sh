@@ -17,7 +17,7 @@ python ./humanoid_visualrl/scripts/play.py \
     --use_fixed_gazing \
     --use_vision \
     --resume \
-    --load_run "2025_0905_203530" \
-    --checkpoint 600 \
+    --load_run "2025_0906_111028" \
+    --checkpoint 1200 \
     --enable_opencv_display 
     # --wandb \
