@@ -458,12 +458,8 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.write_data_to_sim()
         self.sim.step(render=False)
         if self._step_counter % self._render_interval == 0 and is_rendering:
-            # if self._render_viewport:
             self.sim.render()
-            # log.info("1")
-            # else:
-            # self.sim.render(SimulationContext.RenderMode.PARTIAL_RENDERING)
-            # log.info("2")
+
         self.scene.update(dt=self.physics_dt)
 
         # Ensure camera pose is correct, especially for the first few frames

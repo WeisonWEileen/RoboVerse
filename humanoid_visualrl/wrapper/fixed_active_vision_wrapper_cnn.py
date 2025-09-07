@@ -139,7 +139,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # print(f"rewards: {rewards[0]}")
 
             # 在env 0的图像上绘制坐标点
-            if 0 in torch.where(valid_envs)[0] and self.enable_opencv_display:
+            if 0 in torch.where(valid_envs)[0] and self.enable_opencv_display and self.env._render_viewport:
                 # 找到env 0在valid_envs中的索引
                 env_0_idx = torch.where(valid_envs)[0] == 0
                 if env_0_idx.any():
