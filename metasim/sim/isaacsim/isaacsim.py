@@ -101,6 +101,37 @@ class IsaacsimHandler(BaseSimHandler):
 
         return True
 
+    def _init_viewports(self):
+        """在 GUI 模式下创建第二个窗口并绑定第一人称相机"""
+        if not self.sim.has_gui():
+            return  # headless 情况直接返回
+
+        import omni.kit.viewport.utility as kit_viewport
+
+        VP = kit_viewport.get_viewport_interface()
+
+        # ① 主视口（默认 “Viewport”）
+        main_vp = VP.get_default_viewport_window()
+        main_vp.set_title("stage_overview")
+        # 不绑相机 = 自由透视
+
+        # ② 新建一个窗口，显示第一人称摄像头
+        fp_vp = VP.create_instance("first_person_view")
+        fp_vp.set_window_pos(800, 0)  # 根据你的屏幕自行调整
+        fp_vp.set_window_size(800, 600)
+        fp_vp.set_texture_resolution(1280, 720)
+
+        # 让它跟随你在场景里注册的传感器
+        fp_camera_prim = "/World/envs/env_0/g1_static_dex1/torso_link/d435_link/camera_first_person"
+        fp_vp.set_active_camera(fp_camera_prim)
+
+        # 可选：右侧隐藏 USD tree，用更大可视域
+        fp_vp.show_horizontal_scrollbar(False)
+        fp_vp.show_vertical_scrollbar(False)
+
+        # 如果要固定分屏布局，可以用 Kit 的 Layout Manager
+        # omni.kit.window.viewport_legacy.set_viewport_layout(...)
+
     def _init_scene(self) -> None:
         """
         Initializes the isaacsim simulation environment.
@@ -138,6 +169,7 @@ class IsaacsimHandler(BaseSimHandler):
             num_envs=self._num_envs, env_spacing=self.scenario.env_spacing
         )
         self.scene = InteractiveScene(scene_config)
+
 
     def _load_robots(self) -> None:
         for robot in self.robots:
@@ -208,6 +240,8 @@ class IsaacsimHandler(BaseSimHandler):
         # Initialize keyboard input for toggling rendering (e.g., with 'V') when not headless
         if self.sim.has_gui():
             self._init_keyboard()
+
+        # self._init_viewports()
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
@@ -301,13 +335,16 @@ class IsaacsimHandler(BaseSimHandler):
                     )
 
             for _, robot in enumerate(self.robots):
+                # continue
                 robot_inst = self.scene.articulations[robot.name]
                 root_state = states.robots[robot.name].root_state.clone()
                 root_state[:, :3] += self.scene.env_origins
-                robot_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
-                robot_inst.write_root_velocity_to_sim(
-                    states.robots[robot.name].root_state[env_ids, 7:], env_ids=env_ids
-                )
+                # FIXME: yaozhan here when fix_base_link is True
+                if not robot.fix_base_link:
+                    robot_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
+                    robot_inst.write_root_velocity_to_sim(
+                        states.robots[robot.name].root_state[env_ids, 7:], env_ids=env_ids
+                    )
                 joint_ids_reindex = self.get_joint_reindex(robot.name, inverse=True)
                 robot_inst.write_joint_position_to_sim(
                     states.robots[robot.name].joint_pos[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
@@ -315,6 +352,11 @@ class IsaacsimHandler(BaseSimHandler):
                 robot_inst.write_joint_velocity_to_sim(
                     states.robots[robot.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
                 )
+                # robot_inst.write_data_to_sim()
+
+                # self.scene.write_data_to_sim()
+
+                
 
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
@@ -512,7 +554,7 @@ class IsaacsimHandler(BaseSimHandler):
         cfg.spawn.rigid_props.disable_gravity = not robot.enabled_gravity
         init_state = ArticulationCfg.InitialStateCfg(
             # TODO hard code here
-            pos=[0.0, 0.0, 0.78],
+            pos=[0.0, 0.0, 0.8],
             joint_pos=robot.default_joint_positions,
             joint_vel={".*": 0.0},
         )

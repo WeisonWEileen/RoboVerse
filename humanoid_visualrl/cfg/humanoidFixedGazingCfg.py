@@ -314,19 +314,42 @@ class BaseTableHumanoidTaskCfg:
                 },
             },
             "robots": {
-                "g1_static": {
-                    "pos": torch.tensor([0.0, 0.0, 0.78]),
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                # "g1_static": {
+                #     "pos": torch.tensor([0.0, 0.0, 0.78]),
+                #     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                #     "dof_pos": {
+                #         "waist_yaw_joint": 0.0,
+                #         "left_shoulder_pitch_joint": 0.0,
+                #         "left_shoulder_roll_joint": 0.0,
+                #         "left_shoulder_yaw_joint": 0.0,
+                #         "left_elbow_joint": 1.45,
+                #         "right_shoulder_pitch_joint": 0.0,
+                #         "right_shoulder_roll_joint": 0.0,
+                #         "right_shoulder_yaw_joint": 0.0,
+                #         "right_elbow_joint": 1.45,
+                #     },
+                # },
+                "g1_static_dex1": {
+                    "pos": torch.tensor([0.0, 0.0, 0.60]),
+                    "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "waist_yaw_joint": 0.0,
+                        "waist_roll_joint": 0.0,
+                        "waist_pitch_joint": 0.0,
                         "left_shoulder_pitch_joint": 0.0,
                         "left_shoulder_roll_joint": 0.0,
                         "left_shoulder_yaw_joint": 0.0,
-                        "left_elbow_joint": 1.45,
+                        "left_elbow_joint": 0.0,
+                        "left_wrist_roll_joint": 0.0,
+                        "left_wrist_pitch_joint": 0.0,
+                        "left_wrist_yaw_joint": 0.0,
                         "right_shoulder_pitch_joint": 0.0,
                         "right_shoulder_roll_joint": 0.0,
                         "right_shoulder_yaw_joint": 0.0,
-                        "right_elbow_joint": 1.45,
+                        "right_elbow_joint": 0.0,
+                        "right_wrist_roll_joint": 0.0,
+                        "right_wrist_pitch_joint": 0.0,
+                        "right_wrist_yaw_joint": 0.0,
                     },
                 },
             },
@@ -334,7 +357,7 @@ class BaseTableHumanoidTaskCfg:
     ]
 
     command_dim = 14
-    num_actions = 9
+    num_actions = 17
 
     torque_limit_scale = 1.0
 
@@ -379,11 +402,13 @@ class BaseTableHumanoidTaskCfg:
         height=96,
         pos=(1.5, -1.5, 1.5),
         look_at=(0.0, 0.0, 0.0),
-        mount_to="g1_static/pelvis",
+        # mount_to="g1_static/pelvis",
         # mount_to="g1_static",
-        mount_link="torso_link",
+        mount_to="g1_static_dex1",
+        # mount_link="torso_link",
+        mount_link="torso_link/d435_link",
         # though camera visulization maybe wrong , it's correct for fov
-        mount_pos=(0.1, 0.0, 0.9),
+        mount_pos=(0.1, 0.0, 0.0),
         #     quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
         # quat = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])  #
         mount_quat=(0.8660254037844387, 0.0, 0.49999999999999994, 0.0),

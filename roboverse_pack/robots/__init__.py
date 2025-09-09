@@ -16,6 +16,7 @@ from .franka_with_gripper_extension_cfg import FrankaWithGripperExtensionCfg
 from .g1_29dof_cfg import G1Cfg
 # from .g1_23dof_cfg import G123dofCfg
 from .g1_static_lower_body_cfg import G1StaticCfg
+from .g1_static_fixed_lower_fixed_hand_body_cfg_dex1 import G1StaticDex1Cfg
 from .google_robot_static_cfg import GoogleRobotStaticCfg
 from .h1_2_without_hand_cfg import H12WithoutHandCfg
 from .h1_body_collision import H1BodyCollisionCfg
