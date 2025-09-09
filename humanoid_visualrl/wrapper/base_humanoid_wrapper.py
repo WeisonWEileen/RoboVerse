@@ -164,12 +164,16 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.num_envs, self.num_actions, device=self.device, requires_grad=False
         )
         dof_names = self.env.get_joint_names(self.robot.name)
-        for i, dof_name in enumerate(dof_names):
-            i_actuator_cfg = self.robot.actuators[dof_name]
-            self._p_gains[:, i] = i_actuator_cfg.stiffness
-            self._d_gains[:, i] = i_actuator_cfg.damping
-            torque_limit = self.robot.torque_limits[dof_name]
-            self._torque_limits[:, i] = self.scenario.task.torque_limit_scale * torque_limit
+        i = 0
+        for _, dof_name in enumerate(dof_names):
+            if dof_name in self.robot.actuators:
+
+                i_actuator_cfg = self.robot.actuators[dof_name]
+                self._p_gains[:, i] = i_actuator_cfg.stiffness
+                self._d_gains[:, i] = i_actuator_cfg.damping
+                torque_limit = self.robot.torque_limits[dof_name]
+                self._torque_limits[:, i] = self.scenario.task.torque_limit_scale * torque_limit
+                i += 1
 
         # commands
         self.common_step_counter = 0

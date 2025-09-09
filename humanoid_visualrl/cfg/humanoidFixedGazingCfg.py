@@ -15,6 +15,8 @@ from metasim.types import TensorState
 from metasim.utils import configclass
 from loguru import logger as log
 
+from metasim.scenario.objects import RigidObjCfg
+
 
 @configclass
 class LeggedRobotRunnerCfg:
@@ -239,19 +241,32 @@ class BaseTableHumanoidTaskCfg:
     dt = decimation * sim_params.dt
     """simulation time step in s"""
     objects = [
-        PrimitiveCubeCfg(
+        # PrimitiveCubeCfg(
+        #     name="table",
+        #     size=(0.6, 0.6, 0.05),
+        #     color=[0.9, 0.7, 0.7],
+        #     physics=PhysicStateType.RIGIDBODY,
+        #     fix_base_link=True,
+        #     default_position=(0.4, 0.0, 0.8),
+        # ),
+        RigidObjCfg(
             name="table",
-            size=(0.6, 0.6, 0.05),
-            color=[0.9, 0.7, 0.7],
-            physics=PhysicStateType.RIGIDBODY,
+            scale=(0.3, 0.2, 0.3),
+            physics=PhysicStateType.GEOM,
+            usd_path="roboverse_data/ring_table.usd",
             fix_base_link=True,
-            default_position=(0.4, 0.0, 0.8),
+            default_position=(0.0, 0.0, 0.65),
+            default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
+            collision_enabled=True,
+            # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+            # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
         PrimitiveCubeCfg(
             name="cube",
-            size=(0.15, 0.15, 0.15),
+            size=(0.07, 0.07, 0.07),
             color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
+            collision_enabled=True,
             fix_base_link=False,
             default_position=(0.3, 0.1, 0.851),
         ),
@@ -365,6 +380,7 @@ class BaseTableHumanoidTaskCfg:
         pos=(1.5, -1.5, 1.5),
         look_at=(0.0, 0.0, 0.0),
         mount_to="g1_static/pelvis",
+        # mount_to="g1_static",
         mount_link="torso_link",
         # though camera visulization maybe wrong , it's correct for fov
         mount_pos=(0.1, 0.0, 0.9),
@@ -388,7 +404,7 @@ class BaseTableHumanoidTaskCfg:
 
     random_push = PushRandomCfg(enabled=False)
 
-    randomization =  True
+    randomization = True
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15

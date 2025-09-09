@@ -628,10 +628,18 @@ class IsaacsimHandler(BaseSimHandler):
                 rigid_props=rigid_props,
                 collision_props=collision_props,
                 scale=obj.scale,
+
+                # fix_base_link=obj.fix_base_link,
             )
             if isinstance(obj, RigidObjCfg):
                 self.scene.rigid_objects[obj.name] = RigidObject(
-                    RigidObjectCfg(prim_path=prim_path, spawn=usd_file_cfg)
+                    RigidObjectCfg(
+                        prim_path=prim_path,
+                        spawn=usd_file_cfg,
+                        init_state=RigidObjectCfg.InitialStateCfg(
+                            pos=obj.default_position, rot=obj.default_orientation
+                        ),
+                    )
                 )
                 return
 

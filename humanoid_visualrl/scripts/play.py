@@ -30,7 +30,6 @@ def play(args):
     )
     scenario.num_envs = 1
 
-     
     task_cfg, _ = get_cfg_cls(args)
     task_cfg.commands.curriculum = False
     task_cfg.ppo_cfg.resume = True
@@ -82,21 +81,20 @@ def play(args):
         if i % reset_interval == 0:
             if i == 0:
                 # env.init_states.objects["cube"].root_state[0, 1] = 0.075
-                env_wrapper.init_states.objects["cube"].root_state[0, 1] = 0.15
-            # if i == reset_interval:
-            #     env.init_states.objects["cube"].root_state[0, 1] = 0.075
-            # if i == 2 * reset_interval:
-            #     env.init_states.objects["cube"].root_state[0, 1] = 0.0
-            # if i == 3 * reset_interval:
-            #     env.init_states.objects["cube"].root_state[0, 1] = -0.075
-            # if i == 4 * reset_interval:
-            #     env.init_states.objects["cube"].root_state[0, 1] = -0.15
-            # env.init_states.objects["cube"].root_state[0, 1] *= -1
+                env_wrapper.init_states.objects["cube"].root_state[0, 1] = -0.15
+                # if i == reset_interval:
+                #     env.init_states.objects["cube"].root_state[0, 1] = 0.075
+                # if i == 2 * reset_interval:
+                #     env.init_states.objects["cube"].root_state[0, 1] = 0.0
+                # if i == 3 * reset_interval:
+                #     env.init_states.objects["cube"].root_state[0, 1] = -0.075
+                # if i == 4 * reset_interval:
+                #     env.init_states.objects["cube"].root_state[0, 1] = -0.15
+                # env.init_states.objects["cube"].root_state[0, 1] *= -1
                 env_wrapper._reset([0])
                 env_wrapper._compute_observations()
                 ppo_runner.alg.policy.reset([0])
 
-                
         # if i == 200:
         #     env.init_states.objects["cube"].root_state[0, 1] = 0.15
         #     env.env.set_states(env.init_states)

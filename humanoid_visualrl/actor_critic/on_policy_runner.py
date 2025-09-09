@@ -25,7 +25,7 @@ from rsl_rl.modules import (
 )
 from humanoid_visualrl.actor_critic.actor_critic_cnn import ActorCriticCNN
 from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn import ActorCriticCNNRecurrent
-from humanoid_visualrl.actor_critic.actor_critic_resnet import ActorCriticResnet
+# from humanoid_visualrl.actor_critic.actor_critic_resnet_rnn import ActorCriticResnetRecurrent
 from rsl_rl.utils import store_code_state
 
 

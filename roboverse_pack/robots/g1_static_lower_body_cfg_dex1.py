@@ -11,8 +11,8 @@ from metasim.utils import configclass
 class G1StaticCfg(RobotCfg):
     name: str = "g1_static"
     num_joints: int = 9
-    usd_path: str = "roboverse_data/robots/g1/xml/g1_29dof_lock_waist_rev_1_0_modified_lower_fixed.usd"
-    # usd_path: str = "roboverse_data/robots/unitree_isaacsim_assets/g1-29dof-dex1-base-fix-usd/g1_29dof_with_dex1_base_fix1.usd"
+    # usd_path: str = "roboverse_data/robots/g1/xml/g1_29dof_lock_waist_rev_1_0_modified_lower_fixed.usd"
+    usd_path: str = "roboverse_data/robots/unitree_isaacsim_assets/g1-29dof-dex1-base-fix-usd/g1_29dof_with_dex1_base_fix1.usd"
     xml_path: str = MISSING
     urdf_path: str = "roboverse_data/robots/g1/test_8_31.usd"
     enabled_gravity: bool = True

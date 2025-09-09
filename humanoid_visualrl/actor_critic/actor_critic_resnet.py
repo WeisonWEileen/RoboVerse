@@ -39,7 +39,7 @@ import torchvision.models as models
 from rsl_rl.utils import resolve_nn_activation
 
 
-class ActorCriticResnet(nn.Module):
+class ActorCriticResnetRecurrent(nn.Module):
     """Actor-Critic network with ResNet-18 feature extractor."""
 
     is_recurrent = False
