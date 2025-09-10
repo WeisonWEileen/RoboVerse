@@ -42,19 +42,19 @@ if __name__ == "__main__":
             intensity=100.0,
             color=(0.85, 0.9, 1.0),
         ),
-        DistantLightCfg(
-            intensity=100.0,
-            polar=35.0,
-            azimuth=60.0,
-            color=(1.0, 0.98, 0.95),
-        ),
-        DiskLightCfg(
-            intensity=100.0,
-            radius=1.5,
-            pos=(2.0, -2.0, 4.0),
-            rot=(0.7071, 0.7071, 0.0, 0.0),
-            color=(0.95, 0.95, 1.0),
-        ),
+        # DistantLightCfg(
+        #     intensity=100.0,
+        #     polar=35.0,
+        #     azimuth=60.0,
+        #     color=(1.0, 0.98, 0.95),
+        # ),
+        # DiskLightCfg(
+        #     intensity=100.0,
+        #     radius=1.5,
+        #     pos=(2.0, -2.0, 4.0),
+        #     rot=(0.7071, 0.7071, 0.0, 0.0),
+        #     color=(0.95, 0.95, 1.0),
+        # ),
     ]
 
     # look different task cfg

@@ -445,7 +445,9 @@ class BaseTableHumanoidTaskCfg:
         self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
 
         # self.randomize_cube_y_offset = 0.1
-        self.randomize_cube_y_range = 0.2
+        self.randomize_cube_yaw_range = 2.3
+        self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
+        
 
         self.actor_critic_class = "use_rnn"
 

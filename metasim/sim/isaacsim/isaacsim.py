@@ -144,7 +144,7 @@ class IsaacsimHandler(BaseSimHandler):
             dt=self.physics_dt,
             device=args.device,
             render_interval=self.scenario.decimation,  # TODO divide into render interval and control decimation
-            render=render_cfg,
+            # render=render_cfg,
             physx=PhysxCfg(
                 bounce_threshold_velocity=self.scenario.sim_params.bounce_threshold_velocity,
                 solver_type=self.scenario.sim_params.solver_type,
