@@ -9,6 +9,7 @@ import torch
 from loguru import logger as log
 
 from metasim.queries.base import BaseQueryType
+from metasim.scenario import render
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import (
     ArticulationObjCfg,
@@ -126,14 +127,24 @@ class IsaacsimHandler(BaseSimHandler):
         app_launcher = AppLauncher(args)
         self.simulation_app = app_launcher.app
 
+        import isaaclab.sim as sim_utils
+        render_cfg = sim_utils.RenderCfg(
+        rendering_mode="performance",
+        # user friendly setting overwrites
+        # enable_translucency=True, # defaults to False in performance mode
+        enable_reflections=False, # defaults to False in performance mode
+        dlss_mode="1", # defaults to 1 in performance mode
+        )
         # physics context
         from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
         from isaaclab.sim import PhysxCfg, SimulationCfg, SimulationContext
+
 
         sim_config: SimulationCfg = SimulationCfg(
             dt=self.physics_dt,
             device=args.device,
             render_interval=self.scenario.decimation,  # TODO divide into render interval and control decimation
+            render=render_cfg,
             physx=PhysxCfg(
                 bounce_threshold_velocity=self.scenario.sim_params.bounce_threshold_velocity,
                 solver_type=self.scenario.sim_params.solver_type,
@@ -144,10 +155,23 @@ class IsaacsimHandler(BaseSimHandler):
             ),
         )
 
+        from isaaclab.assets import AssetBaseCfg
+        from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+
         self.sim: SimulationContext = SimulationContext(sim_config)
         scene_config: InteractiveSceneCfg = InteractiveSceneCfg(
-            num_envs=self._num_envs, env_spacing=self.scenario.env_spacing
+            num_envs=self._num_envs,
+            env_spacing=self.scenario.env_spacing,
         )
+        # scene_config.sky_light = (
+        #     AssetBaseCfg(
+        #         prim_path="/World/skyLight",
+        #         spawn=sim_utils.DomeLightCfg(
+        #             intensity=750.0,
+        #             texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
+        #         ),
+        #     ),
+        # )
         self.scene = InteractiveScene(scene_config)
 
 
@@ -191,7 +215,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_lights()
         # self.init_marker_viz()
 
-        # self._load_render_settings()
+        self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         self.sim.reset()
@@ -693,6 +717,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.terrain.env_origins = self.terrain.terrain_origins
 
     def _load_render_settings(self) -> None:
+        # TODO support it well
         import carb
         import omni.replicator.core as rep
 
@@ -713,6 +738,9 @@ class IsaacsimHandler(BaseSimHandler):
         log.info(f"Render spp: {settings.get('/rtx/pathtracing/spp')}")
         log.info(f"Render adaptiveSampling/enabled: {settings.get('/rtx/pathtracing/adaptiveSampling/enabled')}")
         log.info(f"Render maxBounces: {settings.get('/rtx/pathtracing/maxBounces')}")
+
+
+
 
     def _load_sensors(self) -> None:
         from isaaclab.sensors import ContactSensor, ContactSensorCfg
@@ -783,13 +811,7 @@ class IsaacsimHandler(BaseSimHandler):
             SphereLightCfg,
         )
 
-        sky_light = AssetBaseCfg(
-            prim_path="/World/skyLight",
-            spawn=sim_utils.DomeLightCfg(
-                intensity=750.0,
-                texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
-            ),
-        )
+
 
         # Use lights from scenario configuration if available
         if hasattr(self.scenario, "lights") and self.scenario.lights:
@@ -873,6 +895,8 @@ class IsaacsimHandler(BaseSimHandler):
         """Add a dome light to the scene based on configuration."""
         import isaaclab.sim as sim_utils
         from isaaclab.sim.spawners import spawn_light
+        from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+        # from isaaclab.assets import AssetBaseCfg
 
         light_name = f"/World/DomeLight_{light_index}"
 
@@ -880,6 +904,7 @@ class IsaacsimHandler(BaseSimHandler):
         isaac_light_cfg = sim_utils.DomeLightCfg(
             intensity=light_cfg.intensity,
             color=light_cfg.color,
+            texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
         )
 
         # Add texture if specified

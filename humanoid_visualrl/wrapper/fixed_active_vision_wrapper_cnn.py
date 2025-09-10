@@ -92,18 +92,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         #     vision_rgb = None
 
         # Display image in OpenCV window if enabled
-        if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
-            # Use the original uint8 RGB image for display (before normalization)
-            # vision_rgb is in format (batch_size, height, width, channels)
-            display_image = vision_rgb[0].cpu().numpy()  # Take first environment
+        # if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
+        #     # Use the original uint8 RGB image for display (before normalization)
+        #     # vision_rgb is in format (batch_size, height, width, channels)
+        #     display_image = vision_rgb[0].cpu().numpy()  # Take first environment
 
-            # Display the image and check if window is still open
+        #     # Display the image and check if window is still open
 
-            window_open = self.opencv_renderer.display(display_image)
-            if not window_open:
-                # User closed the window, disable further display
-                self.enable_opencv_display = False
-                log.info("OpenCV display window closed by user")
+        #     window_open = self.opencv_renderer.display(display_image)
+        #     if not window_open:
+        #         # User closed the window, disable further display
+        #         self.enable_opencv_display = False
+        #         log.info("OpenCV display window closed by user")
 
     def _compute_pixel_distance(self):
         # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
