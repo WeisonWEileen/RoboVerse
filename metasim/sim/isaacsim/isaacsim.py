@@ -108,29 +108,9 @@ class IsaacsimHandler(BaseSimHandler):
 
         import omni.kit.viewport.utility as kit_viewport
 
-        VP = kit_viewport.get_viewport_interface()
+        kit_viewport.frame_viewport_prims('/World/envs/env_0/g1_static_dex1/torso_link/d435_link/camera_first_person')
 
-        # ① 主视口（默认 “Viewport”）
-        main_vp = VP.get_default_viewport_window()
-        main_vp.set_title("stage_overview")
-        # 不绑相机 = 自由透视
 
-        # ② 新建一个窗口，显示第一人称摄像头
-        fp_vp = VP.create_instance("first_person_view")
-        fp_vp.set_window_pos(800, 0)  # 根据你的屏幕自行调整
-        fp_vp.set_window_size(800, 600)
-        fp_vp.set_texture_resolution(1280, 720)
-
-        # 让它跟随你在场景里注册的传感器
-        fp_camera_prim = "/World/envs/env_0/g1_static_dex1/torso_link/d435_link/camera_first_person"
-        fp_vp.set_active_camera(fp_camera_prim)
-
-        # 可选：右侧隐藏 USD tree，用更大可视域
-        fp_vp.show_horizontal_scrollbar(False)
-        fp_vp.show_vertical_scrollbar(False)
-
-        # 如果要固定分屏布局，可以用 Kit 的 Layout Manager
-        # omni.kit.window.viewport_legacy.set_viewport_layout(...)
 
     def _init_scene(self) -> None:
         """
@@ -241,7 +221,8 @@ class IsaacsimHandler(BaseSimHandler):
         if self.sim.has_gui():
             self._init_keyboard()
 
-        # self._init_viewports()
+
+        self._init_viewports()
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")

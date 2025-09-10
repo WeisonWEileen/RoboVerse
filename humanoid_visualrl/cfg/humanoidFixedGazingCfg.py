@@ -309,7 +309,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.5, 0.0, 0.925]),
+                    "pos": torch.tensor([0.5, 0.0, 0.875]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -406,12 +406,16 @@ class BaseTableHumanoidTaskCfg:
         # mount_to="g1_static",
         mount_to="g1_static_dex1",
         # mount_link="torso_link",
+        # mount_link="torso_link/d435_link",
         mount_link="torso_link/d435_link",
         # though camera visulization maybe wrong , it's correct for fov
-        mount_pos=(0.1, 0.0, 0.0),
+        # mount_pos=(0.05, 0.0, 0.0),
+        mount_pos=(0.0, 0.0, 0.0),
         #     quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
         # quat = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])  #
-        mount_quat=(0.8660254037844387, 0.0, 0.49999999999999994, 0.0),
+        # mount_quat=(0.8660254037844387, 0.0, 0.49999999999999994, 0.0),
+        # mount_quat=(0.5, -0.5, 0.5, -0.5),
+        mount_quat=(1.0, 0.0, 0.0, 0.0),
     )
 
     @configclass
