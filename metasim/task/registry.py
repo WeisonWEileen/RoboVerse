@@ -23,8 +23,8 @@ def register_task(*names):
         raise ValueError("At least one name must be provided to register_task().")
 
     def _decorator(cls):
-        if not issubclass(cls, BaseTaskEnv):
-            raise TypeError(f"Can only register subclasses of BaseTaskEnv, got: {cls!r}")
+        # if not issubclass(cls, BaseTaskEnv):
+        #     raise TypeError(f"Can only register subclasses of BaseTaskEnv, got: {cls!r}")
         for raw_name in names:
             key = raw_name.strip().lower()
             if not key:

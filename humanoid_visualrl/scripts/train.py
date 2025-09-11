@@ -6,7 +6,7 @@ from typing import Literal
 
 import rootutils
 import torch
-from metasim.scenario.lights import DiskLightCfg, DistantLightCfg, DomeLightCfg
+from metasim.scenario.lights import DomeLightCfg
 
 import tyro
 from metasim.scenario.cameras import PinholeCameraCfg
@@ -22,45 +22,35 @@ from humanoid_visualrl.utils.utils import get_log_dir, get_cfg_cls, get_env_wrap
 
 import shutil
 import os
-
+from metasim.task.registry import get_task_class
 
 if __name__ == "__main__":
     args = get_args()
+    task_cfg, cfg_file_path = get_cfg_cls(args)
+
+
 
     if args.use_resnet and args.use_vision:
         raise ValueError("use_resnet and use_vision cannot be True at the same time")
 
     # initialize scenario
     scenario = ScenarioCfg(
-        robots=[args.robot],
+        robots=[task_cfg.robot],
         simulator=args.sim,
         headless=args.headless,
-        num_envs=args.num_envs,
+        num_envs=task_cfg.num_envs,
     )
     scenario.lights = [
         DomeLightCfg(
             intensity=100.0,
             color=(0.85, 0.9, 1.0),
         ),
-        # DistantLightCfg(
-        #     intensity=100.0,
-        #     polar=35.0,
-        #     azimuth=60.0,
-        #     color=(1.0, 0.98, 0.95),
-        # ),
-        # DiskLightCfg(
-        #     intensity=100.0,
-        #     radius=1.5,
-        #     pos=(2.0, -2.0, 4.0),
-        #     rot=(0.7071, 0.7071, 0.0, 0.0),
-        #     color=(0.95, 0.95, 1.0),
-        # ),
     ]
 
     # look different task cfg
-    task_cfg, cfg_file_path = get_cfg_cls(args)
 
-    if args.use_vision or args.use_resnet or args.use_fixed_gazing:
+
+    if task_cfg.use_vision or task_cfg.use_resnet or task_cfg.use_fixed_gazing:
         scenario.cameras = [task_cfg.camera]
     else:
         scenario.cameras = []
@@ -76,6 +66,8 @@ if __name__ == "__main__":
     scenario.env_spacing = task_cfg.env_spacing
 
     log.info(f"Using simulator: {args.sim}")
+
+    env_cls = get_task_class(args.task)
 
     env, env_file_path = get_env_wrapper_cls(args, scenario)
     device = torch.device("cuda")

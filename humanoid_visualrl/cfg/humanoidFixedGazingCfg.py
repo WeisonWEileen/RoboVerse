@@ -17,6 +17,8 @@ from loguru import logger as log
 
 from metasim.scenario.objects import RigidObjCfg
 
+from metasim.task.registry import register_task
+
 
 @configclass
 class LeggedRobotRunnerCfg:
@@ -97,6 +99,7 @@ class LeggedRobotRunnerCfg:
     empirical_normalization = False
 
 
+# @register_task("g1_static_dex1_fixed_gazing")
 @configclass
 class BaseTableHumanoidTaskCfg:
     """Base class for legged-gym style humanoid tasks.
@@ -358,12 +361,9 @@ class BaseTableHumanoidTaskCfg:
 
     command_dim = 14
     num_actions = 17
-
     torque_limit_scale = 1.0
-
     reward_weights: dict[str, float] = {
         "upper_body_pos": 0.1,
-        # "dof_vel": -5e-4,
         "pixel_norm_at_cube": 0.4,
     }
 
@@ -447,7 +447,6 @@ class BaseTableHumanoidTaskCfg:
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_yaw_range = 2.3
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
-        
 
         self.actor_critic_class = "use_rnn"
 
@@ -461,3 +460,10 @@ class BaseTableHumanoidTaskCfg:
         log.info("================================================")
         log.info(f"USING {self.actor_critic_class} ACTOR CRITIC CLASS")
         log.info("================================================")
+
+        # training runtime highly relevant
+        self.robot = "g1_static_dex1"
+        self.num_envs = 64
+        self.enable_opencv_display = True
+        self.use_vision = True
+        self.use_fixed_gazing = True

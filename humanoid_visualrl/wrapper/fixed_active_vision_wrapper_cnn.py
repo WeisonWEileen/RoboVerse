@@ -15,8 +15,11 @@ from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 from metasim.types import TensorState
 from metasim.utils.math import quat_apply
 from loguru import logger as log
+from metasim.task.registry import register_task
 
 
+
+@register_task("active_vision")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
 

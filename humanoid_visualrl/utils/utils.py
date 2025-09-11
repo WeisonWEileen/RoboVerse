@@ -319,6 +319,7 @@ def get_args():
         export_policy = False
         resume: bool = False
         wandb: bool = False
+        task: str = "active_vision"
 
         def __post_init__(self):
             """Post-initialization configuration."""
