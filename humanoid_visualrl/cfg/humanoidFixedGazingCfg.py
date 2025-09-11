@@ -17,8 +17,6 @@ from loguru import logger as log
 
 from metasim.scenario.objects import RigidObjCfg
 
-from metasim.task.registry import register_task
-
 
 @configclass
 class LeggedRobotRunnerCfg:
@@ -100,7 +98,7 @@ class LeggedRobotRunnerCfg:
 
 
 # @register_task("g1_static_dex1_fixed_gazing")
-@configclass
+@configclass(name="active_vision")
 class BaseTableHumanoidTaskCfg:
     """Base class for legged-gym style humanoid tasks.
 
@@ -244,14 +242,6 @@ class BaseTableHumanoidTaskCfg:
     dt = decimation * sim_params.dt
     """simulation time step in s"""
     objects = [
-        # PrimitiveCubeCfg(
-        #     name="table",
-        #     size=(0.6, 0.6, 0.05),
-        #     color=[0.9, 0.7, 0.7],
-        #     physics=PhysicStateType.RIGIDBODY,
-        #     fix_base_link=True,
-        #     default_position=(0.4, 0.0, 0.8),
-        # ),
         RigidObjCfg(
             name="table",
             scale=(0.3, 0.2, 0.3),
@@ -390,11 +380,11 @@ class BaseTableHumanoidTaskCfg:
     # control
     action_scale = 0.25
 
-    task_name = "fixed_gazing"
+    task_name = "active_vision"
 
     from metasim.scenario.cameras import PinholeCameraCfg
 
-    camera = PinholeCameraCfg(
+    cameras = [PinholeCameraCfg(
         name="camera_first_person",
         # data_types=["rgb", "instance_id_seg"],
         data_types=["rgb", "semantic_seg"],
@@ -416,7 +406,7 @@ class BaseTableHumanoidTaskCfg:
         # mount_quat=(0.8660254037844387, 0.0, 0.49999999999999994, 0.0),
         # mount_quat=(0.5, -0.5, 0.5, -0.5),
         mount_quat=(1.0, 0.0, 0.0, 0.0),
-    )
+    )]
 
     @configclass
     class PushRandomCfg:

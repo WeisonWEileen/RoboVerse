@@ -19,6 +19,10 @@ from metasim.task.registry import register_task
 
 
 
+
+
+
+
 @register_task("active_vision")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
@@ -29,8 +33,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.image_center_x = self.cfg.camera.width / 2
-        self.image_center_y = self.cfg.camera.height / 2
+        self.image_center_x = self.cfg.cameras[0].width / 2
+        self.image_center_y = self.cfg.cameras[0].height / 2
         self.done_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.feature_extractor = Reset18Extractor(device=self.device)
 
@@ -47,16 +51,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # TODO hard code for now
         self.target_id = 2
 
+
+
     def _init_buffers(self):
         super()._init_buffers()
         self.obs_buf_state = torch.zeros(self.num_envs, self.cfg.num_observations, device=self.device)
         self.vision_rgb_buf = torch.zeros(
-            self.num_envs, 3, self.cfg.camera.height, self.cfg.camera.width, device=self.device
+            self.num_envs, 3, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device
         )
         self.obs_buf = (self.obs_buf_state, self.vision_rgb_buf)
         # self.wrist_pose = torch.zeros(self.num_envs, 2, 7, device=self.device)
 
-        height, width = self.cfg.camera.height, self.cfg.camera.width
+        height, width = self.cfg.cameras[0].height, self.cfg.cameras[0].width
 
         # 创建坐标网格
         self.y_coords, self.x_coords = torch.meshgrid(
@@ -66,7 +72,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.cube_pose_buf = self.init_states.objects["cube"].root_state[:, :7].clone()
 
         self.vision_seg_buf = torch.zeros(
-            self.num_envs, self.cfg.camera.height, self.cfg.camera.width, device=self.device, dtype=torch.int32
+            self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
         )
 
     def _refreshed_tensors(self, tensor_state: TensorState):

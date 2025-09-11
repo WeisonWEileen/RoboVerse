@@ -1,0 +1,1 @@
+import humanoid_visualrl.wrapper.fixed_active_vision_wrapper_cnn  # ensures @register_task runs

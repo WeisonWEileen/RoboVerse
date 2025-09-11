@@ -8,6 +8,12 @@ from loguru import logger as log
 
 from metasim.sim.base import BaseSimHandler
 from metasim.utils import configclass
+import inspect
+import shutil
+
+def dump_instance_file(cls_instance, file_path):
+    cls_instance_file_path = inspect.getfile(cls_instance.__class__)
+    shutil.copy(cls_instance_file_path, file_path)
 
 
 def get_body_reindexed_indices_from_substring(

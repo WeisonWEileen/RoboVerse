@@ -30,7 +30,7 @@ def __dataclass_transform__():
 
 
 @__dataclass_transform__()
-def configclass(cls, **kwargs):
+def configclass(*decorator_args, **decorator_kwargs):
     """Wrapper around `dataclass` functionality to add extra checks and utilities.
 
     As of Python 3.7, the standard dataclasses have two main issues which makes them non-generic for
@@ -77,39 +77,67 @@ def configclass(cls, **kwargs):
         env_cfg_copy = env_cfg_copy.replace(num_envs=32)
 
     Args:
-        cls: The class to wrap around.
-        **kwargs: Additional arguments to pass to :func:`dataclass`.
+        *decorator_args: When used as ``@configclass`` directly, contains the class object as first arg.
+        name(s): Optional. When provided as ``@configclass(name="foo")`` or ``@configclass(names=(...))``,
+            the class will also be registered into the task cfg registry under these names.
+        **decorator_kwargs: Additional arguments to pass to :func:`dataclass`.
 
     Returns:
         The wrapped class.
 
     .. _dataclass: https://docs.python.org/3/library/dataclasses.html
     """
-    # add type annotations
-    _add_annotation_types(cls)
-    # add field factory
-    _process_mutable_types(cls)
-    # copy mutable members
-    # note: we check if user defined __post_init__ function exists and augment it with our own
-    if hasattr(cls, "__post_init__"):
-        cls.__post_init__ = _combined_function(cls.__post_init__, _custom_post_init)
-    else:
-        cls.__post_init__ = _custom_post_init
-    # add helper functions for dictionary conversion
-    cls.to_dict = _class_to_dict
-    cls.from_dict = _update_class_from_dict
-    cls.replace = _replace_class_with_kwargs
-    cls.copy = _copy_class
-    cls.validate = _validate
-    # wrap around dataclass
-    if cls.__doc__ is None:
-        cls.__doc__ = "NO_DOCSTRING"  # HACK: Avoid dataclass auto-generating docstring
-    cls = dataclass(cls, **kwargs)
-    # If not docstring, inherit docstring from base class
-    if cls.__doc__ == "NO_DOCSTRING":
-        cls.__doc__ = next(c.__doc__ for c in cls.__bases__ if c.__doc__)
-    # return wrapped class
-    return cls
+    names = decorator_kwargs.pop("names", None) or decorator_kwargs.pop("name", None)
+
+    def _apply(_cls):
+        # add type annotations
+        _add_annotation_types(_cls)
+        # add field factory
+        _process_mutable_types(_cls)
+        # copy mutable members
+        # note: we check if user defined __post_init__ function exists and augment it with our own
+        if hasattr(_cls, "__post_init__"):
+            _cls.__post_init__ = _combined_function(_cls.__post_init__, _custom_post_init)
+        else:
+            _cls.__post_init__ = _custom_post_init
+        # add helper functions for dictionary conversion
+        _cls.to_dict = _class_to_dict
+        _cls.from_dict = _update_class_from_dict
+        _cls.replace = _replace_class_with_kwargs
+        _cls.copy = _copy_class
+        _cls.validate = _validate
+        # wrap around dataclass
+        if _cls.__doc__ is None:
+            _cls.__doc__ = "NO_DOCSTRING"  # HACK: Avoid dataclass auto-generating docstring
+        _cls = dataclass(_cls, **decorator_kwargs)
+        # If not docstring, inherit docstring from base class
+        if _cls.__doc__ == "NO_DOCSTRING":
+            _cls.__doc__ = next(c.__doc__ for c in _cls.__bases__ if c.__doc__)
+
+        # Optional: auto-register into task cfg registry if names are provided
+        if names:
+            try:
+                from metasim.task.registry import register_task_cfg as _register_task_cfg
+
+                # Support both single string and iterable of names
+                if isinstance(names, (str, bytes)):
+                    _register_task_cfg(names)(_cls)
+                else:
+                    _register_task_cfg(*tuple(names))(_cls)
+            except Exception:
+                # Avoid hard failures if registry is unavailable
+                pass
+        return _cls
+
+    # Used as @configclass
+    if decorator_args and isinstance(decorator_args[0], type):
+        return _apply(decorator_args[0])
+
+    # Used as @configclass(...)
+    def _wrapper(_cls):
+        return _apply(_cls)
+
+    return _wrapper
 
 
 """
