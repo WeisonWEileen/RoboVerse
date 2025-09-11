@@ -20,9 +20,6 @@ from metasim.task.registry import register_task
 
 
 
-
-
-
 @register_task("active_vision")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
@@ -38,8 +35,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.done_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.feature_extractor = Reset18Extractor(device=self.device)
 
-        self.pixel_reward_offset = torch.exp(torch.tensor([-self.cfg.camera.width / 2.0 / 50.0], device=self.device))
-
+        self.pixel_reward_offset = torch.exp(
+                -torch.sqrt(torch.tensor([self.cfg.cameras[0].width**2 + self.cfg.cameras[0].height**2], device=self.device)) / 2.0 / 50.0
+        )
         self.sucess_thres = (
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
@@ -81,13 +79,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
-        vision_rgb = tensor_state.cameras[self.cfg.camera.name].rgb
+        vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb
         self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2).float() / 255.0
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
-        # vision_seg = tensor_state.cameras[self.cfg.camera.name].instance_id_seg
+        # vision_seg = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg
 
-        self.vision_seg_buf = tensor_state.cameras[self.cfg.camera.name].semantic_seg_data
-        self.vision_seg_info = tensor_state.cameras[self.cfg.camera.name].instance_id_seg_id2label
+        self.vision_seg_buf = tensor_state.cameras[self.cfg.cameras[0].name].semantic_seg_data
+        self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
 
         self._compute_pixel_distance()
 
@@ -220,12 +218,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
 
         # visual_features = self.resnet_features
-        cube_pose_obs = self.cube_pose_buf
+        # cube_pose_obs = self.cube_pose_buf
 
         self.privileged_obs_buf = torch.cat(
             (
                 # ref_wrist_pos_obs,  # 14
-                cube_pose_obs,
+                # cube_pose_obs,
                 # wrist_pos_obs,  # 14
                 q,  # |A|
                 dq,  # |A|
@@ -332,7 +330,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _reward_look_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for looking at the cube."""
         # 获取相机的世界坐标位置 (num_envs, 3)
-        camera_pos = tensor_state.cameras[self.cfg.camera.name].pos
+        camera_pos = tensor_state.cameras[self.cfg.cameras[0].name].pos
 
         # 获取立方体的世界坐标位置 (num_envs, 3)
         cube_pos = tensor_state.objects["cube"].root_state[:, :3]
@@ -343,7 +341,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # 获取相机的朝向向量 (num_envs, 3)
         # 相机的朝向通常是+X方向（根据CameraState的注释）
-        camera_quat = tensor_state.cameras[self.cfg.camera.name].quat_world  # (num_envs, 4) - (w, x, y, z)
+        camera_quat = tensor_state.cameras[self.cfg.cameras[0].name].quat_world  # (num_envs, 4) - (w, x, y, z)
         # 将相机的+X轴方向向量转换到世界坐标系
         camera_forward = torch.tensor([1.0, 0.0, 0.0], device=self.device).expand(self.num_envs, 3)
         camera_vec = quat_apply(camera_quat, camera_forward)  # 应用四元数旋转

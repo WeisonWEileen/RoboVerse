@@ -119,7 +119,7 @@ class OnPolicyRunner:
             obs_vision_shape = (
                 [obs_context_len, 3, self.env.cfg.camera.height, self.env.cfg.camera.width]
                 if obs_context_len != 1
-                else [3, self.env.cfg.camera.height, self.env.cfg.camera.width]
+                else [3, self.env.cfg.cameras[0].height, self.env.cfg.cameras[0].width]
             )
         else:
             obs_vision_shape = None

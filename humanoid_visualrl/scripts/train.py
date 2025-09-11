@@ -58,7 +58,10 @@ if __name__ == "__main__":
     log.info(f"Using simulator: {args.sim}")
     env_cls = get_task_class(args.task)
 
-    env = env_cls(scenario, enable_opencv_display=args.enable_opencv_display)
+    if task_cfg.use_vision:
+        env = env_cls(scenario, enable_opencv_display=args.enable_opencv_display)
+    else:
+        env = env_cls(scenario)
     device = torch.device("cuda")
     log_dir = get_log_dir(args, scenario)
 

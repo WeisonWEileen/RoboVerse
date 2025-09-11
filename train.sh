@@ -3,10 +3,10 @@
 python ./humanoid_visualrl/scripts/train.py \
     --num_envs 64 \
     --wandb \
-    --robot "g1_static_dex1" \
-    --use_fixed_gazing \
-    --use_vision \
+    --task "active_vision" \
     --enable_opencv_display 
+    # --use_fixed_gazing \
+    # --use_vision \
     # --resume 
     # --headless \
     # --load_run "2025_0905_013206" \

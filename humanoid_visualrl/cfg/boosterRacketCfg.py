@@ -8,7 +8,7 @@ from typing import Callable, Literal
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveCubeCfg
+from metasim.scenario.objects import PrimitiveSphereCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.types import TensorState
@@ -73,7 +73,7 @@ class LeggedRobotRunnerCfg:
 
     # logging
     # logger: str = "wandb"
-    wandb_project: str = "active_vision"
+    wandb_project: str = "booster"
 
     save_interval = 100
     """save interval for checkpoints"""
@@ -98,7 +98,7 @@ class LeggedRobotRunnerCfg:
 
 
 # @register_task("g1_static_dex1_fixed_gazing")
-@configclass(name="active_vision")
+@configclass(name="booster_racket")
 class BaseTableHumanoidTaskCfg:
     """Base class for legged-gym style humanoid tasks.
 
@@ -242,20 +242,8 @@ class BaseTableHumanoidTaskCfg:
     dt = decimation * sim_params.dt
     """simulation time step in s"""
     objects = [
-        RigidObjCfg(
-            name="table",
-            scale=(0.3, 0.2, 0.3),
-            physics=PhysicStateType.GEOM,
-            usd_path="roboverse_data/ring_table.usd",
-            fix_base_link=True,
-            default_position=(0.0, 0.0, 0.65),
-            default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
-            collision_enabled=True,
-            # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-            # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
-        ),
-        PrimitiveCubeCfg(
-            name="cube",
+        PrimitiveSphereCfg(
+            name="table_tennis",
             size=(0.07, 0.07, 0.07),
             color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
@@ -268,8 +256,6 @@ class BaseTableHumanoidTaskCfg:
     """objects in the environment"""
     traj_filepath = None
     """path to the trajectory file"""
-    # TODO read form max_episode_length_s and divide s
-    # max_episode_length_s: int = 6
     max_episode_length_s: int = 4
     """maximum episode length in seconds"""
     episode_length: int = 2400
@@ -307,42 +293,33 @@ class BaseTableHumanoidTaskCfg:
                 },
             },
             "robots": {
-                # "g1_static": {
-                #     "pos": torch.tensor([0.0, 0.0, 0.78]),
-                #     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                #     "dof_pos": {
-                #         "waist_yaw_joint": 0.0,
-                #         "left_shoulder_pitch_joint": 0.0,
-                #         "left_shoulder_roll_joint": 0.0,
-                #         "left_shoulder_yaw_joint": 0.0,
-                #         "left_elbow_joint": 1.45,
-                #         "right_shoulder_pitch_joint": 0.0,
-                #         "right_shoulder_roll_joint": 0.0,
-                #         "right_shoulder_yaw_joint": 0.0,
-                #         "right_elbow_joint": 1.45,
-                #     },
-                # },
-                "g1_static_dex1": {
-                    "pos": torch.tensor([0.0, 0.0, 0.60]),
-                    "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
+                "t1": {
+                    "pos": torch.tensor([0.0, 0.0, 0.50]),
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
-                        "waist_yaw_joint": 0.0,
-                        "waist_roll_joint": 0.0,
-                        "waist_pitch_joint": 0.0,
-                        "left_shoulder_pitch_joint": 0.0,
-                        "left_shoulder_roll_joint": 0.0,
-                        "left_shoulder_yaw_joint": 0.0,
-                        "left_elbow_joint": 0.0,
-                        "left_wrist_roll_joint": 0.0,
-                        "left_wrist_pitch_joint": 0.0,
-                        "left_wrist_yaw_joint": 0.0,
-                        "right_shoulder_pitch_joint": 0.0,
-                        "right_shoulder_roll_joint": 0.0,
-                        "right_shoulder_yaw_joint": 0.0,
-                        "right_elbow_joint": 0.0,
-                        "right_wrist_roll_joint": 0.0,
-                        "right_wrist_pitch_joint": 0.0,
-                        "right_wrist_yaw_joint": 0.0,
+                        "AAHead_yaw": 0.0,
+                        "Head_pitch": 0.0,
+                        "Left_Shoulder_Pitch": 0.20,
+                        "Left_Shoulder_Roll": -1.35,
+                        "Left_Elbow_Pitch": 0.0,
+                        "Left_Elbow_Yaw": -0.50,
+                        "Right_Shoulder_Pitch": 0.435,
+                        "Right_Shoulder_Roll": 0.95,
+                        "Right_Elbow_Pitch": 0.0,
+                        "Right_Elbow_Yaw": 0.55,
+                        "Waist": 0.0,
+                        "Left_Hip_Pitch": -0.20,
+                        "Left_Hip_Roll": 0.0,
+                        "Left_Hip_Yaw": 0.0,
+                        "Left_Knee_Pitch": 0.42,
+                        "Left_Ankle_Pitch": -0.23,
+                        "Left_Ankle_Roll": 0.0,
+                        "Right_Hip_Pitch": -0.20,
+                        "Right_Hip_Roll": 0.0,
+                        "Right_Hip_Yaw": 0.0,
+                        "Right_Knee_Pitch": 0.42,
+                        "Right_Ankle_Pitch": -0.23,
+                        "Right_Ankle_Roll": 0.0,
                     },
                 },
             },
@@ -363,25 +340,16 @@ class BaseTableHumanoidTaskCfg:
     # obs
     visual_dim: int = 512
 
-    if use_vision:
-        # s
-        num_single_obs = num_actions * 3
-        num_observations: int = int(frame_stack * num_single_obs)
-        single_num_privileged_obs: int = num_actions * 3 
-        num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-    else:
-        num_single_obs = num_actions * 3 + visual_dim
-        num_observations = int(frame_stack * num_single_obs)
-        # single_num_observations = 3 * num_actions + 6 + visual_dim
 
-        # privileged obs
-        single_num_privileged_obs = num_actions * 3 + 7 + visual_dim
-        num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
+    num_single_obs = num_actions * 3
+    num_observations: int = int(frame_stack * num_single_obs)
+    single_num_privileged_obs: int = num_actions * 3 + 7
+    num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
 
     # control
     action_scale = 0.25
 
-    task_name = "active_vision"
+    task_name = "booster"
 
     from metasim.scenario.cameras import PinholeCameraCfg
 
@@ -393,19 +361,9 @@ class BaseTableHumanoidTaskCfg:
         height=96,
         pos=(1.5, -1.5, 1.5),
         look_at=(0.0, 0.0, 0.0),
-        # mount_to="g1_static/pelvis",
-        # mount_to="g1_static",
-        mount_to="g1_static_dex1",
-        # mount_link="torso_link",
-        # mount_link="torso_link/d435_link",
-        mount_link="torso_link/d435_link",
-        # though camera visulization maybe wrong , it's correct for fov
-        # mount_pos=(0.05, 0.0, 0.0),
+        mount_to="t1",
+        mount_link="H2/d435_link",
         mount_pos=(0.0, 0.0, 0.0),
-        #     quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
-        # quat = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])  #
-        # mount_quat=(0.8660254037844387, 0.0, 0.49999999999999994, 0.0),
-        # mount_quat=(0.5, -0.5, 0.5, -0.5),
         mount_quat=(1.0, 0.0, 0.0, 0.0),
     )]
 
@@ -427,13 +385,6 @@ class BaseTableHumanoidTaskCfg:
     randomization = True
 
     def __post_init__(self):
-        self.command_ranges.wrist_max_radius = 0.15
-        self.command_ranges.l_wrist_pos_x = [-0.05, 0.15]
-        self.command_ranges.l_wrist_pos_y = [-0.05, 0.15]
-        self.command_ranges.l_wrist_pos_z = [-0.15, 0.15]
-        self.command_ranges.r_wrist_pos_x = [-0.05, 0.15]
-        self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
-        self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
 
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_yaw_range = 2.3

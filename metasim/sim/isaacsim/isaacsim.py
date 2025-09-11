@@ -31,7 +31,7 @@ from metasim.utils.state import CameraState, ObjectState, RobotState, TensorStat
 
 import omni
 import weakref
-
+from metasim.utils.math import convert_camera_frame_orientation_convention
 
 class IsaacsimHandler(BaseSimHandler):
     """
@@ -208,7 +208,7 @@ class IsaacsimHandler(BaseSimHandler):
     def launch(self) -> None:
         self._init_scene()
         self._load_robots()
-        # self._load_sensors()
+        self._load_sensors()
         self._load_cameras()
         self._load_terrain()
         self._load_objects()
@@ -506,6 +506,8 @@ class IsaacsimHandler(BaseSimHandler):
         self.sim.step(render=False)
         if self._step_counter % self._render_interval == 0 and is_rendering:
             self.sim.render()
+            # self._update_tiled_camera_pose()
+        
 
         self.scene.update(dt=self.physics_dt)
 
@@ -750,6 +752,7 @@ class IsaacsimHandler(BaseSimHandler):
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
+            track_pose=True,
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)
         self.scene.sensors["contact_sensor"] = self.contact_sensor
@@ -1127,6 +1130,8 @@ class IsaacsimHandler(BaseSimHandler):
             prim_path = f"/World/envs/env_.*/{camera.name}"
             # Use default offset, will be set by set_world_poses_from_view later
             offset = TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world")
+
+            # update the index of mount link for camera 
         else:
             prim_path = f"/World/envs/env_.*/{camera.mount_to}/{camera.mount_link}/{camera.name}"
             offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
@@ -1330,3 +1335,17 @@ class IsaacsimHandler(BaseSimHandler):
             obj_inst.root_physx_view.set_material_properties(materials, torch.tensor(env_ids, device=device))
         else:
             raise ValueError(f"Object {obj_name} not found")
+
+
+
+    # it do not work ... at isaacsim 5.0.0 because of the XPrimPath is not update
+    # def _update_tiled_camera_pose(self):
+    #     for camera in self.cameras:
+    #         camera_inst = self.scene.sensors[camera.name]
+    #         pos, quat = camera_inst._view.get_world_poses()
+    #         camera_inst._data.pos_w = pos
+    #         camera_inst._data.quat_w_world = convert_camera_frame_orientation_convention(
+    #             quat, origin="opengl", target="world"
+    #         )
+
+

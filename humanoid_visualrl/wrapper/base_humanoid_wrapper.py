@@ -327,9 +327,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
         # self.contact_forces[:] = tensor_state.extras["net_contact_force"][:]
         # FIXME debug here
-        # self.contact_forces[:] = self.env.contact_sensor.data.net_forces_w[
-        #     :, self.env.get_body_reindex(self.robot.name), :
-        # ]
+        self.contact_forces[:] = self.env.contact_sensor.data.net_forces_w[
+            :, self.env.get_body_reindex(self.robot.name), :
+        ]
 
     def _check_reset(self):
         # reset_buf = torch.any(

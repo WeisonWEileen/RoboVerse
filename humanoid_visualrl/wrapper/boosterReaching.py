@@ -6,7 +6,8 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
 from metasim.task.registry import register_task
 
-@register_task("walking")
+
+@register_task("booster_reaching")
 class WalkingWrapper(HumanoidBaseWrapper):
     """Wrapper for walking tasks."""
 
@@ -21,12 +22,21 @@ class WalkingWrapper(HumanoidBaseWrapper):
         self.right_hip_pitch_joint_idx = joint_names.index("right_hip_pitch_joint")
         self.right_knee_joint_idx = joint_names.index("right_knee_joint")
 
+        if "t1" in self.robot.name:
+            self.left_hip_pitch_joint_idx = joint_names.index("Left_Hip_Pitch")
+            self.left_knee_joint_idx = joint_names.index("Left_Knee_Pitch")
+            self.right_hip_pitch_joint_idx = joint_names.index("Right_Hip_Pitch")
+            self.right_knee_joint_idx = joint_names.index("Right_Knee_Pitch")
+
         if "h1" in self.robot.name:
             self.left_ankle_joint_idx = joint_names.index("left_ankle_joint")
             self.right_ankle_joint_idx = joint_names.index("right_ankle_joint")
         elif "g1" in self.robot.name:
             self.left_ankle_joint_idx = joint_names.index("left_ankle_pitch_joint")
             self.right_ankle_joint_idx = joint_names.index("right_ankle_pitch_joint")
+        elif "t1" in self.robot.name:
+            self.left_ankle_joint_idx = joint_names.index("Left_Ankle_Pitch")
+            self.right_ankle_joint_idx = joint_names.index("Right_Ankle_Pitch")
         else:
             raise ValueError(f"Unsupported robot: {self.robot.name} for Skillblender Walking Task")
 
@@ -433,5 +443,3 @@ class WalkingWrapper(HumanoidBaseWrapper):
         lin_mismatch = torch.exp(-torch.square(self.base_lin_vel[:, 2]) * 10)
         ang_mismatch = torch.exp(-torch.norm(self.base_ang_vel[:, :2], dim=1) * 5.0)
         return (lin_mismatch + ang_mismatch) / 2.0
-
-

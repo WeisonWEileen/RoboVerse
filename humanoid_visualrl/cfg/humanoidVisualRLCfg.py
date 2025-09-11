@@ -271,6 +271,7 @@ class BaseTableHumanoidTaskCfg:
         resample_on_env_reset: bool = True
 
     humanoid_extra_cfg: HumanoidExtraCfg = HumanoidExtraCfg()
+    cameras = []
 
     init_states = [
         {
