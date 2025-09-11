@@ -106,4 +106,4 @@ class G1StaticCfg(RobotCfg):
 
     # joint substrings, to find indices of joints.
 
-    upper_body_joints = ["shoulder", "elbow", "torso"]
+    upper_body_joints = ["shoulder", "elbow", "torso", "waist_pitch_joint", "waist_roll_joint"]

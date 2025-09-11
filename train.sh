@@ -3,7 +3,7 @@
 python ./humanoid_visualrl/scripts/train.py \
     --num_envs 64 \
     --wandb \
-    --robot "g1_static" \
+    --robot "g1_static_dex1" \
     --use_fixed_gazing \
     --use_vision \
     --enable_opencv_display 

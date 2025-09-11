@@ -81,7 +81,13 @@ def play(args):
         if i % reset_interval == 0:
             if i == 0:
                 # env.init_states.objects["cube"].root_state[0, 1] = 0.075
-                env_wrapper.init_states.objects["cube"].root_state[0, 1] = -0.15
+
+                yaw = torch.tensor(1.0, device=env_wrapper.device)
+
+                cube_x = torch.cos(yaw) * task_cfg.randomize_cube_radius
+                cube_y = torch.sin(yaw) * task_cfg.randomize_cube_radius
+                env_wrapper.init_states.objects["cube"].root_state[0, 0] = cube_x
+                env_wrapper.init_states.objects["cube"].root_state[0, 1] = cube_y
                 # if i == reset_interval:
                 #     env.init_states.objects["cube"].root_state[0, 1] = 0.075
                 # if i == 2 * reset_interval:
@@ -110,7 +116,7 @@ def play(args):
         # print(actions)
         # breakpoint()
         # for i in task_cfg.decimation:
-        obs, rewards, dones, infos = env_wrapper.step(actions.detach())
+        obs, wras, dones, infos = env_wrapper.step(actions.detach())
         log.info(f"step: {i}")
 
     env_wrapper.env.close()

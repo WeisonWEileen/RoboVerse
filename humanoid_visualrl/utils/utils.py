@@ -199,7 +199,7 @@ def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     task_name = scenario.task.task_name
     task_name = f"{robot_name}_{task_name}"
     now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
-    log_dir = f"./outputs/humanoid_visualrl/{task_name}/{now}/"
+    log_dir = f"./outputs/active_perception/{task_name}/{now}/"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
     log.info("Log directory: {}", log_dir)
@@ -265,7 +265,7 @@ def get_load_root_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     task_name = f"{robot_name}_{task_name}"
     if args.load_run is None:
         raise ValueError("Please provide a run name to load the model from using --load_run")
-    load_root = f"./outputs/humanoid_visualrl/{task_name}/{args.load_run}"
+    load_root = f"./outputs/active_perception/{task_name}/{args.load_run}"
     return load_root
 
 

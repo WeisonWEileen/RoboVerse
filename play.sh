@@ -13,11 +13,11 @@
 
 python ./humanoid_visualrl/scripts/play.py \
     --num_envs 1 \
-    --robot "g1_static" \
+    --robot "g1_static_dex1" \
     --use_fixed_gazing \
     --use_vision \
     --resume \
-    --load_run "2025_0907_132619" \
-    --checkpoint 2100 \
+    --load_run "2025_0910_093858" \
+    --checkpoint 8000 \
     --enable_opencv_display 
     # --wandb \

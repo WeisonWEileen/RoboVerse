@@ -130,9 +130,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             center_x = weighted_x / pixel_counts[valid_envs]
 
             # 计算距离
-            # distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
+            distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
             # since now we have no pitch dof for waist, we only consider x pixel distance
-            distance = torch.abs(center_x - self.image_center_x)
+            # distance = torch.abs(center_x - self.image_center_x)
 
             # 计算奖励
             self.pixel_rewards_buf[valid_envs] = torch.exp(-distance / 50.0) - self.pixel_reward_offset

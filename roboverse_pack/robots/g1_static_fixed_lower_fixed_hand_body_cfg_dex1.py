@@ -25,23 +25,23 @@ class G1StaticDex1Cfg(RobotCfg):
     collapse_fixed_joints: bool = True
 
     actuators: dict[str, BaseActuatorCfg] = {
-        "waist_yaw_joint": BaseActuatorCfg(stiffness=40, damping=10),
-        "waist_roll_joint": BaseActuatorCfg(stiffness=40, damping=10),
-        "waist_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),
+        "waist_yaw_joint": BaseActuatorCfg(stiffness=400, damping=5),
+        "waist_roll_joint": BaseActuatorCfg(stiffness=400, damping=5),
+        "waist_pitch_joint": BaseActuatorCfg(stiffness=400, damping=5),
         "left_shoulder_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "left_shoulder_roll_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "left_shoulder_yaw_joint": BaseActuatorCfg(stiffness=40, damping=10),
-        "left_elbow_joint": BaseActuatorCfg(stiffness=40, damping=10),
-        "left_wrist_roll_joint": BaseActuatorCfg(stiffness=40, damping=10),
-        "left_wrist_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),
-        "left_wrist_yaw_joint": BaseActuatorCfg(stiffness=40, damping=10),
+        "left_elbow_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
+        "left_wrist_roll_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
+        "left_wrist_pitch_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
+        "left_wrist_yaw_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
         "right_shoulder_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "right_shoulder_roll_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "right_shoulder_yaw_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "right_elbow_joint": BaseActuatorCfg(stiffness=40, damping=10),
-        "right_wrist_roll_joint": BaseActuatorCfg(stiffness=40, damping=10),
-        "right_wrist_yaw_joint": BaseActuatorCfg(stiffness=40, damping=10),
-        "right_wrist_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),
+        "right_wrist_roll_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
+        "right_wrist_yaw_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
+        "right_wrist_pitch_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
     }
     joint_limits: dict[str, tuple[float, float]] = {
         "waist_yaw_joint": (-2.618, 2.618),
@@ -64,9 +64,9 @@ class G1StaticDex1Cfg(RobotCfg):
     }
 
     torque_limits: dict[str, float] = {  # = target angles [rad] when action = 0.0
-        "waist_yaw_joint": 25,
-        "waist_pitch_joint": 25,
-        "waist_roll_joint": 25,
+        "waist_yaw_joint": 88,
+        "waist_pitch_joint": 55,
+        "waist_roll_joint": 55,
         "left_shoulder_pitch_joint": 25,
         "left_shoulder_roll_joint": 25,
         "left_shoulder_yaw_joint": 25,
@@ -134,4 +134,11 @@ class G1StaticDex1Cfg(RobotCfg):
 
     # joint substrings, to find indices of joints.
 
-    upper_body_joints = ["shoulder", "elbow", "torso"]
+    upper_body_joints = [
+        "shoulder",
+        "elbow",
+        "torso",
+        "waist_pitch_joint",
+        "waist_roll_joint",
+        "wrist",
+    ]

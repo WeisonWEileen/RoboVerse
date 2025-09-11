@@ -362,9 +362,9 @@ class BaseTableHumanoidTaskCfg:
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
-        # "upper_body_pos": 0.1,
+        "upper_body_pos": 0.1,
         # "dof_vel": -5e-4,
-        "pixel_norm_at_cube": 20,
+        "pixel_norm_at_cube": 0.4,
     }
 
     frame_stack = 1
