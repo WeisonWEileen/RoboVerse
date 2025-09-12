@@ -9,11 +9,11 @@ import cv2
 import numpy as np
 import torch
 
-from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg
+from humanoid_visualrl.cfg.active_vision_cube_cfg import BaseTableHumanoidTaskCfg
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 from metasim.types import TensorState
-from metasim.utils.math import quat_apply
+from metasim.utils.math import quat_apply, quat_mul
 from loguru import logger as log
 from metasim.task.registry import register_task
 
@@ -49,7 +49,25 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # TODO hard code for now
         self.target_id = 2
 
+        # calucalte camera pos due to the bug that camera is not updated
+        if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
+            name = self.env.get_body_names(self.robot.name)
+            # get virtual mount link by spilt /
+            mount_link_name = self.cfg.cameras[0].mount_link
+            mount_link_name = mount_link_name.split("/")[0]
+            self.camera_mount_link_idx = name.index(mount_link_name)
+            self.camera_mount_link_pos = torch.zeros(self.num_envs, 3, device=self.device)
+            self.camera_mount_link_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device).repeat(self.num_envs, 1)
+            self.camera_quat_w = self.camera_mount_link_quat = torch.tensor(
+                [1.0, 0.0, 0.0, 0.0], device=self.device
+            ).repeat(self.num_envs, 1)
 
+            self.camera_pos_w = torch.tensor([0.91496, 0.0, 0.40355, 0.0]).to(self.device).repeat(self.num_envs, 1)
+            self.camera_tran_pos = torch.tensor([0.05762, 0.01753, 0.42987]).to(self.device).repeat(self.num_envs, 1)
+
+            self.camera_tran_quat = (
+                torch.tensor(self.cfg.cameras[0].mount_quat).to(self.device).repeat(self.num_envs, 1)
+            )
 
     def _init_buffers(self):
         super()._init_buffers()
@@ -88,6 +106,17 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
 
         self._compute_pixel_distance()
+
+        if self.camera_mount_link_idx is not None:
+            self.camera_mount_link_pos = tensor_state.robots[self.robot.name].body_state[:, self.camera_mount_link_idx,:3]
+            self.camera_mount_link_quat = tensor_state.robots[self.robot.name].body_state[:, self.camera_mount_link_idx,3:7]
+
+
+            self.camera_pos_w = self.camera_mount_link_pos + quat_apply(self.camera_mount_link_quat, self.camera_tran_pos)
+            self.camera_quat_w = quat_mul(self.camera_mount_link_quat, self.camera_tran_quat)
+
+
+
 
         # target_id = info["cube"]
 
@@ -330,7 +359,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _reward_look_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for looking at the cube."""
         # 获取相机的世界坐标位置 (num_envs, 3)
-        camera_pos = tensor_state.cameras[self.cfg.cameras[0].name].pos
+        camera_pos = self.camera_pos_w
 
         # 获取立方体的世界坐标位置 (num_envs, 3)
         cube_pos = tensor_state.objects["cube"].root_state[:, :3]
@@ -341,7 +370,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # 获取相机的朝向向量 (num_envs, 3)
         # 相机的朝向通常是+X方向（根据CameraState的注释）
-        camera_quat = tensor_state.cameras[self.cfg.cameras[0].name].quat_world  # (num_envs, 4) - (w, x, y, z)
+        # camera_quat = tensor_state.cameras[self.cfg.cameras[0].name].quat_world  # (num_envs, 4) - (w, x, y, z)
+        camera_quat = self.camera_quat_w  # (num_envs, 4) - (w, x, y, z)
         # 将相机的+X轴方向向量转换到世界坐标系
         camera_forward = torch.tensor([1.0, 0.0, 0.0], device=self.device).expand(self.num_envs, 3)
         camera_vec = quat_apply(camera_quat, camera_forward)  # 应用四元数旋转
@@ -353,7 +383,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 使用平滑的奖励函数：当dot_product接近1时奖励接近1
         reward = torch.clamp(dot_product, min=0.0)  # 只考虑正向的对准
 
-        # self._update_marker_viz(camera_pos, camera_quat, direction_vec)
+        self._update_marker_viz(camera_pos, camera_quat, direction_vec)
 
         return reward
 
@@ -362,7 +392,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # world_pos = position + self._env_origins[:, :3]
         world_pos = position + self._env_origins[:, :3]
         # move up  0.5 to be clear to see
-        world_pos[:, 2] -= 0.7
+        # world_pos[:, 2] -= 0.7
         pos = world_pos
 
         # 准备两组标记：相机方向（蓝色）和指向立方体的方向（红色）

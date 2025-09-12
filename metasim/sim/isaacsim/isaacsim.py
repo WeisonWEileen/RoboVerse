@@ -33,6 +33,7 @@ import omni
 import weakref
 from metasim.utils.math import convert_camera_frame_orientation_convention
 
+
 class IsaacsimHandler(BaseSimHandler):
     """
     Handler for Isaac Lab simulation environment.
@@ -86,7 +87,7 @@ class IsaacsimHandler(BaseSimHandler):
         if event.input == carb.input.KeyboardInput.V:
             if event.type == carb.input.KeyboardEventType.KEY_PRESS:
                 self._render_viewport = not self._render_viewport
-            
+
             if not self._render_viewport:
                 if self.sim.has_rtx_sensors():
                     self.sim.set_render_mode(SimulationContext.RenderMode.PARTIAL_RENDERING)
@@ -95,23 +96,20 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 self.sim.set_render_mode(SimulationContext.RenderMode.FULL_RENDERING)
 
-
-
         # if event.type == carb.input.KeyboardEventType.KEY_PRESS:
         #     if event.input.name == "V":
 
         return True
 
     def _init_viewports(self):
+        # TODO: check whether this is successful
         """在 GUI 模式下创建第二个窗口并绑定第一人称相机"""
         if not self.sim.has_gui():
             return  # headless 情况直接返回
 
         import omni.kit.viewport.utility as kit_viewport
 
-        kit_viewport.frame_viewport_prims('/World/envs/env_0/g1_static_dex1/torso_link/d435_link/camera_first_person')
-
-
+        kit_viewport.frame_viewport_prims("/World/envs/env_0/g1_static_dex1/torso_link/d435_link/camera_first_person")
 
     def _init_scene(self) -> None:
         """
@@ -128,17 +126,17 @@ class IsaacsimHandler(BaseSimHandler):
         self.simulation_app = app_launcher.app
 
         import isaaclab.sim as sim_utils
+
         render_cfg = sim_utils.RenderCfg(
-        rendering_mode="performance",
-        # user friendly setting overwrites
-        # enable_translucency=True, # defaults to False in performance mode
-        enable_reflections=False, # defaults to False in performance mode
-        dlss_mode="1", # defaults to 1 in performance mode
+            rendering_mode="performance",
+            # user friendly setting overwrites
+            # enable_translucency=True, # defaults to False in performance mode
+            enable_reflections=False,  # defaults to False in performance mode
+            dlss_mode="1",  # defaults to 1 in performance mode
         )
         # physics context
         from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
         from isaaclab.sim import PhysxCfg, SimulationCfg, SimulationContext
-
 
         sim_config: SimulationCfg = SimulationCfg(
             dt=self.physics_dt,
@@ -173,7 +171,6 @@ class IsaacsimHandler(BaseSimHandler):
         #     ),
         # )
         self.scene = InteractiveScene(scene_config)
-
 
     def _load_robots(self) -> None:
         for robot in self.robots:
@@ -213,7 +210,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_terrain()
         self._load_objects()
         self._load_lights()
-        # self.init_marker_viz()
+        self.init_marker_viz()
 
         self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
@@ -245,8 +242,9 @@ class IsaacsimHandler(BaseSimHandler):
         if self.sim.has_gui():
             self._init_keyboard()
 
-
         self._init_viewports()
+
+
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
@@ -361,8 +359,6 @@ class IsaacsimHandler(BaseSimHandler):
 
                 # self.scene.write_data_to_sim()
 
-                
-
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
 
@@ -458,8 +454,10 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_id_seg_id2label=instance_id_seg_id2label,
                 semantic_seg_data=semantic_seg_data,
                 semantic_seg_id2label=semantic_seg_id2label,
-                pos=(camera_inst.data.pos_w - self.scene.env_origins),
-                quat_world=camera_inst.data.quat_w_world,
+                # pos=(camera_inst.data.pos_w - self.scene.env_origins),
+                # pos=( self.d435_view.get_world_poses()[0] - self.scene.env_origins),
+               
+                # quat_world=camera_inst.data.quat_w_world,
                 intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
         extras = self.get_extra()
@@ -507,7 +505,6 @@ class IsaacsimHandler(BaseSimHandler):
         if self._step_counter % self._render_interval == 0 and is_rendering:
             self.sim.render()
             # self._update_tiled_camera_pose()
-        
 
         self.scene.update(dt=self.physics_dt)
 
@@ -677,7 +674,6 @@ class IsaacsimHandler(BaseSimHandler):
                 rigid_props=rigid_props,
                 collision_props=collision_props,
                 scale=obj.scale,
-
                 # fix_base_link=obj.fix_base_link,
             )
             if isinstance(obj, RigidObjCfg):
@@ -740,9 +736,6 @@ class IsaacsimHandler(BaseSimHandler):
         log.info(f"Render spp: {settings.get('/rtx/pathtracing/spp')}")
         log.info(f"Render adaptiveSampling/enabled: {settings.get('/rtx/pathtracing/adaptiveSampling/enabled')}")
         log.info(f"Render maxBounces: {settings.get('/rtx/pathtracing/maxBounces')}")
-
-
-
 
     def _load_sensors(self) -> None:
         from isaaclab.sensors import ContactSensor, ContactSensorCfg
@@ -813,8 +806,6 @@ class IsaacsimHandler(BaseSimHandler):
             DomeLightCfg,
             SphereLightCfg,
         )
-
-
 
         # Use lights from scenario configuration if available
         if hasattr(self.scenario, "lights") and self.scenario.lights:
@@ -1017,6 +1008,8 @@ class IsaacsimHandler(BaseSimHandler):
     # # Correspond to Shader -> Inputs -> UV -> Texture Tiling (in Isaac Sim 4.2.0)
     # shader.CreateInput("texture_scale", Sdf.ValueTypeNames.Float2).Set((10,10))
 
+
+
     def _get_pose(
         self, obj_name: str, obj_subpath: str | None = None, env_ids: list[int] | None = None
     ) -> tuple[torch.FloatTensor, torch.FloatTensor]:
@@ -1131,7 +1124,7 @@ class IsaacsimHandler(BaseSimHandler):
             # Use default offset, will be set by set_world_poses_from_view later
             offset = TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world")
 
-            # update the index of mount link for camera 
+            # update the index of mount link for camera
         else:
             prim_path = f"/World/envs/env_.*/{camera.mount_to}/{camera.mount_link}/{camera.name}"
             offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
@@ -1336,8 +1329,6 @@ class IsaacsimHandler(BaseSimHandler):
         else:
             raise ValueError(f"Object {obj_name} not found")
 
-
-
     # it do not work ... at isaacsim 5.0.0 because of the XPrimPath is not update
     # def _update_tiled_camera_pose(self):
     #     for camera in self.cameras:
@@ -1347,5 +1338,3 @@ class IsaacsimHandler(BaseSimHandler):
     #         camera_inst._data.quat_w_world = convert_camera_frame_orientation_convention(
     #             quat, origin="opengl", target="world"
     #         )
-
-
