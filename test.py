@@ -25,3 +25,4 @@ if root.IsValid():
 # 保存
 stage.GetRootLayer().Save()
 print("✅ 已把 /Root/T1 提升为 /T1，并删除 Root")
+print("11")
