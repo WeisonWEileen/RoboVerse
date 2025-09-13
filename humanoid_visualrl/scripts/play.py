@@ -3,53 +3,68 @@ import rootutils
 rootutils.setup_root(__file__, pythonpath=True)
 
 
+import os
+
 import torch
+from loguru import logger as log
 from metasim.scenario.scenario import ScenarioCfg
+
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 from humanoid_visualrl.utils.utils import (
     export_policy_as_jit,
-    get_cfg_cls,
     get_args,
     get_export_jit_path,
     get_load_path,
-    get_env_wrapper_cls,
+    load_task_cfg,
+    load_wrapper,
 )
 
-from loguru import logger as log
-from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
+
+
+
+
 
 
 def play(args):
+    """Run the trained policy in the environment.
+
+    Args:
+        args: Command line arguments containing configuration
+    """
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    load_path = get_load_path(args)
+
+    # get task cfg from cfg.py in load_path
+    # breakpoint()
+    task_cfg = load_task_cfg(args)
     scenario = ScenarioCfg(
-        robots=[args.robot],
+        robots=[task_cfg.robot],
         num_envs=args.num_envs,
         simulator=args.sim,
         headless=args.headless,
         cameras=[],
     )
     scenario.num_envs = 1
+    # scenario.task
 
-    task_cfg, _ = get_cfg_cls(args)
     task_cfg.commands.curriculum = False
     task_cfg.ppo_cfg.resume = True
     # add objects
     scenario.objects = task_cfg.objects
-    if args.use_vision or args.use_resnet or args.use_fixed_gazing:
-        scenario.cameras = [task_cfg.camera]
-    else:
-        scenario.cameras = []
+
+    scenario.cameras = task_cfg.cameras
 
     # task assign and override
     scenario.sim_params = task_cfg.sim_params
     scenario.decimation = task_cfg.decimation
     scenario.render_interval = scenario.decimation
     scenario.task = task_cfg
+    # breakpoint()
     scenario.env_spacing = task_cfg.env_spacing
     task_cfg.randomization = False
     # log_dir = get_log_dir(args, scenario)
-    env_wrapper, _ = get_env_wrapper_cls(args, scenario)
-    load_path = get_load_path(args, scenario)
+    env_wrapper = load_wrapper(args, scenario)
+    # load_path = get_load_path(args)
 
     # load policy
     ppo_runner = OnPolicyRunner(
@@ -57,7 +72,7 @@ def play(args):
         train_cfg=env_wrapper.train_cfg,
         device=device,
         # log_dir=log_dir,
-        use_vision=args.use_vision,
+        use_vision=task_cfg.use_vision,
     )
     ppo_runner.load(load_path)
     policy = ppo_runner.get_inference_policy(device=env_wrapper.device)
@@ -66,7 +81,7 @@ def play(args):
     if args.export_policy:
         export_jit_path = get_export_jit_path(args, scenario)
         export_policy_as_jit(ppo_runner.alg.actor_critic, export_jit_path)
-        print("Exported policy as jit script to: ", export_jit_path)
+        log.info(f"Exported policy as jit script to: {export_jit_path}")
 
     # env.init_states.objects["cube"].root_state[0, :1] = 0.2
     env_wrapper.init_states.objects["cube"].root_state[0, 1] = 0.0
@@ -80,43 +95,23 @@ def play(args):
         # set fixed command
         if i % reset_interval == 0:
             if i == 0:
-                # env.init_states.objects["cube"].root_state[0, 1] = 0.075
-
                 yaw = torch.tensor(1.0, device=env_wrapper.device)
-
                 cube_x = torch.cos(yaw) * task_cfg.randomize_cube_radius
                 cube_y = torch.sin(yaw) * task_cfg.randomize_cube_radius
                 env_wrapper.init_states.objects["cube"].root_state[0, 0] = cube_x
                 env_wrapper.init_states.objects["cube"].root_state[0, 1] = cube_y
-                # if i == reset_interval:
-                #     env.init_states.objects["cube"].root_state[0, 1] = 0.075
-                # if i == 2 * reset_interval:
-                #     env.init_states.objects["cube"].root_state[0, 1] = 0.0
-                # if i == 3 * reset_interval:
-                #     env.init_states.objects["cube"].root_state[0, 1] = -0.075
-                # if i == 4 * reset_interval:
-                #     env.init_states.objects["cube"].root_state[0, 1] = -0.15
-                # env.init_states.objects["cube"].root_state[0, 1] *= -1
                 env_wrapper._reset([0])
                 env_wrapper._compute_observations()
                 ppo_runner.alg.policy.reset([0])
 
-        # if i == 200:
-        #     env.init_states.objects["cube"].root_state[0, 1] = 0.15
-        #     env.env.set_states(env.init_states)
-        # env.commands[:, 0] = 0.0
-        # env.commands[:, 1] = 0.0
-        # env.commands[:, 2] = 0.0
-        # env.commands[:, 3] = 0.0
-
-        if args.use_vision:
+        if task_cfg.use_vision:
             actions = policy(obs)
         else:
             actions = policy(obs.detach())
         # print(actions)
         # breakpoint()
         # for i in task_cfg.decimation:
-        obs, wras, dones, infos = env_wrapper.step(actions.detach())
+        obs, _, _, _ = env_wrapper.step(actions.detach())
         log.info(f"step: {i}")
 
     env_wrapper.env.close()

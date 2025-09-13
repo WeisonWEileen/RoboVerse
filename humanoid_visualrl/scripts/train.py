@@ -79,7 +79,7 @@ if __name__ == "__main__":
     )
 
     if args.resume:
-        resume_path = get_load_path(args, scenario)
+        resume_path = get_load_path(args)
         if not os.path.exists(resume_path):
             raise FileNotFoundError(f"Resume path {resume_path} does not exist")
         log.info(f"Loading model from: {resume_path}")

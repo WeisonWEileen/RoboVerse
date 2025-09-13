@@ -11,6 +11,7 @@ from metasim.utils import configclass
 import inspect
 import shutil
 
+
 def dump_instance_file(cls_instance, file_path):
     cls_instance_file_path = inspect.getfile(cls_instance.__class__)
     shutil.copy(cls_instance_file_path, file_path)
@@ -253,25 +254,23 @@ def get_env_wrapper_cls(args: argparse.Namespace, scenario: ScenarioCfg):
         from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper as TaskWrapper
 
         env = TaskWrapper(scenario)
-    
+
     import inspect
 
     # 获取环境类定义所在的文件路径
     env_file_path = inspect.getfile(env.__class__)
     print(f"Environment class file: {env_file_path}")
 
-
     return env, env_file_path
 
 
-def get_load_root_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
+def get_load_root_dir(args: argparse.Namespace) -> str:
     """Get the root directory to load the model from."""
-    robot_name = args.robot
-    task_name = scenario.task.task_name
-    task_name = f"{robot_name}_{task_name}"
+    task_name = args.task
+    task_name = f"{task_name}"
     if args.load_run is None:
         raise ValueError("Please provide a run name to load the model from using --load_run")
-    load_root = f"./outputs/active_perception/{task_name}/{args.load_run}"
+    load_root = f"./outputs/{task_name}/{args.load_run}"
     return load_root
 
 
@@ -283,9 +282,9 @@ def get_export_jit_path(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     return f"{load_root}/exported/model_exported_jit.pt"
 
 
-def get_load_path(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
+def get_load_path(args: argparse.Namespace) -> str:
     """Get the path to load the model from."""
-    load_root = get_load_root_dir(args, scenario)
+    load_root = get_load_root_dir(args)
     if args.checkpoint == -1:
         models = [file for file in os.listdir(load_root) if "model" in file]
         models.sort(key=lambda m: f"{m!s:0>15}")
@@ -333,3 +332,140 @@ def get_args():
 
     args = tyro.cli(Args)
     return args
+
+
+def load_task_cfg(args):
+    """Load task configuration from cfg.py file.
+
+    Args:
+        load_path: Path to directory containing cfg.py
+
+    Returns:
+        BaseTableHumanoidTaskCfg: Task configuration instance
+    """
+    load_path = get_load_root_dir(args)
+    import importlib.util
+    import sys
+
+    # Load the cfg.py file as a module
+    cfg_path = os.path.join(load_path, "cfg.py")
+
+    # Use a unique module name to avoid conflicts
+    import time
+
+    module_name = f"task_cfg_module_{int(time.time() * 1000000)}"
+    spec = importlib.util.spec_from_file_location(module_name, cfg_path)
+    cfg_module = importlib.util.module_from_spec(spec)
+
+    # Add the load_path to sys.path temporarily to handle relative imports
+    sys.path.insert(0, load_path)
+    try:
+        # Register the module in sys.modules before executing
+        sys.modules[module_name] = cfg_module
+        spec.loader.exec_module(cfg_module)
+        # Get the task configuration class instance
+        task_cfg = cfg_module.BaseTableHumanoidTaskCfg()
+        return task_cfg
+    finally:
+        # Clean up: remove from sys.modules and sys.path
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+        sys.path.remove(load_path)
+
+
+def load_wrapper(args, scenario):
+    """Load environment wrapper from env.py file.
+
+    Automatically detects and loads any class that inherits from HumanoidBaseWrapper.
+
+    Args:
+        load_path: Path to directory containing env.py
+        scenario: Scenario configuration
+
+    Returns:
+        tuple: (wrapper_instance, None) - wrapper instance and None for compatibility
+    """
+    load_path = get_load_root_dir(args)
+    import importlib.util
+    import inspect
+    import sys
+
+    # Load the env.py file as a module (which contains the wrapper)
+    env_path = os.path.join(load_path, "env.py")
+
+    # Use a unique module name to avoid conflicts
+    import time
+
+    module_name = f"env_module_{int(time.time() * 1000000)}"
+    spec = importlib.util.spec_from_file_location(module_name, env_path)
+    env_module = importlib.util.module_from_spec(spec)
+
+    # Add the load_path to sys.path temporarily to handle relative imports
+    sys.path.insert(0, load_path)
+    try:
+        # Register the module in sys.modules before executing
+        sys.modules[module_name] = env_module
+
+        # Temporarily patch the register_task decorator to allow re-registration
+        import metasim.task.registry as registry_module
+        from metasim.task.registry import TASK_REGISTRY
+
+        # Store original register_task function
+        original_register_task = registry_module.register_task
+
+        def patched_register_task(*names):
+            """Patched version that allows re-registration."""
+
+            def _decorator(cls):
+                for raw_name in names:
+                    key = raw_name.strip().lower()
+                    if key:
+                        # Simply overwrite existing registration without error
+                        TASK_REGISTRY[key] = cls
+                return cls
+
+            return _decorator
+
+        # Apply the patch
+        registry_module.register_task = patched_register_task
+
+        try:
+            spec.loader.exec_module(env_module)
+        finally:
+            # Restore original register_task function
+            registry_module.register_task = original_register_task
+
+        # Find all classes in the module that inherit from HumanoidBaseWrapper
+        wrapper_classes = []
+        for name, obj in inspect.getmembers(env_module, inspect.isclass):
+            # Check if the class is defined in this module (not imported)
+            if obj.__module__ == env_module.__name__:
+                # Check if it inherits from HumanoidBaseWrapper
+                try:
+                    from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
+
+                    if issubclass(obj, HumanoidBaseWrapper) and obj != HumanoidBaseWrapper:
+                        wrapper_classes.append((name, obj))
+                except (ImportError, TypeError):
+                    # If we can't import HumanoidBaseWrapper or there's a type issue, skip
+                    continue
+
+        if not wrapper_classes:
+            raise ValueError(f"No HumanoidBaseWrapper subclass found in {env_path}")
+
+        if len(wrapper_classes) > 1:
+            class_names = [name for name, _ in wrapper_classes]
+            log.warning(f"Multiple wrapper classes found: {class_names}. Using the first one: {class_names[0]}")
+
+        # Use the first (or only) wrapper class found
+        wrapper_name, wrapper_class = wrapper_classes[0]
+        log.info(f"Loading wrapper class: {wrapper_name}")
+
+        # Create an instance of the wrapper with the scenario
+        wrapper_instance = wrapper_class(scenario)
+        return wrapper_instance
+    finally:
+        # Clean up: remove from sys.modules and sys.path
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+        sys.path.remove(load_path)
