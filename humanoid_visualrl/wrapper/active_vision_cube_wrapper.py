@@ -51,6 +51,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # TODO hard code for now
         self.target_id = 2
 
+
         # calucalte camera pos due to the bug that camera is not updated
         if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
             name = self.env.get_body_names(self.robot.name)
@@ -88,8 +89,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
 
         self.cube_pose_buf = self.init_states.objects["cube"].root_state[:, :7].clone()
-
-        self.vision_seg_buf = torch.zeros(
+        if "semantic_seg" in self.cfg.cameras[0].data_types:
+            self.semantic_seg = True
+        else:
+            self.semantic_seg = False
+        if self.semantic_seg:
+            self.vision_seg_buf = torch.zeros(
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
         )
 
@@ -103,11 +108,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2).float() / 255.0
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg
-
-        self.vision_seg_buf = tensor_state.cameras[self.cfg.cameras[0].name].semantic_seg_data
-        self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
-
-        self._compute_pixel_distance()
+        if self.semantic_seg:
+            self.vision_seg_buf = tensor_state.cameras[self.cfg.cameras[0].name].semantic_seg_data
+            self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
+        if self.semantic_seg:
+            self._compute_pixel_distance()
 
         if self.camera_mount_link_idx is not None:
             self.camera_mount_link_pos = tensor_state.robots[self.robot.name].body_state[
@@ -310,8 +315,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.env.sim.render()
         camera_data = self.env.scene.sensors["camera_first_person"].data.output
         self.vision_rgb_buf[env_ids] = camera_data["rgb"][env_ids].permute(0, 3, 1, 2).float() / 255.0
-        # 添加分割数据的更新
-        self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
+        if self.semantic_seg:
+            # 添加分割数据的更新
+            self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
 
     def _check_reset(self):
         # move 0.05 to config

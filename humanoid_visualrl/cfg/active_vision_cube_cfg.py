@@ -388,8 +388,9 @@ class BaseTableHumanoidTaskCfg:
 
     cameras = [PinholeCameraCfg(
         name="camera_first_person",
+        data_types=["rgb"],
         # data_types=["rgb", "instance_id_seg"],
-        data_types=["rgb", "semantic_seg"],
+        # data_types=["rgb", "semantic_seg"],
         width=128,
         height=96,
         pos=(1.5, -1.5, 1.5),
