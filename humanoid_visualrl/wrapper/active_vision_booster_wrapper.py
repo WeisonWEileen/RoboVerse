@@ -18,8 +18,6 @@ from loguru import logger as log
 from metasim.task.registry import register_task
 
 
-
-
 @register_task("booster_racket")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
@@ -36,7 +34,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.feature_extractor = Reset18Extractor(device=self.device)
 
         self.pixel_reward_offset = torch.exp(
-                -torch.sqrt(torch.tensor([self.cfg.cameras[0].width**2 + self.cfg.cameras[0].height**2], device=self.device)) / 2.0 / 50.0
+            -torch.sqrt(
+                torch.tensor([self.cfg.cameras[0].width ** 2 + self.cfg.cameras[0].height ** 2], device=self.device)
+            )
+            / 2.0
+            / 50.0
         )
         self.sucess_thres = (
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
@@ -44,8 +46,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self._reset(list(range(self.num_envs)))
         self.target_id = 2
-
-
 
     def _init_buffers(self):
         super()._init_buffers()
@@ -174,7 +174,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         (int(self.image_center_x), int(self.image_center_y)),
                         (255, 255, 0),
                         1,
-                    )  
+                    )
 
                     # 更新显示缓冲区
                     # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
@@ -187,7 +187,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     # font_thickness = 2
                     # text_x, text_y = 10, 25
 
-                    # cv2.putText(rgb_image, distance_text, (text_x, text_y), 
+                    # cv2.putText(rgb_image, distance_text, (text_x, text_y),
                     #           font, font_scale, font_color, font_thickness)
 
                     if (
@@ -257,10 +257,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _pre_reset_hook(self, env_ids=None):
         # randomly set y of cube in range (-randomize_cube_y_range, randomize_cube_y_range)
         # if self.cfg.randomize_cube_y = True
-        yaw = 2*(torch.rand(len(env_ids), device=self.device)-0.5) * self.cfg.randomize_cube_yaw_range
+        yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_yaw_range
 
-        cube_x =torch.cos(yaw) * self.cfg.randomize_cube_radius
-        cube_y =torch.sin(yaw) * self.cfg.randomize_cube_radius
+        cube_x = torch.cos(yaw) * self.cfg.randomize_cube_radius
+        cube_y = torch.sin(yaw) * self.cfg.randomize_cube_radius
 
         if self.cfg.randomization:
             self.init_states.objects["cube"].root_state[env_ids, 0] = cube_x
@@ -362,8 +362,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         pos = world_pos
 
         # 准备两组标记：相机方向（蓝色）和指向立方体的方向（红色）
-        # 相机方向使用 camera_quat
-        camera_ori = orientation.repeat(pos.shape[0], 1)
+        # 相机方向使用 camera_quat（已为 (N,4) 形状）
+        camera_ori = orientation
 
         # 指向立方体的方向：从 direction_vec 创建四元数
         # direction_vec 已经是归一化的，我们需要将其转换为四元数
@@ -374,6 +374,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         cross = torch.cross(default_forward, direction_vec, dim=1)
         # 计算旋转角度 (dot product)
         dot = torch.sum(default_forward * direction_vec, dim=1)
+        # 数值稳定：限制到 [-1, 1]
+        dot = torch.clamp(dot, -1.0, 1.0)
 
         # 处理平行向量的情况
         cross_norm = torch.norm(cross, dim=1, keepdim=True)
@@ -414,15 +416,16 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 same_mask.sum(), 4
             )
 
-        direction_ori = direction_quat.repeat(pos.shape[0], 1)
+        # 指向立方体方向的四元数（已为 (N,4) 形状）
+        direction_ori = direction_quat
 
         # 创建标记索引：0 表示相机方向（蓝色），1 表示指向立方体的方向（红色）
         camera_idx = torch.zeros(pos.shape[0], dtype=torch.long, device=self.device)
         direction_idx = torch.ones(pos.shape[0], dtype=torch.long, device=self.device)
 
         # 合并位置、方向和索引
-        all_pos = torch.cat([pos, pos], dim=0)  # 每个位置重复两次
-        all_ori = torch.cat([camera_ori, direction_ori], dim=0)  # 相机方向 + 指向立方体方向
-        all_idx = torch.cat([camera_idx, direction_idx], dim=0)  # 0 = 蓝色, 1 = 红色
+        all_pos = torch.cat([pos, pos], dim=0)  # (2N, 3)
+        all_ori = torch.cat([camera_ori, direction_ori], dim=0)  # (2N, 4)
+        all_idx = torch.cat([camera_idx, direction_idx], dim=0)  # (2N,)
 
         self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)

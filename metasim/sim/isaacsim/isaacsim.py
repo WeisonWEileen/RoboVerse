@@ -985,7 +985,7 @@ class IsaacsimHandler(BaseSimHandler):
                 "arrow_b": sim_utils.UsdFileCfg(
                     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
                     scale=(0.1, 0.1, 0.25),
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 0.5, 1.0)),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
                 ),
             },
         )
