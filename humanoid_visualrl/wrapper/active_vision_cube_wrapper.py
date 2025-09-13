@@ -393,7 +393,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 使用平滑的奖励函数：当dot_product接近1时奖励接近1
         reward = torch.clamp(dot_product, min=0.0)  # 只考虑正向的对准
 
-        self._update_marker_viz(camera_pos, camera_quat, direction_vec)
+        if self.env._render_viewport:
+            self._update_marker_viz(camera_pos, camera_quat, direction_vec)
 
         return reward
 
@@ -402,7 +403,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # world_pos = position + self._env_origins[:, :3]
         world_pos = position + self._env_origins[:, :3]
         # move up  0.5 to be clear to see
-        world_pos[:, 2] += 0.3
+        world_pos[:, 2] += 0.7
         pos = world_pos
 
         # 准备两组标记：相机方向（蓝色）和指向立方体的方向（红色）
