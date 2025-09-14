@@ -202,11 +202,9 @@ from metasim.scenario.scenario import ScenarioCfg
 
 def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     """Get the log directory."""
-    robot_name = args.robot
     task_name = scenario.task.task_name
-    task_name = f"{robot_name}_{task_name}"
     now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
-    log_dir = f"./outputs/active_perception/{task_name}/{now}/"
+    log_dir = f"./outputs/{task_name}/{now}/"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
     log.info("Log directory: {}", log_dir)
