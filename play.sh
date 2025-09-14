@@ -11,7 +11,7 @@
 
 
 
-python ./humanoid_visualrl/scripts/play.py \
+python3 ./humanoid_visualrl/scripts/play.py \
     --num_envs 1 \
     --task "active_vision" \
     --resume \

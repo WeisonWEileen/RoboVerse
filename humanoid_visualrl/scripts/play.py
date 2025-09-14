@@ -19,6 +19,7 @@ from humanoid_visualrl.utils.utils import (
     load_wrapper,
 )
 
+import random
 
 
 
@@ -90,19 +91,23 @@ def play(args):
     env_wrapper.env.set_states(env_wrapper.init_states)
     obs, _ = env_wrapper.get_observations()
 
-    reset_interval = 75
+    reset_interval = 150
+    yaw = torch.tensor(0.0, device=env_wrapper.device)
     for i in range(10000):
+
         # set fixed command
         if i % reset_interval == 0:
-            if i == 0:
-                yaw = torch.tensor(1.0, device=env_wrapper.device)
-                cube_x = torch.cos(yaw) * task_cfg.randomize_cube_radius
-                cube_y = torch.sin(yaw) * task_cfg.randomize_cube_radius
-                env_wrapper.init_states.objects["cube"].root_state[0, 0] = cube_x
-                env_wrapper.init_states.objects["cube"].root_state[0, 1] = cube_y
-                env_wrapper._reset([0])
-                env_wrapper._compute_observations()
-                ppo_runner.alg.policy.reset([0])
+            # if i == 0:
+                # yaw = torch.tensor(-1.0, device=env_wrapper.device)
+            # randomly add a value between 0 and 3.14
+            yaw += random.random() * 3.14
+            cube_x = torch.cos(yaw) * task_cfg.randomize_cube_radius
+            cube_y = torch.sin(yaw) * task_cfg.randomize_cube_radius
+            env_wrapper.init_states.objects["cube"].root_state[0, 0] = cube_x
+            env_wrapper.init_states.objects["cube"].root_state[0, 1] = cube_y
+            env_wrapper._reset([0])
+            env_wrapper._compute_observations()
+            # ppo_runner.alg.policy.reset([0])
 
         if task_cfg.use_vision:
             actions = policy(obs)
