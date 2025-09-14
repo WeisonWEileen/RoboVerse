@@ -85,6 +85,8 @@ class ActorCriticCNNRecurrent(ActorCritic):
         print(f"Actor RNN: {self.memory_a}")
         print(f"Critic RNN: {self.memory_c}")
 
+
+
     def reset(self, dones=None):
         self.memory_a.reset(dones)
         self.memory_c.reset(dones)
@@ -113,7 +115,10 @@ class ActorCriticCNNRecurrent(ActorCritic):
             inputs = self.memory_a(concat_inputs, masks, hidden_states)
             self.update_distribution(inputs.squeeze(0))
 
-        return self.distribution.sample()
+        actions = self.distribution.sample()
+        # mask those actions dimension which is not related to the task
+        # actions_masked = actions * self.masks
+        return actions
 
     def act_inference(self, observations):
         state, vision = observations

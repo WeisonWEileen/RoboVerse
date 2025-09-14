@@ -25,6 +25,7 @@ from rsl_rl.modules import (
 )
 from humanoid_visualrl.actor_critic.actor_critic_cnn import ActorCriticCNN
 from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn import ActorCriticCNNRecurrent
+
 # from humanoid_visualrl.actor_critic.actor_critic_resnet_rnn import ActorCriticResnetRecurrent
 from rsl_rl.utils import store_code_state
 
@@ -123,15 +124,15 @@ class OnPolicyRunner:
             )
         else:
             obs_vision_shape = None
-        # obs_shape = [obs_context_len, self.env.num_obs] if obs_context_len != 1 else [self.env.num_obs]
-        # self.alg.init_storage(
-        #     self.env.num_envs,
-        #     self.num_steps_per_env,
-        #     obs_shape,
-        #     obs_vision_shape,
-        #     [self.env.num_privileged_obs],
-        #     [self.env.num_actions],
-        # )
+
+        # self.action_masking = action_masking
+        # if action_masking:
+        #     self.masks = torch.ones(num_actions)
+        #     for mask_id in masks_ids:
+        #         self.masks[mask_id] = 0
+        # else:
+        #     self.masks = False
+
 
         # check if cfg have
         if "empirical_normalization" in self.cfg:

@@ -45,6 +45,8 @@ class PPO:
         symmetry_cfg: dict | None = None,
         # Distributed training parameters
         multi_gpu_cfg: dict | None = None,
+        mask:bool=False,
+        masks_ids:list[int]=[],
     ):
         # device-related parameters
         self.device = device
@@ -114,6 +116,14 @@ class PPO:
         self.schedule = schedule
         self.learning_rate = learning_rate
         self.normalize_advantage_per_mini_batch = normalize_advantage_per_mini_batch
+
+        self.mask = mask
+        if self.mask:
+            # TODO: hard code here
+            actions_shape = 17
+            self.masks_idx = torch.ones(actions_shape, device=self.device)
+            for mask_id in masks_ids:
+                self.masks_idx[mask_id] = 0
 
     def init_storage(
         self, training_type, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, actions_shape, obs_vision_shape=None
@@ -262,6 +272,8 @@ class PPO:
             # Note: we need to do this because we updated the policy with the new parameters
             # -- actor
             self.policy.act(obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+            if self.mask:
+                actions_batch = actions_batch * self.masks_idx
             actions_log_prob_batch = self.policy.get_actions_log_prob(actions_batch)
             # -- critic
             value_batch = self.policy.evaluate(critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])

@@ -37,6 +37,8 @@ class LeggedRobotRunnerCfg:
         """Hidden dimensions for actor network."""
         critic_hidden_dims = [768, 256, 128]
         """Hidden dimensions for critic network."""
+        action_masking = True
+        masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
     @configclass
     class Algorithm:
@@ -61,6 +63,9 @@ class LeggedRobotRunnerCfg:
         desired_kl = 0.01
         max_grad_norm = 1.0
         class_name = "PPO"
+
+        mask = True
+        masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 
     # class_name = "ActorCritic"
     """Policy class name."""
@@ -368,7 +373,7 @@ class BaseTableHumanoidTaskCfg:
         # s
         num_single_obs = num_actions * 3
         num_observations: int = int(frame_stack * num_single_obs)
-        single_num_privileged_obs: int = num_actions * 3 
+        single_num_privileged_obs: int = num_actions * 3
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
     else:
         num_single_obs = num_actions * 3 + visual_dim
@@ -386,30 +391,32 @@ class BaseTableHumanoidTaskCfg:
 
     from metasim.scenario.cameras import PinholeCameraCfg
 
-    cameras = [PinholeCameraCfg(
-        name="camera_first_person",
-        data_types=["rgb"],
-        # data_types=["rgb", "instance_id_seg"],
-        # data_types=["rgb", "semantic_seg"],
-        width=128,
-        height=96,
-        pos=(1.5, -1.5, 1.5),
-        look_at=(0.0, 0.0, 0.0),
-        # mount_to="g1_static/pelvis",
-        # mount_to="g1_static",
-        mount_to="g1_static_dex1",
-        # mount_link="torso_link",
-        # mount_link="torso_link/d435_link",
-        mount_link="torso_link/d435_link",
-        # though camera visulization maybe wrong , it's correct for fov
-        # mount_pos=(0.05, 0.0, 0.0),
-        mount_pos=(0.0, 0.0, 0.0),
-        #     quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
-        # quat = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])  #
-        # mount_quat=(0.8660254037844387, 0.0, 0.49999999999999994, 0.0),
-        # mount_quat=(0.5, -0.5, 0.5, -0.5),
-        mount_quat=(1.0, 0.0, 0.0, 0.0),
-    )]
+    cameras = [
+        PinholeCameraCfg(
+            name="camera_first_person",
+            data_types=["rgb"],
+            # data_types=["rgb", "instance_id_seg"],
+            # data_types=["rgb", "semantic_seg"],
+            width=128,
+            height=96,
+            pos=(1.5, -1.5, 1.5),
+            look_at=(0.0, 0.0, 0.0),
+            # mount_to="g1_static/pelvis",
+            # mount_to="g1_static",
+            mount_to="g1_static_dex1",
+            # mount_link="torso_link",
+            # mount_link="torso_link/d435_link",
+            mount_link="torso_link/d435_link",
+            # though camera visulization maybe wrong , it's correct for fov
+            # mount_pos=(0.05, 0.0, 0.0),
+            mount_pos=(0.0, 0.0, 0.0),
+            #     quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
+            # quat = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])  #
+            # mount_quat=(0.8660254037844387, 0.0, 0.49999999999999994, 0.0),
+            # mount_quat=(0.5, -0.5, 0.5, -0.5),
+            mount_quat=(1.0, 0.0, 0.0, 0.0),
+        )
+    ]
 
     @configclass
     class PushRandomCfg:
