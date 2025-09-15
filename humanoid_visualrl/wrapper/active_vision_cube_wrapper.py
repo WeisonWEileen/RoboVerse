@@ -456,7 +456,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)
 
 
-    def _update_curriculum(self):
+    def _update_culcurrium(self):
         self._update_curriculum_cube_yaw_range()
         
     def _update_curriculum_cube_yaw_range(self):

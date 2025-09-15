@@ -103,9 +103,10 @@ def play(args):
             yaw += random.random() * 3.14
             cube_x = torch.cos(yaw) * task_cfg.randomize_cube_radius
             cube_y = torch.sin(yaw) * task_cfg.randomize_cube_radius
-            env_wrapper.init_states.objects["cube"].root_state[0, 0] = cube_x
-            env_wrapper.init_states.objects["cube"].root_state[0, 1] = cube_y
-            env_wrapper._reset([0])
+            cube_state = env_wrapper.init_states.objects["cube"].root_state
+            cube_state[0, 0] = cube_x
+            cube_state[0, 1] = cube_y
+            env_wrapper.env._set_object_pose(env_wrapper.cfg.objects[1], cube_state[:, :3], cube_state[:, 3:7], env_ids=[0])
             env_wrapper._compute_observations()
             # ppo_runner.alg.policy.reset([0])
 
