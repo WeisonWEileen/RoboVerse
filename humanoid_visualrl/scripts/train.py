@@ -63,7 +63,7 @@ if __name__ == "__main__":
     else:
         env = env_cls(scenario)
     device = torch.device("cuda")
-    log_dir = get_log_dir(args, scenario)
+    log_dir, now = get_log_dir(args, scenario)
 
     dump_instance_file(task_cfg, os.path.join(log_dir, "cfg.py"))
     dump_instance_file(env, os.path.join(log_dir, "env.py"))
@@ -76,6 +76,7 @@ if __name__ == "__main__":
         device=device,
         log_dir=log_dir,
         use_vision=task_cfg.use_vision,
+
     )
 
     if args.resume:
@@ -84,4 +85,4 @@ if __name__ == "__main__":
             raise FileNotFoundError(f"Resume path {resume_path} does not exist")
         log.info(f"Loading model from: {resume_path}")
         ppo_runner.load(resume_path)
-    ppo_runner.learn(num_learning_iterations=args.num_learning_iterations)
+    ppo_runner.learn(num_learning_iterations=args.num_learning_iterations   ,     run_name=f"{args.run_name}_{now}")

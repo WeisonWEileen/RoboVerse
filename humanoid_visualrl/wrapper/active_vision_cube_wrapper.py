@@ -299,12 +299,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _pre_reset_hook(self, env_ids=None):
         # randomly set y of cube in range (-randomize_cube_y_range, randomize_cube_y_range)
         # if self.cfg.randomize_cube_y = True
-        yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_yaw_range
-
-        cube_x = torch.cos(yaw) * self.cfg.randomize_cube_radius
-        cube_y = torch.sin(yaw) * self.cfg.randomize_cube_radius
 
         if self.cfg.randomization:
+            a = self.episode_sums
+            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_yaw_range
+
+            cube_x = torch.cos(yaw) * self.cfg.randomize_cube_radius
+            cube_y = torch.sin(yaw) * self.cfg.randomize_cube_radius
             self.init_states.objects["cube"].root_state[env_ids, 0] = cube_x
             self.init_states.objects["cube"].root_state[env_ids, 1] = cube_y
             self.done_buf[env_ids] = False

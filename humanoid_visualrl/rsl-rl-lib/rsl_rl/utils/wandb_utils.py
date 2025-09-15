@@ -18,11 +18,11 @@ except ModuleNotFoundError:
 class WandbSummaryWriter(SummaryWriter):
     """Summary writer for Weights and Biases."""
 
-    def __init__(self, log_dir: str, flush_secs: int, cfg):
+    def __init__(self, log_dir: str, flush_secs: int, cfg, run_name: str = None):
         super().__init__(log_dir, flush_secs)
 
-        # Get the run name
-        run_name = os.path.split(log_dir)[-1]
+        # # Get the run name
+        # run_name = os.path.split(log_dir)[-1]
 
         try:
             project = cfg["wandb_project"]

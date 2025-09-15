@@ -208,7 +208,7 @@ def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
     log.info("Log directory: {}", log_dir)
-    return log_dir
+    return log_dir, now
 
 
 def get_cfg_cls(args: argparse.Namespace):
@@ -323,6 +323,7 @@ def get_args():
         resume: bool = False
         wandb: bool = False
         task: str = "active_vision"
+        run_name: str = ""
 
         def __post_init__(self):
             """Post-initialization configuration."""
