@@ -43,6 +43,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.sucess_thres = (
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
+        if self.cfg.curriculum_cube_yaw:
+            self.curriculum_cube_yaw_range = 0
+        else:
+            self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
 
         self._reset(list(range(self.num_envs)))
 
@@ -71,6 +75,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.camera_tran_pos = torch.tensor([0.05762, 0.01753, 0.42987]).to(self.device).repeat(self.num_envs, 1)
 
             self.camera_tran_quat = torch.tensor([0.91496, 0.0, 0.40355, 0.0]).to(self.device).repeat(self.num_envs, 1)
+
 
     def _init_buffers(self):
         super()._init_buffers()
@@ -301,8 +306,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if self.cfg.randomize_cube_y = True
 
         if self.cfg.randomization:
-            a = self.episode_sums
-            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_yaw_range
+            if self.cfg.curriculum_cube_yaw:
+                # update curriculum_cube_yaw_range
+                if (self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env) % 100 == 0:
+                    if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
+                        self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.2
+                yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
 
             cube_x = torch.cos(yaw) * self.cfg.randomize_cube_radius
             cube_y = torch.sin(yaw) * self.cfg.randomize_cube_radius
