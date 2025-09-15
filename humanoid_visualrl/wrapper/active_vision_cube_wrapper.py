@@ -44,7 +44,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
         if self.cfg.curriculum_cube_yaw:
-            self.curriculum_cube_yaw_range = 0
+            self.curriculum_cube_yaw_range = 0.2 * self.cfg.randomize_cube_yaw_range
         else:
             self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
 
@@ -131,30 +131,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.camera_mount_link_quat, self.camera_tran_pos
             )
             self.camera_quat_w = quat_mul(self.camera_mount_link_quat, self.camera_tran_quat)
-
-        # target_id = info["cube"]
-
-        # Convert single channel to three channels by repeating
-        # vision_seg shape: [1, 96, 128] -> [1, 96, 128, 3]
-        # if vision_seg is not None:
-        #     vision_rgb = vision_seg.unsqueeze(-1).repeat(1, 1, 1, 3)  # Repeat the channel dimension 3 times
-        # else:
-        #     vision_rgb = None
-
-        # Display image in OpenCV window if enabled
-        # if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
-        #     # Use the original uint8 RGB image for display (before normalization)
-        #     # vision_rgb is in format (batch_size, height, width, channels)
-        #     display_image = vision_rgb[0].cpu().numpy()  # Take first environment
-
-        #     # Display the image and check if window is still open
-
-        #     window_open = self.opencv_renderer.display(display_image)
-        #     if not window_open:
-        #         # User closed the window, disable further display
-        #         self.enable_opencv_display = False
-        #         log.info("OpenCV display window closed by user")
-
+            
     def _compute_pixel_distance(self):
         # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
 
@@ -306,12 +283,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if self.cfg.randomize_cube_y = True
 
         if self.cfg.randomization:
-            if self.cfg.curriculum_cube_yaw:
-                # update curriculum_cube_yaw_range
-                if (self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env) % 100 == 0:
-                    if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
-                        self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.2
-                yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
+
+            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
 
             cube_x = torch.cos(yaw) * self.cfg.randomize_cube_radius
             cube_y = torch.sin(yaw) * self.cfg.randomize_cube_radius
@@ -336,9 +309,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # self.reset_buf = self.timeout_buf | terminate | self.done_buf
         return self.reset_buf
 
-    # def _reset(self, env_ids=None):
-    #     super()._reset(env_ids)
-    #     self.resnet_features[env_ids] = torch.zeros(len(env_ids), 512, device=self.device)
 
     # ==== reward functions ====
     def _reward_upper_body_pos(
@@ -484,3 +454,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         all_idx = torch.cat([camera_idx, direction_idx], dim=0)  # (2N,)
 
         self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)
+
+
+    def _update_curriculum(self):
+        self._update_curriculum_cube_yaw_range()
+        
+    def _update_curriculum_cube_yaw_range(self):
+        if self.cfg.curriculum_cube_yaw:
+            # update curriculum_cube_yaw_range
+            if (self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env) % 75 == 0:
+                if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
+                    self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.2
+                    log.info(f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}")

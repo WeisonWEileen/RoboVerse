@@ -484,7 +484,11 @@ class HumanoidBaseWrapper(RslRlWrapper):
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5 * self.wrap_to_pi(self.commands[:, 3] - heading), -1.0, 1.0)
 
-        self._push_robots()
+        # self._randomize()
+        self._update_curriculum()
+    
+    def _update_curriculum(self):
+        pass
 
     def _resample_commands(self, env_ids):
         self.commands[env_ids, 0] = torch_rand_float(
@@ -516,6 +520,10 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         # set small commands to zero
         self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+
+
+    def _randomize(self):
+        pass
 
     def _push_robots(self):
         """Randomly set robot's root velocity to simulate a push."""
