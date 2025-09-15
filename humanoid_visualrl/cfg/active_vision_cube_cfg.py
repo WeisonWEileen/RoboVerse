@@ -37,8 +37,8 @@ class LeggedRobotRunnerCfg:
         """Hidden dimensions for actor network."""
         critic_hidden_dims = [768, 256, 128]
         """Hidden dimensions for critic network."""
-        action_masking = True
-        masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        # action_masking = False
+        # masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
     @configclass
     class Algorithm:
@@ -64,8 +64,8 @@ class LeggedRobotRunnerCfg:
         max_grad_norm = 1.0
         class_name = "PPO"
 
-        mask = True
-        masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+        # mask = True
+        # masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 
     # class_name = "ActorCritic"
     """Policy class name."""
@@ -435,6 +435,8 @@ class BaseTableHumanoidTaskCfg:
 
     randomization = True
 
+    
+
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
         self.command_ranges.l_wrist_pos_x = [-0.05, 0.15]
@@ -445,8 +447,15 @@ class BaseTableHumanoidTaskCfg:
         self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
 
         # self.randomize_cube_y_offset = 0.1
+        self.randomize_cube_curriculum = True
         self.randomize_cube_yaw_range = 2.3
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
+        
+        # Curriculum learning parameters for cube yaw range
+        self.curriculum_cube_yaw = True
+        self.curriculum_cube_yaw_stages = [0.2, 0.5, 1.0]  # Multipliers for randomize_cube_yaw_range
+        self.curriculum_cube_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
+        self.curriculum_cube_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
         self.actor_critic_class = "use_rnn"
 

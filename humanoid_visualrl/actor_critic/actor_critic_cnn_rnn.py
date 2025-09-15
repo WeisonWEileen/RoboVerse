@@ -85,8 +85,6 @@ class ActorCriticCNNRecurrent(ActorCritic):
         print(f"Actor RNN: {self.memory_a}")
         print(f"Critic RNN: {self.memory_c}")
 
-
-
     def reset(self, dones=None):
         self.memory_a.reset(dones)
         self.memory_c.reset(dones)
