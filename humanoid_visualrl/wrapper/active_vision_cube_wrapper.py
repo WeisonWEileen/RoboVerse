@@ -116,7 +116,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.semantic_seg:
             self.vision_seg_buf = tensor_state.cameras[self.cfg.cameras[0].name].semantic_seg_data
             self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
-        if self.semantic_seg:
             self._compute_pixel_distance()
 
         if self.camera_mount_link_idx is not None:

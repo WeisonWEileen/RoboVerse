@@ -358,9 +358,9 @@ class BaseTableHumanoidTaskCfg:
     num_actions = 17
     torque_limit_scale = 1.0
     reward_weights: dict[str, float] = {
-        "upper_body_pos": 0.1,
-        # "pixel_norm_at_cube": 0.4,
-        "look_at_cube": 0.4,
+        # "upper_body_pos": 0.1,
+        # "look_at_cube": 0.4,
+        "pixel_norm_at_cube": 0.4,
     }
 
     frame_stack = 1
@@ -476,3 +476,7 @@ class BaseTableHumanoidTaskCfg:
         self.enable_opencv_display = True
         self.use_vision = True
         self.use_fixed_gazing = True
+
+
+        if "pixel_norm_at_cube" in self.reward_weights:
+            self.cameras[0].data_types.append("semantic_seg")
