@@ -115,7 +115,7 @@ class ActorCritic(nn.Module):
         else:
             raise ValueError(f"Unknown standard deviation type: {self.noise_std_type}. Should be 'scalar' or 'log'")
         # masked_mean = mean.clone()
-        # mean[..., 0:14] *= 0.0
+        mean[..., 0:14] *= 0.0
         # create distribution
         self.distribution = Normal(mean, std)
 

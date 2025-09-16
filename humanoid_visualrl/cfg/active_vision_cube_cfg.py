@@ -361,6 +361,7 @@ class BaseTableHumanoidTaskCfg:
         # "upper_body_pos": 0.1,
         # "look_at_cube": 0.4,
         "pixel_norm_at_cube": 0.4,
+        "cube_showup": 0.1,
     }
 
     frame_stack = 1

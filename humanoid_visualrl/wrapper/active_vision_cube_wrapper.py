@@ -47,6 +47,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.curriculum_cube_yaw_range = 0.2 * self.cfg.randomize_cube_yaw_range
         else:
             self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
+        self.cube_showup = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
 
         self._reset(list(range(self.num_envs)))
 
@@ -149,6 +150,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # 只处理有目标像素的环境
         valid_envs = pixel_counts > 0
+
+        # turn it into float
+        self.cube_showup = valid_envs.float()
+
+        
 
         if valid_envs.any():
             # 计算加权中心点
@@ -303,6 +309,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.semantic_seg:
             # 添加分割数据的更新
             self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
+        # FIXME: this is a hack to reset the cube_showup
+        self.cube_showup[env_ids] = 0.0
 
     def _check_reset(self):
         # move 0.05 to config
@@ -378,6 +386,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self._update_marker_viz(camera_pos, camera_quat, direction_vec)
 
         return reward
+
+    def _reward_cube_showup(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for being in the pixel range of the cube."""
+        return self.cube_showup 
 
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
         # cupdate
