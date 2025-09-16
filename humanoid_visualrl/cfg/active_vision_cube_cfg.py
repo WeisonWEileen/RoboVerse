@@ -221,7 +221,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 2.0
+    env_spacing: float = 4.0
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -249,7 +249,7 @@ class BaseTableHumanoidTaskCfg:
     objects = [
         RigidObjCfg(
             name="table",
-            scale=(0.3, 0.2, 0.3),
+            scale=(0.5, 0.2, 0.5),
             physics=PhysicStateType.GEOM,
             usd_path="roboverse_data/ring_table.usd",
             fix_base_link=True,
@@ -307,7 +307,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.5, 0.0, 0.875]),
+                    "pos": torch.tensor([0.7, 0.0, 0.875]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
