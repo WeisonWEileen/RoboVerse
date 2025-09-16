@@ -44,7 +44,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
         if self.cfg.curriculum_cube_yaw:
-            self.curriculum_cube_yaw_range = 0.2 * self.cfg.randomize_cube_yaw_range
+            self.curriculum_cube_yaw_range = 0.1 * self.cfg.randomize_cube_yaw_range
         else:
             self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
 
@@ -461,7 +461,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _update_curriculum_cube_yaw_range(self):
         if self.cfg.curriculum_cube_yaw:
             # update curriculum_cube_yaw_range
-            if (self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env) % 75 == 0:
+            if (self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env) % 175 == 0:
                 if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
-                    self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.2
+                    self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.1
                     log.info(f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}")
