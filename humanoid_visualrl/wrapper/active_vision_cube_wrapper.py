@@ -44,7 +44,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
         if self.cfg.curriculum_cube_yaw:
-            self.curriculum_cube_yaw_range = 0.1 * self.cfg.randomize_cube_yaw_range
+            self.curriculum_cube_yaw_range = 0.2 * self.cfg.randomize_cube_yaw_range
         else:
             self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
 
@@ -54,7 +54,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # tensor_state = self.env.get_states()
         # TODO hard code for now
         self.target_id = 2
-
+        self.last_reward = 0.0
+        self.last_curriculum_update_step = 0  # Track when curriculum was last updated
 
         # calucalte camera pos due to the bug that camera is not updated
         if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
@@ -75,7 +76,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.camera_tran_pos = torch.tensor([0.05762, 0.01753, 0.42987]).to(self.device).repeat(self.num_envs, 1)
 
             self.camera_tran_quat = torch.tensor([0.91496, 0.0, 0.40355, 0.0]).to(self.device).repeat(self.num_envs, 1)
-
 
     def _init_buffers(self):
         super()._init_buffers()
@@ -100,8 +100,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.semantic_seg = False
         if self.semantic_seg:
             self.vision_seg_buf = torch.zeros(
-            self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
-        )
+                self.num_envs,
+                self.cfg.cameras[0].height,
+                self.cfg.cameras[0].width,
+                device=self.device,
+                dtype=torch.int32,
+            )
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
@@ -130,7 +134,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.camera_mount_link_quat, self.camera_tran_pos
             )
             self.camera_quat_w = quat_mul(self.camera_mount_link_quat, self.camera_tran_quat)
-            
+
     def _compute_pixel_distance(self):
         # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
 
@@ -282,7 +286,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if self.cfg.randomize_cube_y = True
 
         if self.cfg.randomization:
-
             yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
 
             cube_x = torch.cos(yaw) * self.cfg.randomize_cube_radius
@@ -307,7 +310,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.reset_buf = self.timeout_buf | terminate
         # self.reset_buf = self.timeout_buf | terminate | self.done_buf
         return self.reset_buf
-
 
     # ==== reward functions ====
     def _reward_upper_body_pos(
@@ -454,14 +456,28 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)
 
-
     def _update_curriculum(self):
         self._update_curriculum_cube_yaw_range()
-        
+
     def _update_curriculum_cube_yaw_range(self):
         if self.cfg.curriculum_cube_yaw:
             # update curriculum_cube_yaw_range
-            if (self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env) % 175 == 0:
-                if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
-                    self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.1
-                    log.info(f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}")
+            # Check curriculum update every 200 steps instead of 50 to prevent too frequent updates
+            if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) % 100 == 0:
+                # if average reward added by 0.1
+                reward = self.episode_sums["pixel_norm_at_cube"].mean() * self.cfg.reward_weights["pixel_norm_at_cube"]
+
+                # Always update last_reward to track current performance
+                reward_improvement = reward - self.last_reward
+                self.last_reward = reward
+
+                # Only increase range if there's significant improvement (threshold: 0.01)
+                # and we haven't increased range too recently (minimum 800 steps between updates)
+                steps_since_last_update = self.common_step_counter - self.last_curriculum_update_step
+                if reward_improvement > 0.05 or steps_since_last_update >= 400:
+                    if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
+                        self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.05
+                        self.last_curriculum_update_step = self.common_step_counter
+                        log.info(
+                            f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement:.4f}"
+                        )
