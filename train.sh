@@ -4,7 +4,7 @@ python ./humanoid_visualrl/scripts/train.py \
     --num_envs 64 \
     --wandb \
     --task "active_vision" \
-    --run_name "curri" \
+    --run_name "mask_curri" \
     --enable_opencv_display 
     # --use_fixed_gazing \
     # --use_vision \

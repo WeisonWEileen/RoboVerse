@@ -462,8 +462,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _update_curriculum_cube_yaw_range(self):
         if self.cfg.curriculum_cube_yaw:
             # update curriculum_cube_yaw_range
-            # Check curriculum update every 200 steps instead of 50 to prevent too frequent updates
-            if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) % 100 == 0:
+            # Check curriculum update every 100 iterations (not steps) to prevent too frequent updates
+            current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
+            
+            # Only check and log once per 100 iterations, and only at the exact iteration boundary
+            if current_iteration % 100 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
                 # if average reward added by 0.1
                 reward = self.episode_sums["pixel_norm_at_cube"].mean() * self.cfg.reward_weights["pixel_norm_at_cube"]
 
@@ -472,9 +475,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.last_reward = reward
 
                 # Only increase range if there's significant improvement (threshold: 0.01)
-                # and we haven't increased range too recently (minimum 800 steps between updates)
-                steps_since_last_update = self.common_step_counter - self.last_curriculum_update_step
-                if reward_improvement > 0.05 or steps_since_last_update >= 400:
+                # and we haven't increased range too recently (minimum 400 iterations between updates)
+                iterations_since_last_update = current_iteration - (self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env)
+                log.info(
+                            f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement:.4f}"
+                        )
+                if reward_improvement > 0.05 or iterations_since_last_update >= 400:
                     if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
                         self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.05
                         self.last_curriculum_update_step = self.common_step_counter
