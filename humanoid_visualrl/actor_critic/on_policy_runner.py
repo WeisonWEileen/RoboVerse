@@ -235,7 +235,7 @@ class OnPolicyRunner:
             #   Right now: No, because they all should converge to the same values "asymptotically".
 
         # Start training
-        start_iter = self.current_learning_iteration
+        start_iter = self.current_learning_iteration 
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             start = time.time()

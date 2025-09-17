@@ -115,6 +115,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb
+        # TODO: normalize it to get better results?
+        mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
+        vision_rgb -= mean_tensor
+
         self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2).float() / 255.0
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg
