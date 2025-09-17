@@ -499,3 +499,5 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         log.info(
                             f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement:.4f}"
                         )
+
+

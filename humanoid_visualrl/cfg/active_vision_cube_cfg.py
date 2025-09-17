@@ -71,7 +71,7 @@ class LeggedRobotRunnerCfg:
     """Policy class name."""
     algorithm_class_name = "PPO"
     """Algorithm class name."""
-    num_steps_per_env = 24
+    num_steps_per_env = 96 # *0.005*5*48 = 6
     """per iteration"""
     max_iterations = 1500
     """max number of iterations"""
