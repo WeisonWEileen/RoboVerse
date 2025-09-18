@@ -114,12 +114,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
-        vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb
+        vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb / 255.0
         # TODO: normalize it to get better results?
         mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
         vision_rgb -= mean_tensor
 
-        self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2).float() / 255.0
+        self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg
         if self.semantic_seg:
@@ -157,8 +157,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # turn it into float
         self.cube_showup = valid_envs.float()
-
-        
 
         if valid_envs.any():
             # 计算加权中心点
@@ -393,7 +391,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _reward_cube_showup(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for being in the pixel range of the cube."""
-        return self.cube_showup 
+        return self.cube_showup
 
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
         # cupdate
@@ -480,7 +478,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # update curriculum_cube_yaw_range
             # Check curriculum update every 100 iterations (not steps) to prevent too frequent updates
             current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
-            
+
             # Only check and log once per 100 iterations, and only at the exact iteration boundary
             if current_iteration % 100 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
                 # if average reward added by 0.1
@@ -492,10 +490,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
                 # Only increase range if there's significant improvement (threshold: 0.01)
                 # and we haven't increased range too recently (minimum 400 iterations between updates)
-                iterations_since_last_update = current_iteration - (self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env)
+                iterations_since_last_update = current_iteration - (
+                    self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
+                )
                 log.info(
-                            f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement:.4f}"
-                        )
+                    f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement:.4f}"
+                )
                 if reward_improvement > 0.0025 or iterations_since_last_update >= 400:
                     if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
                         self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.05
@@ -503,5 +503,3 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         log.info(
                             f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement:.4f}"
                         )
-
-
