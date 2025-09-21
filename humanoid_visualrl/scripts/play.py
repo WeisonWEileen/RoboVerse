@@ -91,7 +91,7 @@ def play(args):
     env_wrapper.env.set_states(env_wrapper.init_states)
     obs, _ = env_wrapper.get_observations()
 
-    reset_interval = 150
+    reset_interval = 75
     yaw = torch.tensor(0.0, device=env_wrapper.device)
     for i in range(10000):
 
@@ -100,7 +100,8 @@ def play(args):
             # if i == 0:
                 # yaw = torch.tensor(-1.0, device=env_wrapper.device)
             # randomly add a value between 0 and 3.14
-            yaw += random.random() * 3.14
+            # yaw += random.random() * 3.14
+            yaw = torch.tensor(3.14, device=env_wrapper.device)
             cube_x = torch.cos(yaw) * task_cfg.randomize_cube_radius
             cube_y = torch.sin(yaw) * task_cfg.randomize_cube_radius
             cube_state = env_wrapper.init_states.objects["cube"].root_state
