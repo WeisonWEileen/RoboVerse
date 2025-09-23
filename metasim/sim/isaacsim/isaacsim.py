@@ -59,10 +59,9 @@ class IsaacsimHandler(BaseSimHandler):
         self._is_closed = False
         self._render_interval = self.scenario.render_interval
 
-        if self.headless:
-            self._render_viewport = False
-        else:
-            self._render_viewport = True
+        # initial do not render anything
+        self._render_viewport = False
+
 
     def _init_keyboard(self) -> None:
         import carb

@@ -230,10 +230,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         and self.opencv_renderer is not None
                         and self.vision_rgb_buf is not None
                     ):
-                        # Use the original uint8 RGB image for display (before normalization)
-                        # vision_rgb is in format (batch_size, height, width, channels)
-                        # display_image = self.vision_rgb_buf[0]  # Take first environment
-
                         # Display the image and check if window is still open
                         window_open = self.opencv_renderer.display(rgb_image)
                         if not window_open:
@@ -393,6 +389,17 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         """Reward for being in the pixel range of the cube."""
         return self.cube_showup
 
+    def _reward_wrist_close_to_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for right hand being close to the cube."""
+        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
+        wrist_pos_diff = (
+            wrist_pos[:, 0, :3] - self.cube_pose_buf[:, :3]
+        )  # [num_envs, 2, 3], two hands, position only
+        wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
+        # euclidean distance
+        wrist_pos_error = torch.norm(wrist_pos_diff, dim=1)
+        return torch.exp(-4 * wrist_pos_error), wrist_pos_error
+
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
         # cupdate
         # world_pos = position + self._env_origins[:, :3]
@@ -496,7 +503,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 log.info(
                     f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement:.4f}"
                 )
-                if reward_improvement > 0.0025 or iterations_since_last_update >= 400:
+                if reward_improvement > 0.0025 or iterations_since_last_update >= self.cfg.update_curriculum_iteration:
                     if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
                         self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.05
                         self.last_curriculum_update_step = self.common_step_counter

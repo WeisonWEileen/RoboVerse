@@ -15,7 +15,7 @@ python3 ./humanoid_visualrl/scripts/play.py \
     --num_envs 1 \
     --task "active_vision" \
     --resume \
-    --load_run "2025_0918_064216" \
-    --checkpoint 4700 \
+    --load_run "2025_0918_0000" \
+    --checkpoint 4400 \
     --enable_opencv_display 
     # --wandb \

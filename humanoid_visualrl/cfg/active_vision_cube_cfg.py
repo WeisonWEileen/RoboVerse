@@ -361,6 +361,7 @@ class BaseTableHumanoidTaskCfg:
         # "upper_body_pos": 0.1,
         # "look_at_cube": 0.4,
         "pixel_norm_at_cube": 0.4,
+        "wrist_close_to_cube": 0.4,
         # "cube_showup": 0.1,
     }
 
@@ -449,7 +450,16 @@ class BaseTableHumanoidTaskCfg:
 
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_curriculum = True
-        self.randomize_cube_yaw_range = 2.3
+
+        self.finetune = True
+        if self.finetune:
+            # for finetuning, use less frequent curriculum update and less yaw range
+            self.update_curriculum_iteration = 100
+            self.randomize_cube_yaw_range = 1.8
+        else:
+            self.update_curriculum_iteration = 400
+            self.randomize_cube_yaw_range = 2.3
+
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
         
         # Curriculum learning parameters for cube yaw range
