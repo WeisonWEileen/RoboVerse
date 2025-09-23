@@ -381,7 +381,6 @@ class BaseTableHumanoidTaskCfg:
         num_single_obs = num_actions * 3 + visual_dim
         num_observations = int(frame_stack * num_single_obs)
         # single_num_observations = 3 * num_actions + 6 + visual_dim
-
         # privileged obs
         single_num_privileged_obs = num_actions * 3 + 7 + visual_dim
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)

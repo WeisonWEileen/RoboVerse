@@ -9,13 +9,13 @@ import cv2
 import numpy as np
 import torch
 
-# from humanoid_visualrl.cfg.humanoidFixedGazingCfg import BaseTableHumanoidTaskCfg
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 from metasim.types import TensorState
 from metasim.utils.math import quat_apply
 from loguru import logger as log
 from metasim.task.registry import register_task
+from humanoid_visualrl.cfg.booster_racket_cfg import BaseTableHumanoidTaskCfg
 
 
 @register_task("booster_racket")
@@ -63,7 +63,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.arange(height, device=self.device), torch.arange(width, device=self.device), indexing="ij"
         )
 
-        self.cube_pose_buf = self.init_states.objects["cube"].root_state[:, :7].clone()
+        self.shpere_pose_buf = self.init_states.objects[self.cfg.objects[0].name].root_state[:, :7].clone()
 
         self.vision_seg_buf = torch.zeros(
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
@@ -71,7 +71,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
-        self.cube_pose_buf = tensor_state.objects["cube"].root_state[:, :7]
+        self.shpere_pose_buf = tensor_state.objects[self.cfg.objects[0].name].root_state[:, :7]
 
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
@@ -109,7 +109,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         #         log.info("OpenCV display window closed by user")
 
     def _compute_pixel_distance(self):
-        # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
+        # target_id = next(k for k, v in self.vision_seg_info.items() if "shpere" in v)
 
         # 创建掩码：shape (num_envs, height, width)
         mask = self.vision_seg_buf == self.target_id
@@ -145,36 +145,36 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if 0 in torch.where(valid_envs)[0] and self.enable_opencv_display and self.env._render_viewport:
                 # 找到env 0在valid_envs中的索引
                 env_0_idx = torch.where(valid_envs)[0] == 0
-                if env_0_idx.any():
-                    env_0_pos = torch.where(env_0_idx)[0][0]
-                    # 获取env 0的中心点坐标
-                    center_x_0 = int(center_x[env_0_pos].item())
-                    center_y_0 = int(center_y[env_0_pos].item())
+                # if env_0_idx.any():
+                #     env_0_pos = torch.where(env_0_idx)[0][0]
+                #     # 获取env 0的中心点坐标
+                #     center_x_0 = int(center_x[env_0_pos].item())
+                #     center_y_0 = int(center_y[env_0_pos].item())
 
-                    # 获取env 0的RGB图像并转换为numpy格式用于绘制
+                #     # 获取env 0的RGB图像并转换为numpy格式用于绘制
 
-                    rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
+                rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
 
-                    # 确保图像是uint8格式
-                    if rgb_image.dtype != np.uint8:
-                        rgb_image = (rgb_image * 255).astype(np.uint8)
+                #     # 确保图像是uint8格式
+                #     if rgb_image.dtype != np.uint8:
+                #         rgb_image = (rgb_image * 255).astype(np.uint8)
 
-                    # 绘制计算出的中心点（红色圆圈）
-                    cv2.circle(rgb_image, (center_x_0, center_y_0), 5, (0, 0, 255), -1)  # 红色实心圆
+                #     # 绘制计算出的中心点（红色圆圈）
+                #     cv2.circle(rgb_image, (center_x_0, center_y_0), 5, (0, 0, 255), -1)  # 红色实心圆
 
-                    # 绘制图像中心点（绿色圆圈）
-                    cv2.circle(
-                        rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
-                    )  # 绿色实心圆
+                #     # 绘制图像中心点（绿色圆圈）
+                #     cv2.circle(
+                #         rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+                #     )  # 绿色实心圆
 
-                    # 绘制连接线
-                    cv2.line(
-                        rgb_image,
-                        (center_x_0, center_y_0),
-                        (int(self.image_center_x), int(self.image_center_y)),
-                        (255, 255, 0),
-                        1,
-                    )
+                #     # 绘制连接线
+                #     cv2.line(
+                #         rgb_image,
+                #         (center_x_0, center_y_0),
+                #         (int(self.image_center_x), int(self.image_center_y)),
+                #         (255, 255, 0),
+                #         1,
+                #     )
 
                     # 更新显示缓冲区
                     # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
@@ -190,21 +190,21 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     # cv2.putText(rgb_image, distance_text, (text_x, text_y),
                     #           font, font_scale, font_color, font_thickness)
 
-                    if (
-                        self.enable_opencv_display
-                        and self.opencv_renderer is not None
-                        and self.vision_rgb_buf is not None
-                    ):
-                        # Use the original uint8 RGB image for display (before normalization)
-                        # vision_rgb is in format (batch_size, height, width, channels)
-                        # display_image = self.vision_rgb_buf[0]  # Take first environment
+                if (
+                    self.enable_opencv_display
+                    and self.opencv_renderer is not None
+                    and self.vision_rgb_buf is not None
+                ):
+                    # Use the original uint8 RGB image for display (before normalization)
+                    # vision_rgb is in format (batch_size, height, width, channels)
+                    # display_image = self.vision_rgb_buf[0]  # Take first environment
 
-                        # Display the image and check if window is still open
-                        window_open = self.opencv_renderer.display(rgb_image)
-                        if not window_open:
-                            # User closed the window, disable further display
-                            self.enable_opencv_display = False
-                            print("OpenCV display window closed by user")
+                    # Display the image and check if window is still open
+                    window_open = self.opencv_renderer.display(rgb_image)
+                    if not window_open:
+                        # User closed the window, disable further display
+                        self.enable_opencv_display = False
+                        print("OpenCV display window closed by user")
 
         # # if pixel distance is less than 10, done
         # self.done_buf = self.pixel_rewards_buf > self.sucess_thres
@@ -214,12 +214,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
 
         # visual_features = self.resnet_features
-        cube_pose_obs = self.cube_pose_buf
+        shpere_pose_obs = self.shpere_pose_buf
 
         self.privileged_obs_buf = torch.cat(
             (
                 # ref_wrist_pos_obs,  # 14
-                cube_pose_obs,
+                shpere_pose_obs,
                 # wrist_pos_obs,  # 14
                 q,  # |A|
                 dq,  # |A|
@@ -254,21 +254,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.obs_buf = (self.obs_buf, self.vision_rgb_buf)
         self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
 
-    def _pre_reset_hook(self, env_ids=None):
-        # randomly set y of cube in range (-randomize_cube_y_range, randomize_cube_y_range)
-        # if self.cfg.randomize_cube_y = True
-        yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_yaw_range
-
-        cube_x = torch.cos(yaw) * self.cfg.randomize_cube_radius
-        cube_y = torch.sin(yaw) * self.cfg.randomize_cube_radius
-
-        if self.cfg.randomization:
-            self.init_states.objects["cube"].root_state[env_ids, 0] = cube_x
-            self.init_states.objects["cube"].root_state[env_ids, 1] = cube_y
-            self.done_buf[env_ids] = False
-
     def _post_reset_hook(self, env_ids):
-        self.cube_pose_buf[env_ids] = self.init_states.objects["cube"].root_state[env_ids, :7]
+        self.shpere_pose_buf[env_ids] = self.init_states.objects[self.cfg.objects[0].name].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
         self.env.sim.render()
         camera_data = self.env.scene.sensors["camera_first_person"].data.output
@@ -278,8 +265,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _check_reset(self):
         # move 0.05 to config
-        terminate = torch.abs(self.cube_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
+        terminate = (
+            torch.abs(self.root_state[:, 2]) < 0.3
+        )
         self.reset_buf = self.timeout_buf | terminate
+        # self.reset_buf = self.timeout_buf
         # self.reset_buf = self.timeout_buf | terminate | self.done_buf
         return self.reset_buf
 
@@ -318,13 +308,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             dim=1,
         )
 
-    def _reward_pixel_norm_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for gazing at the cube."""
+    def _reward_pixel_norm_at_shpere(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for gazing at the shpere."""
         # return self.pixel_rewards_buf - self.pixel_reward_offset
         return self.pixel_rewards_buf
 
-    def _reward_look_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for looking at the cube."""
+    def _reward_look_at_shpere(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for looking at the shpere."""
         # 获取相机的世界坐标位置 (num_envs, 3)
         camera_pos = tensor_state.cameras[self.cfg.cameras[0].name].pos
 

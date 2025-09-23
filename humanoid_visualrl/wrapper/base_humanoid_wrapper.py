@@ -124,6 +124,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         # states
         self.dof_pos = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         self.dof_vel = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
+        self.root_state = torch.zeros(self.num_envs, 13, device=self.device, requires_grad=False)
         self.base_quat = torch.zeros(self.num_envs, 4, device=self.device, requires_grad=False)
         self.base_lin_vel = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
         self.base_ang_vel = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
@@ -314,6 +315,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         """Update tensors from are refreshed tensors after physics step."""
+        self.root_state[:] = tensor_state.robots[self.robot.name].root_state
         self.dof_pos[:] = tensor_state.robots[self.robot.name].joint_pos
         self.dof_vel[:] = tensor_state.robots[self.robot.name].joint_vel
         self.base_quat[:] = tensor_state.robots[self.robot.name].root_state[:, 3:7]
@@ -439,6 +441,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.last_dof_vel[env_ids] = 0.0
         self.episode_length_buf[env_ids] = 0
         self.feet_air_time[env_ids] = 0.0
+        self.root_state[env_ids] = self.init_states.robots[self.robot.name].root_state[env_ids]
 
         #
         self.dof_pos[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids]

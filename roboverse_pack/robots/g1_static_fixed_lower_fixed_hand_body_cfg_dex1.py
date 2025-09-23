@@ -15,7 +15,7 @@ class G1StaticDex1Cfg(RobotCfg):
     num_joints: int = 17
     # usd_path: str = "roboverse_data/robots/g1/xml/g1_29dof_lock_waist_rev_1_0_modified_lower_fixed.usd"
     usd_path: str = (
-        "roboverse_data/robots/g1withdex1/g1_29dof_with_dex1_rev_1_0_fixed_lower_fixed_hand_merge_joints.usd"
+"roboverse_data/robots/g1withdex1/g1_29dof_with_dex1_rev_1_0_fixed_lower_fixed_hand_merge_joints.usd"
     )
     xml_path: str = MISSING
     urdf_path: str = "roboverse_data/robots/g1/test_8_31.usd"

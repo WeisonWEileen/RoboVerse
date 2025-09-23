@@ -15,8 +15,6 @@ from metasim.types import TensorState
 from metasim.utils import configclass
 from loguru import logger as log
 
-from metasim.scenario.objects import RigidObjCfg
-
 
 @configclass
 class LeggedRobotRunnerCfg:
@@ -243,9 +241,9 @@ class BaseTableHumanoidTaskCfg:
     """simulation time step in s"""
     objects = [
         PrimitiveSphereCfg(
-            name="table_tennis",
-            size=(0.07, 0.07, 0.07),
-            color=[1.0, 0.0, 0.0],
+            name="ball",
+            radius=0.03,
+            color=[1.0, 0.55, 0.0],
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
             fix_base_link=False,
@@ -287,14 +285,14 @@ class BaseTableHumanoidTaskCfg:
     init_states = [
         {
             "objects": {
-                "cube": {
-                    "pos": torch.tensor([0.5, 0.0, 0.875]),
+                "ball": {
+                    "pos": torch.tensor([0.5, -0.15, 0.875]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
             "robots": {
                 "t1": {
-                    "pos": torch.tensor([0.0, 0.0, 0.50]),
+                    "pos": torch.tensor([0.0, 0.0, 0.615]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "AAHead_yaw": 0.0,
@@ -303,10 +301,12 @@ class BaseTableHumanoidTaskCfg:
                         "Left_Shoulder_Roll": -1.35,
                         "Left_Elbow_Pitch": 0.0,
                         "Left_Elbow_Yaw": -0.50,
-                        "Right_Shoulder_Pitch": 0.435,
-                        "Right_Shoulder_Roll": 0.95,
+                        # "Right_Shoulder_Pitch": 0.435,
+                        # "Right_Shoulder_Roll": 0.95,
+                        "Right_Shoulder_Pitch": -0.68,
+                        "Right_Shoulder_Roll": 1.49,
                         "Right_Elbow_Pitch": 0.0,
-                        "Right_Elbow_Yaw": 0.55,
+                        "Right_Elbow_Yaw": 0.50,
                         "Waist": 0.0,
                         "Left_Hip_Pitch": -0.20,
                         "Left_Hip_Roll": 0.0,
@@ -327,11 +327,11 @@ class BaseTableHumanoidTaskCfg:
     ]
 
     command_dim = 14
-    num_actions = 17
+    num_actions = 23
     torque_limit_scale = 1.0
     reward_weights: dict[str, float] = {
-        "upper_body_pos": 0.1,
-        "pixel_norm_at_cube": 0.4,
+        # "upper_body_pos": 0.1,
+        "pixel_norm_at_shpere": 0.4,
     }
 
     frame_stack = 1
@@ -339,7 +339,6 @@ class BaseTableHumanoidTaskCfg:
 
     # obs
     visual_dim: int = 512
-
 
     num_single_obs = num_actions * 3
     num_observations: int = int(frame_stack * num_single_obs)
@@ -349,23 +348,25 @@ class BaseTableHumanoidTaskCfg:
     # control
     action_scale = 0.25
 
-    task_name = "booster"
+    task_name = "booster_racket"
 
     from metasim.scenario.cameras import PinholeCameraCfg
 
-    cameras = [PinholeCameraCfg(
-        name="camera_first_person",
-        # data_types=["rgb", "instance_id_seg"],
-        data_types=["rgb", "semantic_seg"],
-        width=128,
-        height=96,
-        pos=(1.5, -1.5, 1.5),
-        look_at=(0.0, 0.0, 0.0),
-        mount_to="t1",
-        mount_link="H2/d435_link",
-        mount_pos=(0.0, 0.0, 0.0),
-        mount_quat=(1.0, 0.0, 0.0, 0.0),
-    )]
+    cameras = [
+        PinholeCameraCfg(
+            name="camera_first_person",
+            # data_types=["rgb", "instance_id_seg"],
+            data_types=["rgb", "semantic_seg"],
+            width=128,
+            height=96,
+            pos=(1.5, -1.5, 1.5),
+            look_at=(0.0, 0.0, 0.0),
+            mount_to="t1",
+            mount_link="H2/d435_link",
+            mount_pos=(0.0, 0.0, 0.0),
+            mount_quat=(1.0, 0.0, 0.0, 0.0),
+        )
+    ]
 
     @configclass
     class PushRandomCfg:
@@ -382,13 +383,12 @@ class BaseTableHumanoidTaskCfg:
 
     random_push = PushRandomCfg(enabled=False)
 
-    randomization = True
+    randomization = False
 
     def __post_init__(self):
-
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_yaw_range = 2.3
-        self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
+        # self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
 
         self.actor_critic_class = "use_rnn"
 
@@ -404,7 +404,7 @@ class BaseTableHumanoidTaskCfg:
         log.info("================================================")
 
         # training runtime highly relevant
-        self.robot = "g1_static_dex1"
+        self.robot = "t1"
         self.num_envs = 64
         self.enable_opencv_display = True
         self.use_vision = True
