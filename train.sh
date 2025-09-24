@@ -5,7 +5,7 @@ python ./humanoid_visualrl/scripts/train.py \
     --wandb \
     --task "active_vision" \
     --run_name "mask_curri_fov" \
-    --enable_opencv_display 
+    --enable_opencv_display \
     --resume \
     --load_run "2025_0918_0000" \
     --checkpoint 4400 \

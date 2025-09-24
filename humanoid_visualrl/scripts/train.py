@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # task_cfg, cfg_file_path = get_cfg_cls(args)
     task_cfg_cls = get_task_cfg_class(args.task)
 
-    task_cfg = task_cfg_cls()
+    task_cfg = task_cfg_cls(finetune=args.resume)
 
     # initialize scenario
     scenario = ScenarioCfg(

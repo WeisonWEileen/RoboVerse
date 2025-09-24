@@ -1,4 +1,4 @@
-"""A humanoid base wrapper for skillBench tasks"""
+"""A humanoid base wrapper for skillBench tasks."""
 
 from __future__ import annotations
 

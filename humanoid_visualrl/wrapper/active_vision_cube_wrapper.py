@@ -57,6 +57,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.target_id = 2
         self.last_reward = 0.0
         self.last_curriculum_update_step = 0  # Track when curriculum was last updated
+        # for pixel distance calculation
+        self.see_flag = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
 
         # calucalte camera pos due to the bug that camera is not updated
         if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
@@ -154,6 +156,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # 只处理有目标像素的环境
         valid_envs = pixel_counts > 0
+        self.see_flag = valid_envs.clone()
 
         # turn it into float
         self.cube_showup = valid_envs.float()
@@ -385,20 +388,37 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         return reward
 
+    def _reward_see_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for seeing the cube."""
+        return self.see_flag.float()
+
     def _reward_cube_showup(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for being in the pixel range of the cube."""
         return self.cube_showup
 
+    # def _reward_wrist_close_to_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    #     """Reward for right hand being close to the cube."""
+        
+    #     # for envs that can see the cube
+    #     wrist_pos_error = torch.zeros(self.num_envs, device=self.device)
+    #     wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
+    #     wrist_pos_diff = (
+    #         wrist_pos[:, 0, :3] - self.cube_pose_buf[:, :3]
+    #     )  # [num_envs, 2, 3], two hands, position only
+    #     wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
+    #     # euclidean distance
+    #     dist = torch.norm(wrist_pos_diff, dim=1)
+    #     wrist_pos_error[self.see_flag] = dist[self.see_flag]
+    #     return torch.exp(-4 * wrist_pos_error)
+
     def _reward_wrist_close_to_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for right hand being close to the cube."""
-        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
-        wrist_pos_diff = (
-            wrist_pos[:, 0, :3] - self.cube_pose_buf[:, :3]
-        )  # [num_envs, 2, 3], two hands, position only
-        wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
-        # euclidean distance
-        wrist_pos_error = torch.norm(wrist_pos_diff, dim=1)
-        return torch.exp(-4 * wrist_pos_error), wrist_pos_error
+        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]
+        dist = torch.norm(wrist_pos[:, 0, :3] - self.cube_pose_buf[:, :3], dim=1)
+        # 用一个“特征距离” d0 决定衰减强度（见下文）
+        d0 = 0.10  # 10 cm 附近作为“半好不坏”的参考尺度
+        # 只对看见方块的 env 计分，没看见直接 0
+        reward = 4.4 * self.see_flag.float() * torch.exp(-dist / d0)
+        return reward
 
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
         # cupdate

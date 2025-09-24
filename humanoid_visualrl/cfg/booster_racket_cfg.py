@@ -367,7 +367,7 @@ class BaseTableHumanoidTaskCfg:
             mount_quat=(1.0, 0.0, 0.0, 0.0),
         )
     ]
-
+    finetune = False
     @configclass
     class PushRandomCfg:
         """Configuration for random push forces."""
