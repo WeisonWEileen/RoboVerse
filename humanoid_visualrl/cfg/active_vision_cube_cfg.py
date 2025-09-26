@@ -361,7 +361,7 @@ class BaseTableHumanoidTaskCfg:
         # "upper_body_pos": 0.1,
         # "look_at_cube": 0.4,
         "see_cube": 0.4,
-        "pixel_norm_at_cube": 0.4,
+        # "pixel_norm_at_cube": 0.4,
         "wrist_close_to_cube": 1.0,
         # "cube_showup": 0.1,
     }
@@ -396,26 +396,16 @@ class BaseTableHumanoidTaskCfg:
     cameras = [
         PinholeCameraCfg(
             name="camera_first_person",
-            data_types=["rgb"],
+            data_types=["rgb", "semantic_seg"],
             # data_types=["rgb", "instance_id_seg"],
             # data_types=["rgb", "semantic_seg"],
             width=128,
             height=96,
             pos=(1.5, -1.5, 1.5),
             look_at=(0.0, 0.0, 0.0),
-            # mount_to="g1_static/pelvis",
-            # mount_to="g1_static",
             mount_to="g1_static_dex1",
-            # mount_link="torso_link",
-            # mount_link="torso_link/d435_link",
             mount_link="torso_link/d435_link",
-            # though camera visulization maybe wrong , it's correct for fov
-            # mount_pos=(0.05, 0.0, 0.0),
             mount_pos=(0.0, 0.0, 0.0),
-            #     quat_xyzw = R.from_euler("xyz", [0, 60, 0], degrees=True).as_quat()
-            # quat = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])  #
-            # mount_quat=(0.8660254037844387, 0.0, 0.49999999999999994, 0.0),
-            # mount_quat=(0.5, -0.5, 0.5, -0.5),
             mount_quat=(1.0, 0.0, 0.0, 0.0),
         )
     ]
@@ -465,7 +455,9 @@ class BaseTableHumanoidTaskCfg:
             self.curriculum_cube_yaw = True
 
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
-        
+        if self.finetune:
+            self.randomize_cube_radius -= 0.07
+            
 
         
         self.curriculum_cube_yaw_stages = [0.2, 0.5, 1.0]  # Multipliers for randomize_cube_yaw_range
@@ -493,5 +485,3 @@ class BaseTableHumanoidTaskCfg:
         self.use_fixed_gazing = True
 
 
-        if "pixel_norm_at_cube" in self.reward_weights:
-            self.cameras[0].data_types.append("semantic_seg")

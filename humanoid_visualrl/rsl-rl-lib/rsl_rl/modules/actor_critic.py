@@ -78,6 +78,14 @@ class ActorCritic(nn.Module):
         # disable args validation for speedup
         Normal.set_default_validate_args(False)
 
+
+        self.mask = torch.ones(num_actions, dtype=torch.float, device='cuda')
+        # mask left hand
+        self.mask[0:7] = 0.0
+        # mask right wrist 
+        self.mask[11:14] = 0.0
+
+
     @staticmethod
     # not used at the moment
     def init_weights(sequential, scales):
@@ -115,7 +123,11 @@ class ActorCritic(nn.Module):
         else:
             raise ValueError(f"Unknown standard deviation type: {self.noise_std_type}. Should be 'scalar' or 'log'")
         # masked_mean = mean.clone()
+        # for gazing, mask all the none-waist actions
         # mean[..., 0:14] *= 0.0
+        # for reaching, mask left hand
+
+        mean *= self.mask
         # create distribution
         self.distribution = Normal(mean, std)
 

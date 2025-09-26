@@ -52,6 +52,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
                 recording_path="humanoid_vision_recording.mp4",
             )
 
+        # self.right_wrist_indice = 
+
     def _parse_indices(self, robot):
         """Parse rigid body indices from robot cfg."""
         feet_names = robot.feet_links

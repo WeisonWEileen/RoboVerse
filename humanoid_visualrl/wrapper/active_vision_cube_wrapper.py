@@ -59,6 +59,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.last_curriculum_update_step = 0  # Track when curriculum was last updated
         # for pixel distance calculation
         self.see_flag = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.mask = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.pixel_counts = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
+        self.right_wrist_indice = self.wrist_indices[1]
 
         # calucalte camera pos due to the bug that camera is not updated
         if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
@@ -112,8 +115,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
+
+        # ======update cube pose======
         self.cube_pose_buf = tensor_state.objects["cube"].root_state[:, :7]
 
+        # ======update vision rgb and seg======
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb / 255.0
@@ -142,33 +148,33 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             )
             self.camera_quat_w = quat_mul(self.camera_mount_link_quat, self.camera_tran_quat)
 
-    def _compute_pixel_distance(self):
-        # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
-
+        # ========== update see flag ======
         # 创建掩码：shape (num_envs, height, width)
-        mask = self.vision_seg_buf == self.target_id
+        self.mask = self.vision_seg_buf == self.target_id
 
         # 为每个环境计算加权中心点
         self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
 
         # 计算每个环境的像素数量
-        pixel_counts = mask.sum(dim=(1, 2))
+        self.pixel_counts = self.mask.sum(dim=(1, 2))
 
         # 只处理有目标像素的环境
-        valid_envs = pixel_counts > 0
+        valid_envs = self.pixel_counts > 0
         self.see_flag = valid_envs.clone()
 
+    def _compute_pixel_distance(self):
+        # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
         # turn it into float
-        self.cube_showup = valid_envs.float()
+        self.cube_showup = self.see_flag.float()
 
-        if valid_envs.any():
+        if self.see_flag.any():
             # 计算加权中心点
-            weighted_y = (mask[valid_envs] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
-            weighted_x = (mask[valid_envs] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+            weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+            weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
 
             # 归一化
-            center_y = weighted_y / pixel_counts[valid_envs]
-            center_x = weighted_x / pixel_counts[valid_envs]
+            center_y = weighted_y / self.pixel_counts[self.see_flag]
+            center_x = weighted_x / self.pixel_counts[self.see_flag]
 
             # 计算距离
             distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
@@ -176,13 +182,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # distance = torch.abs(center_x - self.image_center_x)
 
             # 计算奖励
-            self.pixel_rewards_buf[valid_envs] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
+            self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
             # print(f"rewards: {rewards[0]}")
 
             # 在env 0的图像上绘制坐标点
-            if 0 in torch.where(valid_envs)[0] and self.enable_opencv_display and self.env._render_viewport:
+            if 0 in torch.where(self.see_flag)[0] and self.enable_opencv_display and self.env._render_viewport:
                 # 找到env 0在valid_envs中的索引
-                env_0_idx = torch.where(valid_envs)[0] == 0
+                env_0_idx = torch.where(self.see_flag)[0] == 0
                 if env_0_idx.any():
                     env_0_pos = torch.where(env_0_idx)[0][0]
                     # 获取env 0的中心点坐标
@@ -412,12 +418,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     #     return torch.exp(-4 * wrist_pos_error)
 
     def _reward_wrist_close_to_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]
-        dist = torch.norm(wrist_pos[:, 0, :3] - self.cube_pose_buf[:, :3], dim=1)
+        right_wrist_pos = tensor_state.robots[robot_name].body_state[:, self.right_wrist_indice, :7]
+        dist = torch.norm(right_wrist_pos[:, :3] - self.cube_pose_buf[:, :3], dim=1)
         # 用一个“特征距离” d0 决定衰减强度（见下文）
-        d0 = 0.10  # 10 cm 附近作为“半好不坏”的参考尺度
+        # d0 = 0.10  # 10 cm 附近作为“半好不坏”的参考尺度
         # 只对看见方块的 env 计分，没看见直接 0
-        reward = 4.4 * self.see_flag.float() * torch.exp(-dist / d0)
+        reward = self.see_flag.float() * torch.exp(-dist * 4)
+
+        # test to visualize  wrist pos
+        # self._update_marker_viz(right_wrist_pos[:, :3], right_wrist_pos[:, 3:7], right_wrist_pos[:, :3] - self.cube_pose_buf[:, :3])
         return reward
 
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
@@ -425,7 +434,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # world_pos = position + self._env_origins[:, :3]
         world_pos = position + self._env_origins[:, :3]
         # move up  0.5 to be clear to see
-        world_pos[:, 2] += 0.7
+        # world_pos[:, 2] += 0.7
         pos = world_pos
 
         # 准备两组标记：相机方向（蓝色）和指向立方体的方向（红色）
