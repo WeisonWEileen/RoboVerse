@@ -221,7 +221,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 20.0
+    env_spacing: float = 5.0
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -249,7 +249,7 @@ class BaseTableHumanoidTaskCfg:
     objects = [
         RigidObjCfg(
             name="table",
-            scale=(0.5, 0.2, 0.5),
+            scale=(0.46, 0.2, 0.46),
             physics=PhysicStateType.GEOM,
             usd_path="roboverse_data/ring_table.usd",
             fix_base_link=True,
@@ -307,7 +307,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.7, 0.0, 0.875]),
+                    "pos": torch.tensor([0.6, 0.0, 0.875]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -447,7 +447,9 @@ class BaseTableHumanoidTaskCfg:
         if self.finetune:
             # for finetuning, use less frequent curriculum update and less yaw range
             self.update_curriculum_iteration = 100
-            self.randomize_cube_yaw_range = 1.8
+            # self.randomize_cube_yaw_range = 1.8
+            # self.randomize_cube_yaw_range = 1.8
+            self.randomize_cube_yaw_range = 0.8
             self.curriculum_cube_yaw = False
         else:
             self.update_curriculum_iteration = 400
