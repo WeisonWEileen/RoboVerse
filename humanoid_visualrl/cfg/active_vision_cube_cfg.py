@@ -221,7 +221,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 5.0
+    env_spacing: float = 8.0
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -361,7 +361,7 @@ class BaseTableHumanoidTaskCfg:
         # "upper_body_pos": 0.1,
         # "look_at_cube": 0.4,
         "see_cube": 0.4,
-        # "pixel_norm_at_cube": 0.4,
+        "pixel_norm_at_cube": 0.4,
         "wrist_close_to_cube": 1.0,
         # "cube_showup": 0.1,
     }

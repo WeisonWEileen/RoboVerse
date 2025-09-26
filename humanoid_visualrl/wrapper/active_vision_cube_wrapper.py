@@ -40,7 +40,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             / 2.0
             / 50.0
         )
-        self.sucess_thres = (
+        # self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
+        
+        self.success_thres = (
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
         if self.cfg.curriculum_cube_yaw:
@@ -62,6 +64,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.mask = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.pixel_counts = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
         self.right_wrist_indice = self.wrist_indices[1]
+        self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
+
 
         # calucalte camera pos due to the bug that camera is not updated
         if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
@@ -133,7 +137,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.semantic_seg:
             self.vision_seg_buf = tensor_state.cameras[self.cfg.cameras[0].name].semantic_seg_data
             self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
-            self._compute_pixel_distance()
 
         if self.camera_mount_link_idx is not None:
             self.camera_mount_link_pos = tensor_state.robots[self.robot.name].body_state[
@@ -153,7 +156,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.mask = self.vision_seg_buf == self.target_id
 
         # 为每个环境计算加权中心点
-        self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
+        # self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
 
         # 计算每个环境的像素数量
         self.pixel_counts = self.mask.sum(dim=(1, 2))
@@ -161,6 +164,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 只处理有目标像素的环境
         valid_envs = self.pixel_counts > 0
         self.see_flag = valid_envs.clone()
+        self._compute_pixel_distance()
 
     def _compute_pixel_distance(self):
         # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
@@ -182,6 +186,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # distance = torch.abs(center_x - self.image_center_x)
 
             # 计算奖励
+            self.pixel_rewards_buf *= 0.0
             self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
             # print(f"rewards: {rewards[0]}")
 
@@ -247,7 +252,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                             print("OpenCV display window closed by user")
 
         # # if pixel distance is less than 10, done
-        # self.done_buf = self.pixel_rewards_buf > self.sucess_thres
+        # self.done_buf = self.pixel_rewards_buf > self.success_thres
 
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos

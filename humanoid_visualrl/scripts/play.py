@@ -94,7 +94,7 @@ def play(args):
     reset_interval = 75
     yaw = torch.tensor(0.0, device=env_wrapper.device)
     # set fixed command
-    yaw = (random.random()-0.5) * 0.3 + 3.14/2
+    yaw = (random.random()-0.5) * 0.3 + 3.14/3
     yaw = torch.tensor(yaw, device=env_wrapper.device)
     for i in range(10000):
 

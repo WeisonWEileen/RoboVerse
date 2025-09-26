@@ -115,7 +115,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         mask = self.vision_seg_buf == self.target_id
 
         # 为每个环境计算加权中心点
-        self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
+        self.pixel_rewards_buf *= 0.0
 
         # 计算每个环境的像素数量
         pixel_counts = mask.sum(dim=(1, 2))
