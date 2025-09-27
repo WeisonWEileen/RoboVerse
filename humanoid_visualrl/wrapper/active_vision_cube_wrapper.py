@@ -305,9 +305,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         if self.cfg.randomization:
             yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
-
-            cube_x = torch.cos(yaw) * self.cfg.randomize_cube_radius
-            cube_y = torch.sin(yaw) * self.cfg.randomize_cube_radius
+            # radius bias randomize_cube_radius_range
+            radius_bias = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_radius_range
+            radius = self.cfg.randomize_cube_radius + radius_bias
+            cube_x = torch.cos(yaw) * radius
+            cube_y = torch.sin(yaw) * radius
             self.init_states.objects["cube"].root_state[env_ids, 0] = cube_x
             self.init_states.objects["cube"].root_state[env_ids, 1] = cube_y
             self.done_buf[env_ids] = False

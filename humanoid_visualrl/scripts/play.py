@@ -104,8 +104,8 @@ def play(args):
             # randomly add a value between 0 and 3.14
             # yaw = torch.tensor(3.14/2, device=env_wrapper.device)
             yaw -= 0.2
-            cube_x = torch.cos(yaw) * (task_cfg.randomize_cube_radius - 0.07)
-            cube_y = torch.sin(yaw) * (task_cfg.randomize_cube_radius - 0.07)
+            cube_x = torch.cos(yaw) * (task_cfg.randomize_cube_radius)
+            cube_y = torch.sin(yaw) * (task_cfg.randomize_cube_radius)
             cube_state = env_wrapper.init_states.objects["cube"].root_state
             cube_state[0, 0] = cube_x
             cube_state[0, 1] = cube_y

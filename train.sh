@@ -7,8 +7,8 @@ python ./humanoid_visualrl/scripts/train.py \
     --run_name "mask_curri_fov_finetune" \
     --enable_opencv_display \
     --resume \
-    --load_run "2025_0918_064216" \
-    --checkpoint 4500 \
+    --load_run "2025_0918_0000" \
+    --checkpoint 4400 \
     # --use_fixed_gazing \
     # --use_vision \
     # --resume 

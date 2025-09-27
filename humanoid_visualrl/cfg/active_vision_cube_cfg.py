@@ -307,7 +307,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.6, 0.0, 0.875]),
+                    "pos": torch.tensor([0.70, 0.0, 0.875]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -433,12 +433,6 @@ class BaseTableHumanoidTaskCfg:
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
-        self.command_ranges.l_wrist_pos_x = [-0.05, 0.15]
-        self.command_ranges.l_wrist_pos_y = [-0.05, 0.15]
-        self.command_ranges.l_wrist_pos_z = [-0.15, 0.15]
-        self.command_ranges.r_wrist_pos_x = [-0.05, 0.15]
-        self.command_ranges.r_wrist_pos_y = [-0.15, 0.05]
-        self.command_ranges.r_wrist_pos_z = [-0.15, 0.15]
 
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_curriculum = True
@@ -457,8 +451,12 @@ class BaseTableHumanoidTaskCfg:
             self.curriculum_cube_yaw = True
 
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
-        if self.finetune:
-            self.randomize_cube_radius -= 0.07
+        self.randomize_cube_radius_range =0.15
+        # self.randomize_cube_radius = 0.85  # max
+        # self.randomize_cube_radius = 0.55
+        # self.randomize_cube_radius -= 0.07
+        # if self.finetune:
+        #     self.randomize_cube_radius -= 0.07
             
 
         
