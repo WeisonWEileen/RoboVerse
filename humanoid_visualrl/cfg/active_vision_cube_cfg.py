@@ -221,7 +221,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 8.0
+    env_spacing: float = 12.0
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -249,7 +249,7 @@ class BaseTableHumanoidTaskCfg:
     objects = [
         RigidObjCfg(
             name="table",
-            scale=(0.46, 0.2, 0.46),
+            scale=(0.44, 0.2, 0.44),
             physics=PhysicStateType.GEOM,
             usd_path="roboverse_data/ring_table.usd",
             fix_base_link=True,
@@ -307,7 +307,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.70, 0.0, 0.875]),
+                    "pos": torch.tensor([0.62, 0.0, 0.875]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -361,13 +361,14 @@ class BaseTableHumanoidTaskCfg:
         # "upper_body_pos": 0.1,
         # "look_at_cube": 0.4,
         "see_cube": 0.4,
-        "pixel_norm_at_cube": 0.4,
+        # "pixel_norm_at_cube": 0.4,
         "wrist_close_to_cube": 1.0,
         # "cube_showup": 0.1,
     }
 
     frame_stack = 1
     c_frame_stack = 1
+
 
     # obs
     visual_dim: int = 512
@@ -429,11 +430,8 @@ class BaseTableHumanoidTaskCfg:
 
     finetune = False
 
-    
-
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
-
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_curriculum = True
 
@@ -451,7 +449,7 @@ class BaseTableHumanoidTaskCfg:
             self.curriculum_cube_yaw = True
 
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
-        self.randomize_cube_radius_range =0.15
+        self.randomize_cube_radius_range =0.12
         # self.randomize_cube_radius = 0.85  # max
         # self.randomize_cube_radius = 0.55
         # self.randomize_cube_radius -= 0.07
