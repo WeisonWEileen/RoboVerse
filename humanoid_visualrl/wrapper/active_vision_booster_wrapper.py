@@ -46,6 +46,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self._reset(list(range(self.num_envs)))
         self.target_id = 2
+        self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
 
     def _init_buffers(self):
         super()._init_buffers()

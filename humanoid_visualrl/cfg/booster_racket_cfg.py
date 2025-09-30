@@ -392,12 +392,12 @@ class BaseTableHumanoidTaskCfg:
 
         self.actor_critic_class = "use_rnn"
 
-        if self.actor_critic_class == "use_vision":
-            self.ppo_cfg.policy.class_name = "ActorCriticCNN"
-        if self.actor_critic_class == "use_resnet":
-            self.ppo_cfg.policy.class_name = "ActorCriticResnet"
-        if self.actor_critic_class == "use_rnn":
-            self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrent"
+        # if self.actor_critic_class == "use_vision":
+        #     self.ppo_cfg.policy.class_name = "ActorCriticCNN"
+        # if self.actor_critic_class == "use_resnet":
+        #     self.ppo_cfg.policy.class_name = "ActorCriticResnet"
+        # if self.actor_critic_class == "use_rnn":
+        self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrentBooster"
 
         log.info("================================================")
         log.info(f"USING {self.actor_critic_class} ACTOR CRITIC CLASS")
