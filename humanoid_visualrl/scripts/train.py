@@ -55,6 +55,10 @@ if __name__ == "__main__":
     scenario.task = task_cfg
     scenario.env_spacing = task_cfg.env_spacing
 
+    if args.debug:
+        scenario.env_spacing = 5
+        scenario.env_spacing = 5
+
     log.info(f"Using simulator: {args.sim}")
     env_cls = get_task_class(args.task)
 
@@ -64,11 +68,16 @@ if __name__ == "__main__":
         env = env_cls(scenario)
     device = torch.device("cuda")
     log_dir, now = get_log_dir(args, scenario)
+    
+    if args.debug:
+        # do not log, faster reset
+        log_dir = None
+        task_cfg.num_steps_per_env = 48
+    else:
+        dump_instance_file(task_cfg, os.path.join(log_dir, "cfg.py"))
+        dump_instance_file(env, os.path.join(log_dir, "env.py"))
 
-    dump_instance_file(task_cfg, os.path.join(log_dir, "cfg.py"))
-    dump_instance_file(env, os.path.join(log_dir, "env.py"))
-
-    if args.wandb:
+    if args.wandb and not args.debug:
         env.train_cfg["logger"] = "wandb"
     ppo_runner = OnPolicyRunner(
         env=env,

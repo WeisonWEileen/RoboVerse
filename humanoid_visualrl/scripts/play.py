@@ -90,12 +90,13 @@ def play(args):
     env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
     env_wrapper.enable_opencv_display = True
+    env_wrapper.env._render_viewport = True
     obs, _ = env_wrapper.get_observations()
 
     reset_interval = 75
     yaw = torch.tensor(0.0, device=env_wrapper.device)
     # set fixed command
-    yaw = (random.random()-0.5) * 0.3 + 3.14/3
+    yaw = (random.random()-0.5) * 0.3 - 3.14/3
     yaw = torch.tensor(yaw, device=env_wrapper.device)
     for i in range(10000):
 
@@ -104,7 +105,7 @@ def play(args):
                 # yaw = torch.tensor(-1.0, device=env_wrapper.device)
             # randomly add a value between 0 and 3.14
             # yaw = torch.tensor(3.14/2, device=env_wrapper.device)
-            yaw -= 0.2
+            yaw += 0.2
             radius = task_cfg.randomize_cube_radius 
             radius_bias = (
                 2 * random.random() * task_cfg.randomize_cube_radius_range
@@ -117,7 +118,7 @@ def play(args):
             env_wrapper.env._set_object_pose(env_wrapper.cfg.objects[1], cube_state[:, :3], cube_state[:, 3:7], env_ids=[0])
             env_wrapper._compute_observations()
             # ppo_runner.alg.policy.reset([0])
-
+        
         if task_cfg.use_vision:
             actions = policy(obs)
         else:
@@ -126,7 +127,9 @@ def play(args):
         # breakpoint()
         # for i in task_cfg.decimation:
         obs, _, _, _ = env_wrapper.step(actions.detach())
-        log.info(f"step: {i}")
+        env_states = env_wrapper.env.get_states()
+        print(env_wrapper._reward_wrist_close_to_cube(env_states, task_cfg.robot, task_cfg))
+        # log.info(f"step: {i}")
 
     env_wrapper.env.close()
 

@@ -71,7 +71,7 @@ class LeggedRobotRunnerCfg:
     """Policy class name."""
     algorithm_class_name = "PPO"
     """Algorithm class name."""
-    num_steps_per_env = 96 # *0.005*5*48 = 6
+    num_steps_per_env = 96  # *0.005*5*48 = 6
     """per iteration"""
     max_iterations = 1500
     """max number of iterations"""
@@ -80,7 +80,7 @@ class LeggedRobotRunnerCfg:
     # logger: str = "wandb"
     wandb_project: str = "active_vision"
 
-    save_interval = 100
+    save_interval = 200
     """save interval for checkpoints"""
     experiment_name = "test"
     """experiment name"""
@@ -267,6 +267,7 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.3, 0.1, 0.851),
+            mass=0.2,  # 增加质量以确保更好的物理行为
         ),
     ]
     # cameras
@@ -307,7 +308,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.62, 0.0, 0.875]),
+                    "pos": torch.tensor([0.0, 0.0, 1.575]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -368,7 +369,6 @@ class BaseTableHumanoidTaskCfg:
 
     frame_stack = 1
     c_frame_stack = 1
-
 
     # obs
     visual_dim: int = 512
@@ -435,7 +435,6 @@ class BaseTableHumanoidTaskCfg:
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_curriculum = True
 
-
         if self.finetune:
             # for finetuning, use less frequent curriculum update and less yaw range
             self.update_curriculum_iteration = 100
@@ -449,15 +448,13 @@ class BaseTableHumanoidTaskCfg:
             self.curriculum_cube_yaw = True
 
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
-        self.randomize_cube_radius_range =0.12
+        self.randomize_cube_radius_range = 0.12
         # self.randomize_cube_radius = 0.85  # max
         # self.randomize_cube_radius = 0.55
         # self.randomize_cube_radius -= 0.07
         # if self.finetune:
         #     self.randomize_cube_radius -= 0.07
-            
 
-        
         self.curriculum_cube_yaw_stages = [0.2, 0.5, 1.0]  # Multipliers for randomize_cube_yaw_range
         self.curriculum_cube_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
         self.curriculum_cube_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
@@ -481,5 +478,3 @@ class BaseTableHumanoidTaskCfg:
         self.enable_opencv_display = True
         self.use_vision = True
         self.use_fixed_gazing = True
-
-

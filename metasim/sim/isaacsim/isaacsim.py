@@ -62,7 +62,6 @@ class IsaacsimHandler(BaseSimHandler):
         # initial do not render anything
         self._render_viewport = False
 
-
     def _init_keyboard(self) -> None:
         import carb
 
@@ -201,6 +200,21 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
 
+    
+    def filter_collisions(self, robot_name: str, obj_name: str):
+        """Filter collisions between robot and obj"""
+        from pxr import Usd, UsdPhysics, PhysxSchema
+        import omni.usd
+
+        stage = omni.usd.get_context().get_stage()
+
+        for env_id in range(self.num_envs):
+            robot_path = f"/World/envs/env_{env_id}/{robot_name}"
+            cube_path = f"/World/envs/env_{env_id}/{obj_name}"
+            robot_prim = stage.GetPrimAtPath(robot_path)
+            filteredPairsAPIBox0 = UsdPhysics.FilteredPairsAPI.Apply(robot_prim)
+            filteredPairsAPIBox0.CreateFilteredPairsRel().AddTarget(cube_path)
+
     def launch(self) -> None:
         self._init_scene()
         self._load_robots()
@@ -215,6 +229,7 @@ class IsaacsimHandler(BaseSimHandler):
         # self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
+        # self._setup_selective_collision()
         self.sim.reset()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         self.scene.reset(indices)
@@ -243,8 +258,6 @@ class IsaacsimHandler(BaseSimHandler):
             self._init_keyboard()
 
         self._init_viewports()
-
-
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
@@ -317,7 +330,7 @@ class IsaacsimHandler(BaseSimHandler):
                 env_ids = torch.tensor(env_ids, device=self.device)
 
             for _, obj in enumerate(self.objects):
-                if obj.fix_base_link:
+                if obj.name == "table":
                     continue
                 if isinstance(obj, ArticulationObjCfg):
                     obj_inst = self.scene.articulations[obj.name]
@@ -456,7 +469,6 @@ class IsaacsimHandler(BaseSimHandler):
                 semantic_seg_id2label=semantic_seg_id2label,
                 # pos=(camera_inst.data.pos_w - self.scene.env_origins),
                 # pos=( self.d435_view.get_world_poses()[0] - self.scene.env_origins),
-               
                 # quat_world=camera_inst.data.quat_w_world,
                 intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
@@ -1007,8 +1019,6 @@ class IsaacsimHandler(BaseSimHandler):
     # shader = UsdShade.Shader(omni.usd.get_shader_from_material(material, get_prim=True))
     # # Correspond to Shader -> Inputs -> UV -> Texture Tiling (in Isaac Sim 4.2.0)
     # shader.CreateInput("texture_scale", Sdf.ValueTypeNames.Float2).Set((10,10))
-
-
 
     def _get_pose(
         self, obj_name: str, obj_subpath: str | None = None, env_ids: list[int] | None = None

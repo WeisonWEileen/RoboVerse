@@ -27,6 +27,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.env.filter_collisions(self.robot.name, "cube")
 
         self.image_center_x = self.cfg.cameras[0].width / 2
         self.image_center_y = self.cfg.cameras[0].height / 2
@@ -85,6 +86,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.camera_tran_pos = torch.tensor([0.05762, 0.01753, 0.42987]).to(self.device).repeat(self.num_envs, 1)
 
             self.camera_tran_quat = torch.tensor([0.91496, 0.0, 0.40355, 0.0]).to(self.device).repeat(self.num_envs, 1)
+
 
     def _init_buffers(self):
         super()._init_buffers()
@@ -333,7 +335,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _check_reset(self):
         # move 0.05 to config
         terminate = torch.abs(self.cube_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
-        self.reset_buf = self.timeout_buf | terminate
+        self.reset_buf = self.timeout_buf 
         # self.reset_buf = self.timeout_buf | terminate | self.done_buf
         return self.reset_buf
 

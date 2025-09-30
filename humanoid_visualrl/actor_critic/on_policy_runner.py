@@ -317,7 +317,7 @@ class OnPolicyRunner:
             # Clear episode infos
             ep_infos.clear()
             # Save code state
-            if it == start_iter and not self.disable_logs:
+            if it == start_iter and not self.disable_logs and self.log_dir is not None:
                 # obtain all the diff files
                 git_file_paths = store_code_state(self.log_dir, self.git_status_repos)
                 # if possible store them to wandb

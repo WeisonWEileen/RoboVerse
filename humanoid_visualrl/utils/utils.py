@@ -324,6 +324,7 @@ def get_args():
         wandb: bool = False
         task: str = "active_vision"
         run_name: str = ""
+        debug: bool = False
 
         def __post_init__(self):
             """Post-initialization configuration."""
