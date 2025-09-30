@@ -308,7 +308,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.0, 0.0, 1.575]),
+                    "pos": torch.tensor([0.62, 0.0, 0.875]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
