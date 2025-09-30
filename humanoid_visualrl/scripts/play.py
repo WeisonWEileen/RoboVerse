@@ -89,6 +89,7 @@ def play(args):
     # breakpoint()
     env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
+    env_wrapper.enable_opencv_display = True
     obs, _ = env_wrapper.get_observations()
 
     reset_interval = 75
@@ -104,8 +105,12 @@ def play(args):
             # randomly add a value between 0 and 3.14
             # yaw = torch.tensor(3.14/2, device=env_wrapper.device)
             yaw -= 0.2
-            cube_x = torch.cos(yaw) * (task_cfg.randomize_cube_radius)
-            cube_y = torch.sin(yaw) * (task_cfg.randomize_cube_radius)
+            radius = task_cfg.randomize_cube_radius 
+            radius_bias = (
+                2 * random.random() * task_cfg.randomize_cube_radius_range
+            )
+            cube_x = torch.cos(yaw) * (radius + radius_bias)
+            cube_y = torch.sin(yaw) * (radius + radius_bias)
             cube_state = env_wrapper.init_states.objects["cube"].root_state
             cube_state[0, 0] = cube_x
             cube_state[0, 1] = cube_y

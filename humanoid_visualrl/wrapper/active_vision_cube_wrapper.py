@@ -41,7 +41,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             / 50.0
         )
         # self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
-        
+
         self.success_thres = (
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
@@ -65,7 +65,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.pixel_counts = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
         self.right_wrist_indice = self.wrist_indices[1]
         self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
-
 
         # calucalte camera pos due to the bug that camera is not updated
         if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
@@ -171,85 +170,88 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # turn it into float
         self.cube_showup = self.see_flag.float()
 
-        if self.see_flag.any():
-            # 计算加权中心点
-            weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
-            weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+        if self.enable_opencv_display and self.env._render_viewport:
+            rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
 
-            # 归一化
-            center_y = weighted_y / self.pixel_counts[self.see_flag]
-            center_x = weighted_x / self.pixel_counts[self.see_flag]
+            if self.see_flag.any():
+                # 计算加权中心点
+                weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(
+                    dim=(1, 2)
+                )  # (num_valid_envs,)
+                weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(
+                    dim=(1, 2)
+                )  # (num_valid_envs,)
 
-            # 计算距离
-            distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
-            # since now we have no pitch dof for waist, we only consider x pixel distance
-            # distance = torch.abs(center_x - self.image_center_x)
+                # 归一化
+                center_y = weighted_y / self.pixel_counts[self.see_flag]
+                center_x = weighted_x / self.pixel_counts[self.see_flag]
 
-            # 计算奖励
-            self.pixel_rewards_buf *= 0.0
-            self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
-            # print(f"rewards: {rewards[0]}")
+                # 计算距离
+                distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
+                # since now we have no pitch dof for waist, we only consider x pixel distance
+                # distance = torch.abs(center_x - self.image_center_x)
 
-            # 在env 0的图像上绘制坐标点
-            if 0 in torch.where(self.see_flag)[0] and self.enable_opencv_display and self.env._render_viewport:
+                # 计算奖励
+                self.pixel_rewards_buf *= 0.0
+                self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
+                # print(f"rewards: {rewards[0]}")
+
+                # 在env 0的图像上绘制坐标点
+                # if self.env._render_viewport:
                 # 找到env 0在valid_envs中的索引
-                env_0_idx = torch.where(self.see_flag)[0] == 0
-                if env_0_idx.any():
-                    env_0_pos = torch.where(env_0_idx)[0][0]
-                    # 获取env 0的中心点坐标
-                    center_x_0 = int(center_x[env_0_pos].item())
-                    center_y_0 = int(center_y[env_0_pos].item())
+                rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
+                if 0 in torch.where(self.see_flag)[0]:
+                    env_0_idx = torch.where(self.see_flag)[0] == 0
+                    if env_0_idx.any():
+                        env_0_pos = torch.where(env_0_idx)[0][0]
+                        # 获取env 0的中心点坐标
+                        center_x_0 = int(center_x[env_0_pos].item())
+                        center_y_0 = int(center_y[env_0_pos].item())
 
-                    # 获取env 0的RGB图像并转换为numpy格式用于绘制
+                        # 获取env 0的RGB图像并转换为numpy格式用于绘制
 
-                    rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
+                        # 确保图像是uint8格式
+                        if rgb_image.dtype != np.uint8:
+                            rgb_image = (rgb_image * 255).astype(np.uint8)
 
-                    # 确保图像是uint8格式
-                    if rgb_image.dtype != np.uint8:
-                        rgb_image = (rgb_image * 255).astype(np.uint8)
+                        # 绘制计算出的中心点（红色圆圈）
+                        cv2.circle(rgb_image, (center_x_0, center_y_0), 5, (0, 0, 255), -1)  # 红色实心圆
 
-                    # 绘制计算出的中心点（红色圆圈）
-                    cv2.circle(rgb_image, (center_x_0, center_y_0), 5, (0, 0, 255), -1)  # 红色实心圆
+                        # 绘制图像中心点（绿色圆圈）
+                        cv2.circle(
+                            rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+                        )  # 绿色实心圆
 
-                    # 绘制图像中心点（绿色圆圈）
-                    cv2.circle(
-                        rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
-                    )  # 绿色实心圆
+                        # 绘制连接线
+                        cv2.line(
+                            rgb_image,
+                            (center_x_0, center_y_0),
+                            (int(self.image_center_x), int(self.image_center_y)),
+                            (255, 255, 0),
+                            1,
+                        )
 
-                    # 绘制连接线
-                    cv2.line(
-                        rgb_image,
-                        (center_x_0, center_y_0),
-                        (int(self.image_center_x), int(self.image_center_y)),
-                        (255, 255, 0),
-                        1,
-                    )
+                        # 更新显示缓冲区
+                        # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
 
-                    # 更新显示缓冲区
-                    # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
+                        # distance_0 = distance[env_0_pos].item()
+                        # distance_text = f"Distance: {distance_0:.1f} px"
+                        # font = cv2.FONT_HERSHEY_SIMPLEX
+                        # font_scale = 0.6
+                        # font_color = (255, 255, 255)  # 白色文字
+                        # font_thickness = 2
+                        # text_x, text_y = 10, 25
 
-                    # distance_0 = distance[env_0_pos].item()
-                    # distance_text = f"Distance: {distance_0:.1f} px"
-                    # font = cv2.FONT_HERSHEY_SIMPLEX
-                    # font_scale = 0.6
-                    # font_color = (255, 255, 255)  # 白色文字
-                    # font_thickness = 2
-                    # text_x, text_y = 10, 25
+                        # cv2.putText(rgb_image, distance_text, (text_x, text_y),
+                        #           font, font_scale, font_color, font_thickness)
 
-                    # cv2.putText(rgb_image, distance_text, (text_x, text_y),
-                    #           font, font_scale, font_color, font_thickness)
-
-                    if (
-                        self.enable_opencv_display
-                        and self.opencv_renderer is not None
-                        and self.vision_rgb_buf is not None
-                    ):
-                        # Display the image and check if window is still open
-                        window_open = self.opencv_renderer.display(rgb_image)
-                        if not window_open:
-                            # User closed the window, disable further display
-                            self.enable_opencv_display = False
-                            print("OpenCV display window closed by user")
+            if self.opencv_renderer is not None and self.vision_rgb_buf is not None:
+                # Display the image and check if window is still open
+                window_open = self.opencv_renderer.display(rgb_image)
+                if not window_open:
+                    # User closed the window, disable further display
+                    self.enable_opencv_display = False
+                    print("OpenCV display window closed by user")
 
         # # if pixel distance is less than 10, done
         # self.done_buf = self.pixel_rewards_buf > self.success_thres
@@ -306,7 +308,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.cfg.randomization:
             yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
             # radius bias randomize_cube_radius_range
-            radius_bias = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_radius_range
+            radius_bias = (
+                2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_radius_range
+            )
             radius = self.cfg.randomize_cube_radius + radius_bias
             cube_x = torch.cos(yaw) * radius
             cube_y = torch.sin(yaw) * radius
@@ -411,7 +415,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     # def _reward_wrist_close_to_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
     #     """Reward for right hand being close to the cube."""
-        
+
     #     # for envs that can see the cube
     #     wrist_pos_error = torch.zeros(self.num_envs, device=self.device)
     #     wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands

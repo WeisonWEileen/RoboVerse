@@ -461,7 +461,7 @@ def load_wrapper(args, scenario):
         log.info(f"Loading wrapper class: {wrapper_name}")
 
         # Create an instance of the wrapper with the scenario
-        wrapper_instance = wrapper_class(scenario)
+        wrapper_instance = wrapper_class(scenario, args.enable_opencv_display)
         return wrapper_instance
     finally:
         # Clean up: remove from sys.modules and sys.path
