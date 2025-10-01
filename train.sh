@@ -2,13 +2,13 @@
 
 python ./humanoid_visualrl/scripts/train.py \
     --num_envs 64 \
-    --wandb \
     --task "active_vision" \
-    --run_name "mask_curri_fov_finetune" \
-    --enable_opencv_display \
-    --resume \
-    --load_run "2025_0928_024821" \
-    --checkpoint 14300 \
+    --run_name "refactor_cnn" \
+    --enable_opencv_display 
+    # --wandb \
+    # --resume \
+    # --load_run "2025_0918_064216" \
+    # --checkpoint 4400 \
     # --use_fixed_gazing \
     # --use_vision \
     # --resume 

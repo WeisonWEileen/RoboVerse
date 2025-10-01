@@ -37,6 +37,7 @@ from torch.nn.modules import rnn
 
 from rsl_rl.utils import resolve_nn_activation
 
+from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn import VisionBackbonePDC
 
 class ActorCriticCNN(nn.Module):
     """Actor-Critic network with vanilla CNN feature extractor."""
@@ -76,22 +77,24 @@ class ActorCriticCNN(nn.Module):
         #     nn.Flatten(),
         # )
 
-        self.vision_encoder = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
-            nn.ReLU(inplace=True),
-            # ↓↓↓ 新增 ↓↓↓
-            nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=64
-            nn.Flatten(),  # (B, 64)
-            nn.Linear(64, 512),  # 压缩 / 投影到 512 维
-            nn.ReLU(inplace=True),
-        )
+        # self.vision_encoder = nn.Sequential(
+        #     nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
+        #     nn.ReLU(inplace=True),
+        #     nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
+        #     nn.ReLU(inplace=True),
+        #     nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
+        #     nn.ReLU(inplace=True),
+        #     # ↓↓↓ 新增 ↓↓↓
+        #     nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=64
+        #     nn.Flatten(),  # (B, 64)
+        #     nn.Linear(64, 512),  # 压缩 / 投影到 512 维
+        #     nn.ReLU(inplace=True),
+        # )
 
         # FIXME hard code here
+        self.vision_encoder = VisionBackbonePDC(output_dim=64)
         vision_fea_dim = self.vision_encoder(torch.zeros(1, 3, 96, 128)).shape[1]
+        # vision_fea_dim = (torch.zeros(1, 3, 96, 128)).shape[1]
         mlp_input_dim_a = num_actor_obs
         mlp_input_dim_c = num_critic_obs
 

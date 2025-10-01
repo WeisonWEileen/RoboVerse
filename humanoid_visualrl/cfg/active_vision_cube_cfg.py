@@ -37,6 +37,9 @@ class LeggedRobotRunnerCfg:
         """Hidden dimensions for actor network."""
         critic_hidden_dims = [768, 256, 128]
         """Hidden dimensions for critic network."""
+        rnn_hidden_dim = 128
+        vision_height = 96
+        vision_width = 128
         # action_masking = False
         # masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
@@ -221,7 +224,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 12.0
+    env_spacing: float = 20
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -358,12 +361,13 @@ class BaseTableHumanoidTaskCfg:
     command_dim = 14
     num_actions = 17
     torque_limit_scale = 1.0
+
     reward_weights: dict[str, float] = {
         # "upper_body_pos": 0.1,
         # "look_at_cube": 0.4,
         "see_cube": 0.4,
-        # "pixel_norm_at_cube": 0.4,
-        "wrist_close_to_cube": 1.0,
+        "pixel_norm_at_cube": 0.4,
+        # "wrist_close_to_cube": 1.0,
         # "cube_showup": 0.1,
     }
 
@@ -371,7 +375,7 @@ class BaseTableHumanoidTaskCfg:
     c_frame_stack = 1
 
     # obs
-    visual_dim: int = 512
+    visual_dim: int = 64
 
     if use_vision:
         # s
@@ -442,10 +446,16 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_cube_yaw_range = 1.8
             self.randomize_cube_yaw_range = 0.8
             self.curriculum_cube_yaw = False
+
+            self.reward_weights = {
+                "see_cube": 0.5,
+                "pixel_norm_at_cube": 0.5,
+            }
         else:
             self.update_curriculum_iteration = 400
             self.randomize_cube_yaw_range = 2.3
             self.curriculum_cube_yaw = True
+            self.curriculum_randomize_iteration_interval = 200
 
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
         self.randomize_cube_radius_range = 0.12

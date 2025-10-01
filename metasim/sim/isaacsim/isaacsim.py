@@ -106,7 +106,6 @@ class IsaacsimHandler(BaseSimHandler):
             return  # headless 情况直接返回
 
         import omni.kit.viewport.utility as kit_viewport
-
         kit_viewport.frame_viewport_prims("/World/envs/env_0/g1_static_dex1/torso_link/d435_link/camera_first_person")
 
     def _init_scene(self) -> None:
@@ -159,15 +158,6 @@ class IsaacsimHandler(BaseSimHandler):
             num_envs=self._num_envs,
             env_spacing=self.scenario.env_spacing,
         )
-        # scene_config.sky_light = (
-        #     AssetBaseCfg(
-        #         prim_path="/World/skyLight",
-        #         spawn=sim_utils.DomeLightCfg(
-        #             intensity=750.0,
-        #             texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
-        #         ),
-        #     ),
-        # )
         self.scene = InteractiveScene(scene_config)
 
     def _load_robots(self) -> None:

@@ -87,6 +87,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
             self.camera_tran_quat = torch.tensor([0.91496, 0.0, 0.40355, 0.0]).to(self.device).repeat(self.num_envs, 1)
 
+        self.vision_seg_buf = torch.zeros(self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32)
+
 
     def _init_buffers(self):
         super()._init_buffers()
@@ -523,32 +525,19 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self._update_curriculum_cube_yaw_range()
 
     def _update_curriculum_cube_yaw_range(self):
-        if self.cfg.curriculum_cube_yaw:
-            # update curriculum_cube_yaw_range
-            # Check curriculum update every 100 iterations (not steps) to prevent too frequent updates
-            current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
+        if not self.cfg.curriculum_cube_yaw:
+            return
 
-            # Only check and log once per 100 iterations, and only at the exact iteration boundary
-            if current_iteration % 100 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
-                # if average reward added by 0.1
-                reward = self.episode_sums["pixel_norm_at_cube"].mean() * self.cfg.reward_weights["pixel_norm_at_cube"]
+        # 当前迭代数
+        current_iter = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
 
-                # Always update last_reward to track current performance
-                reward_improvement = reward - self.last_reward
-                self.last_reward = reward
-
-                # Only increase range if there's significant improvement (threshold: 0.01)
-                # and we haven't increased range too recently (minimum 400 iterations between updates)
-                iterations_since_last_update = current_iteration - (
-                    self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
+        # 每 100 iter 检查一次，并且只在边界触发
+        if current_iter > 0 and current_iter % self.cfg.curriculum_randomize_iteration_interval == 0:
+            # 只有当范围还没到最大时才增长
+            if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
+                self.curriculum_cube_yaw_range = min(
+                    self.curriculum_cube_yaw_range + self.cfg.randomize_cube_yaw_range * 0.05,
+                    self.cfg.randomize_cube_yaw_range,
                 )
-                log.info(
-                    f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement:.4f}"
-                )
-                if reward_improvement > 0.0025 or iterations_since_last_update >= self.cfg.update_curriculum_iteration:
-                    if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
-                        self.curriculum_cube_yaw_range += self.cfg.randomize_cube_yaw_range * 0.05
-                        self.last_curriculum_update_step = self.common_step_counter
-                        log.info(
-                            f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement:.4f}"
-                        )
+                self.last_curriculum_update_iter = current_iter
+                log.info(f"[curriculum] iter {current_iter}, yaw_range = {self.curriculum_cube_yaw_range:.4f}")

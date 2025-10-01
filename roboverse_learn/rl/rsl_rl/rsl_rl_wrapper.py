@@ -46,6 +46,10 @@ class RslRlWrapper(VecEnv):
         env.set_states(self.init_states)
         self.use_vision = scenario.task.use_vision
 
+        if self.use_vision:
+            self.vision_height = scenario.task.cameras[0].height
+            self.vision_width = scenario.task.cameras[0].width
+
 
     def _init_buffers(self):
         """Initialize buffers for rsl_rl compatibility."""
@@ -53,7 +57,7 @@ class RslRlWrapper(VecEnv):
         self.obs_buf = torch.zeros((self.num_envs, self.num_obs), device=self.device, dtype=torch.float32)
         self.privileged_obs_buf = torch.zeros((self.num_envs, self.num_privileged_obs), device=self.device, dtype=torch.float32)
         if self.use_vision:
-            self.vision_buf = torch.zeros((self.num_envs, 3, 48, 64), device=self.device, dtype=torch.float32)
+            self.vision_buf = torch.zeros((self.num_envs, 3, self.vision_height, self.vision_width), device=self.device, dtype=torch.float32)
         if self.use_vision:
             self.extra_buf = {
             "observations": {
