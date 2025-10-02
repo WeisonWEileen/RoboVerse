@@ -267,8 +267,6 @@ class OnPolicyRunner:
                             ep_infos.append(infos["episode"])
                         elif "log" in infos:
                             ep_infos.append(infos["log"])
-                        elif "episode_metrics" in infos:
-                            ep_infos.append(infos["episode_metrics"])
                         # Update rewards
                         if self.alg.rnd:
                             cur_ereward_sum += rewards
@@ -283,6 +281,10 @@ class OnPolicyRunner:
                         new_ids = (dones > 0).nonzero(as_tuple=False)
                         rewbuffer.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
                         lenbuffer.extend(cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
+
+                        if "episode_metrics" in infos:
+                            if "see_flag_avg" in infos["episode_metrics"]:
+                                see_flag_avg = infos["episode_metrics"]["see_flag_avg"]
                         cur_reward_sum[new_ids] = 0
                         cur_episode_length[new_ids] = 0
                         # -- intrinsic and extrinsic rewards
@@ -391,6 +393,10 @@ class OnPolicyRunner:
                 self.writer.add_scalar(
                     "Train/mean_episode_length/time", statistics.mean(locs["lenbuffer"]), self.tot_time
                 )
+
+        # Log see_flag_avg regardless of whether episodes have completed
+        if "see_flag_avg" in locs:
+            self.writer.add_scalar("Episode/see_flag_avg", locs["see_flag_avg"], locs["it"])
 
         str = f" \033[1m Learning iteration {locs['it']}/{locs['tot_iter']} \033[0m "
 
