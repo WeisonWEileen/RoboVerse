@@ -248,6 +248,7 @@ class IsaacsimHandler(BaseSimHandler):
             self._init_keyboard()
 
         self._init_viewports()
+        self._is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
@@ -320,7 +321,7 @@ class IsaacsimHandler(BaseSimHandler):
                 env_ids = torch.tensor(env_ids, device=self.device)
 
             for _, obj in enumerate(self.objects):
-                if obj.name == "table":
+                if obj.fix_base_link:
                     continue
                 if isinstance(obj, ArticulationObjCfg):
                     obj_inst = self.scene.articulations[obj.name]
@@ -380,6 +381,8 @@ class IsaacsimHandler(BaseSimHandler):
 
         object_states = {}
         for obj in self.objects:
+            if obj.name == "table":
+                    continue
             if isinstance(obj, ArticulationObjCfg):
                 obj_inst = self.scene.articulations[obj.name]
                 joint_reindex = self.get_joint_reindex(obj.name)
@@ -460,7 +463,7 @@ class IsaacsimHandler(BaseSimHandler):
                 # pos=(camera_inst.data.pos_w - self.scene.env_origins),
                 # pos=( self.d435_view.get_world_poses()[0] - self.scene.env_origins),
                 # quat_world=camera_inst.data.quat_w_world,
-                intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
+                # intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
         extras = self.get_extra()
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
@@ -498,13 +501,13 @@ class IsaacsimHandler(BaseSimHandler):
             )
 
     def _simulate(self):
-        from isaaclab.sim import SimulationContext
+        # from isaaclab.sim import SimulationContext
 
         # is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
-        is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
+        
         self.scene.write_data_to_sim()
         self.sim.step(render=False)
-        if self._step_counter % self._render_interval == 0 and is_rendering:
+        if self._step_counter % self._render_interval == 0 and self._is_rendering:
             self.sim.render()
             # self._update_tiled_camera_pose()
 

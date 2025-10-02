@@ -1,11 +1,13 @@
 # train with walking
 
 python ./humanoid_visualrl/scripts/train.py \
-    --num_envs 64 \
+    --num_envs 128 \
     --task "active_vision" \
     --run_name "cnn_pretrain" \
     --enable_opencv_display \
-    --wandb 
+    --headless
+    # --debug 
+    # --wandb 
     # --resume \
     # --load_run "2025_0918_064216" \
     # --checkpoint 4400 \

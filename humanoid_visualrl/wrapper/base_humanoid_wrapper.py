@@ -20,6 +20,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
 from metasim.utils.math import quat_apply, quat_rotate_inverse
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
+import time
 
 
 class HumanoidBaseWrapper(RslRlWrapper):
@@ -400,16 +401,25 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         for _ in range(self.cfg.decimation):
             # refresh dof states
-            tensor_state = self.env.get_states()
-            self.dof_pos = tensor_state.robots[self.robot.name].joint_pos
-            self.dof_vel = tensor_state.robots[self.robot.name].joint_vel
+            # tensor_state = self.env.get_states()
+            # self.dof_pos = tensor_state.robots[self.robot.name].joint_pos
+            # self.dof_vel = tensor_state.robots[self.robot.name].joint_vel
+
+            # test more light weight 
+            reindex = self.env.get_joint_reindex(self.robot.name)
+            self.dof_pos = self.env.scene.articulations[self.robot.name].data.joint_pos[:, reindex]
+            self.dof_vel = self.env.scene.articulations[self.robot.name].data.joint_vel[:, reindex]
+
             torques = self._compute_effort(action)
             self.env.set_dof_targets(torques)
             self.env.simulate()
 
     def step(self, actions):
         action = self._pre_physics_step(actions)
+        # start_step = time.time()
         self._physics_step(action)
+        # end_step = time.time()
+        # print(f"Step time: {end_step - start_step}")
         self._post_physics_step()
         return self.obs_buf, self.rew_buf, self.reset_buf, self.extra_buf
 
@@ -533,15 +543,16 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _push_robots(self):
         """Randomly set robot's root velocity to simulate a push."""
         if self.cfg.random_push.enabled and self.common_step_counter % self.cfg.random_push.push_interval == 0:
-            max_vel = self.cfg.random_push.max_push_vel_xy
-            max_push_angular = self.cfg.random_push.max_push_ang_vel
-            tensor_states = self.env.get_states()
-            self.rand_push_force[:, :2] += torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device)
-            tensor_states.robots[self.robot.name].root_state[:, 0:2] += self.rand_push_force[:, :2]
-            self.rand_push_torque = torch_rand_float(
-                -max_push_angular, max_push_angular, (self.num_envs, 3), device=self.device
-            )
-            tensor_states.robots[self.robot.name].root_state[:, 10:13] = self.rand_push_torque
+            pass #due to performace issue, we generally not use get_states
+            # max_vel = self.cfg.random_push.max_push_vel_xy
+            # max_push_angular = self.cfg.random_push.max_push_ang_vel
+            # tensor_states = self.env.get_states()
+            # self.rand_push_force[:, :2] += torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device)
+            # tensor_states.robots[self.robot.name].root_state[:, 0:2] += self.rand_push_force[:, :2]
+            # self.rand_push_torque = torch_rand_float(
+            #     -max_push_angular, max_push_angular, (self.num_envs, 3), device=self.device
+            # )
+            # tensor_states.robots[self.robot.name].root_state[:, 10:13] = self.rand_push_torque
 
     def _update_marker_viz(self):
         # convert to world frame
