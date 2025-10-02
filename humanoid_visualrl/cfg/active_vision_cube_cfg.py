@@ -40,6 +40,7 @@ class LeggedRobotRunnerCfg:
         rnn_hidden_dim = 128
         vision_height = 96
         vision_width = 128
+        finetune = False
         # action_masking = False
         # masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
@@ -455,6 +456,10 @@ class BaseTableHumanoidTaskCfg:
             self.update_curriculum_iteration = 400
             self.randomize_cube_yaw_range = 2.3
             self.curriculum_cube_yaw = True
+            self.curriculum_win_length = 2000
+            self.curriculum_avg_thres = 0.5
+            self.curriculum_update_avg_thres = 0.5
+            self.curriculum_update_avg_win_length = 0.5
             self.curriculum_randomize_iteration_interval = 200
 
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
@@ -488,3 +493,4 @@ class BaseTableHumanoidTaskCfg:
         self.enable_opencv_display = True
         self.use_vision = True
         self.use_fixed_gazing = True
+        self.ppo_cfg.policy.finetune = self.finetune

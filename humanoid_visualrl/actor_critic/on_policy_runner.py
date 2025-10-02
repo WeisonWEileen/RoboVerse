@@ -31,7 +31,6 @@ from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn_booster import ActorCri
 from rsl_rl.utils import store_code_state
 
 
-
 class OnPolicyRunner:
     """On-policy runner for training and evaluation."""
 
@@ -135,7 +134,6 @@ class OnPolicyRunner:
         # else:
         #     self.masks = False
 
-
         # check if cfg have
         if "empirical_normalization" in self.cfg:
             self.empirical_normalization = self.cfg["empirical_normalization"]
@@ -237,7 +235,7 @@ class OnPolicyRunner:
             #   Right now: No, because they all should converge to the same values "asymptotically".
 
         # Start training
-        start_iter = self.current_learning_iteration 
+        start_iter = self.current_learning_iteration
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             start = time.time()
@@ -269,6 +267,8 @@ class OnPolicyRunner:
                             ep_infos.append(infos["episode"])
                         elif "log" in infos:
                             ep_infos.append(infos["log"])
+                        elif "episode_metrics" in infos:
+                            ep_infos.append(infos["episode_metrics"])
                         # Update rewards
                         if self.alg.rnd:
                             cur_ereward_sum += rewards

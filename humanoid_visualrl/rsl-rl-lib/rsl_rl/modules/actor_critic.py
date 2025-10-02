@@ -25,6 +25,7 @@ class ActorCritic(nn.Module):
         activation="elu",
         init_noise_std=1.0,
         noise_std_type: str = "scalar",
+        finetune: bool = False,
         **kwargs,
     ):
         if kwargs:
@@ -80,10 +81,14 @@ class ActorCritic(nn.Module):
 
 
         self.mask = torch.ones(num_actions, dtype=torch.float, device='cuda')
-        # mask left hand
-        self.mask[0:7] = 0.0
-        # mask right wrist 
-        self.mask[11:14] = 0.0
+        if not finetune:
+            #  mask all none waist actions
+            self.mask[0:14] = 0.0
+        else:
+            # mask left hand
+            self.mask[0:7] = 0.0
+            # mask right wrist 
+            self.mask[11:14] = 0.0
 
 
     @staticmethod
