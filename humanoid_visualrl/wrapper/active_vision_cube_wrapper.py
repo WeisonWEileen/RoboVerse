@@ -340,9 +340,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _check_reset(self):
         # move 0.05 to config
-        terminate = torch.abs(self.cube_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
+        # terminate = torch.abs(self.cube_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
         self.reset_buf = self.timeout_buf
-        self.reset_buf = self.timeout_buf | terminate | self.done_buf
+        # self.reset_buf = self.timeout_buf | terminate | self.done_buf
         return self.reset_buf
 
     # ==== reward functions ====
