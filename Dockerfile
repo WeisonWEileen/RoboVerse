@@ -79,32 +79,35 @@ WORKDIR ${HOME}/RoboVerse
 ########################################################
 ## Install isaaclab, mujoco, sapien3, pybullet
 ########################################################
-
+RUN sudo apt install -y zsh git curl vim
+chsh -s $(which zsh)
 ## Create conda environment
-RUN mamba create -n metasim python=3.10 -y \
-    && mamba clean -a -y
+RUN uv venv --python 3.11 metasim_isaacsim
 RUN echo "mamba activate metasim" >> ${HOME}/.bashrc
+RUN pip install torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
+RUN pip install "isaacsim[all,extscache]==5.0.0" --extra-index-url https://pypi.nvidia.com  
+RUN cd thirdparty/IsaacLab && RUN ./isaaclab.sh -i      
 
 ## Pip install
-RUN cd ${HOME}/RoboVerse \
-    && eval "$(mamba shell hook --shell bash)" \
-    && mamba activate metasim \
-    && uv pip install -e ".[isaaclab,mujoco,sapien3,pybullet]" \
-    && uv cache clean
+# RUN cd ${HOME}/RoboVerse \
+#     && eval "$(mamba shell hook --shell bash)" \
+#     && mamba activate metasim \
+#     && uv pip install -e ".[isaaclab,mujoco,sapien3,pybullet]" \
+#     && uv cache clean
 
 # Test proxy connection
 # RUN wget --method=HEAD --output-document - https://www.google.com/
 
 ## Install IsaacLab v1.4.1
-RUN mkdir -p ${HOME}/packages \
-    && cd ${HOME}/packages \
-    && eval "$(mamba shell hook --shell bash)" \
-    && mamba activate metasim \
-    && git clone --depth 1 --branch v1.4.1 https://github.com/isaac-sim/IsaacLab.git IsaacLab \
-    && cd IsaacLab \
-    && sed -i '/^EXTRAS_REQUIRE = {$/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n    "robomimic": [],\n}' source/extensions/omni.isaac.lab_tasks/setup.py \
-    && ./isaaclab.sh -i \
-    && pip cache purge
+# RUN mkdir -p ${HOME}/packages \
+#     && cd ${HOME}/packages \
+#     && eval "$(mamba shell hook --shell bash)" \
+#     && mamba activate metasim \
+#     && git clone --depth 1 --branch v1.4.1 https://github.com/isaac-sim/IsaacLab.git IsaacLab \
+#     && cd IsaacLab \
+#     && sed -i '/^EXTRAS_REQUIRE = {$/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n    "robomimic": [],\n}' source/extensions/omni.isaac.lab_tasks/setup.py \
+#     && ./isaaclab.sh -i \
+#     && pip cache purge
 
 ## Install IsaacLab v2.1.0
 # RUN mkdir -p ${HOME}/packages \
@@ -121,42 +124,46 @@ RUN mkdir -p ${HOME}/packages \
 ########################################################
 ## Install genesis
 ########################################################
-RUN mamba create -n metasim_genesis python=3.10 -y \
-    && mamba clean -a -y
-RUN cd ${HOME}/RoboVerse \
-    && eval "$(mamba shell hook --shell bash)" \
-    && mamba activate metasim_genesis \
-    && uv pip install -e ".[genesis]" \
-    && uv cache clean
+# RUN mamba create -n metasim_genesis python=3.10 -y \
+#     && mamba clean -a -y
+# RUN cd ${HOME}/RoboVerse \
+#     && eval "$(mamba shell hook --shell bash)" \
+#     && mamba activate metasim_genesis \
+#     && uv pip install -e ".[genesis]" \
+#     && uv cache clean
 
 ########################################################
 ## Install isaacgym
 ########################################################
-RUN mamba create -n metasim_isaacgym python=3.8 -y \
-    && mamba clean -a -y
-RUN mkdir -p ${HOME}/packages \
-    && cd ${HOME}/packages \
-    && wget https://developer.nvidia.com/isaac-gym-preview-4 \
-    && tar -xf isaac-gym-preview-4 \
-    && rm isaac-gym-preview-4
-RUN find ${HOME}/packages/isaacgym/python -type f -name "*.py" -exec sed -i 's/np\.float/np.float32/g' {} +
-RUN cd ${HOME}/RoboVerse \
-    && eval "$(mamba shell hook --shell bash)" \
-    && mamba activate metasim_isaacgym \
-    && uv pip install -e ".[isaacgym]" "isaacgym @ ${HOME}/packages/isaacgym/python" \
-    && uv cache clean
+# RUN mamba create -n metasim_isaacgym python=3.8 -y \
+#     && mamba clean -a -y
+# RUN mkdir -p ${HOME}/packages \
+#     && cd ${HOME}/packages \
+#     && wget https://developer.nvidia.com/isaac-gym-preview-4 \
+#     && tar -xf isaac-gym-preview-4 \
+#     && rm isaac-gym-preview-4
+# RUN find ${HOME}/packages/isaacgym/python -type f -name "*.py" -exec sed -i 's/np\.float/np.float32/g' {} +
+# RUN cd ${HOME}/RoboVerse \
+#     && eval "$(mamba shell hook --shell bash)" \
+#     && mamba activate metasim_isaacgym \
+#     && uv pip install -e ".[isaacgym]" "isaacgym @ ${HOME}/packages/isaacgym/python" \
+#     && uv cache clean
 ## Fix error: libpython3.8.so.1.0: cannot open shared object file
 ## Refer to https://stackoverflow.com/a/75872751
-RUN export CONDA_PREFIX=${HOME}/conda/envs/metasim_isaacgym \
-    && mkdir -p $CONDA_PREFIX/etc/conda/activate.d \
-    && echo "export OLD_LD_LIBRARY_PATH=\$LD_LIBRARY_PATH && export LD_LIBRARY_PATH=$CONDA_PREFIX/lib/:\$LD_LIBRARY_PATH" >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh \
-    && mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d \
-    && echo "export LD_LIBRARY_PATH=\$OLD_LD_LIBRARY_PATH && unset OLD_LD_LIBRARY_PATH" >> $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
-## Fix error: No such file or directory: '.../lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch/gymtorch.cpp'
-RUN mkdir -p ${HOME}/conda/envs/metasim_isaacgym/lib/python3.8/site-packages/isaacgym/_bindings/src \
-    && cp -r ${HOME}/packages/isaacgym/python/isaacgym/_bindings/src/gymtorch ${HOME}/conda/envs/metasim_isaacgym/lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch
+# RUN export CONDA_PREFIX=${HOME}/conda/envs/metasim_isaacgym \
+#     && mkdir -p $CONDA_PREFIX/etc/conda/activate.d \
+#     && echo "export OLD_LD_LIBRARY_PATH=\$LD_LIBRARY_PATH && export LD_LIBRARY_PATH=$CONDA_PREFIX/lib/:\$LD_LIBRARY_PATH" >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh \
+#     && mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d \
+#     && echo "export LD_LIBRARY_PATH=\$OLD_LD_LIBRARY_PATH && unset OLD_LD_LIBRARY_PATH" >> $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
+# ## Fix error: No such file or directory: '.../lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch/gymtorch.cpp'
+# RUN mkdir -p ${HOME}/conda/envs/metasim_isaacgym/lib/python3.8/site-packages/isaacgym/_bindings/src \
+#     && cp -r ${HOME}/packages/isaacgym/python/isaacgym/_bindings/src/gymtorch ${HOME}/conda/envs/metasim_isaacgym/lib/python3.8/site-packages/isaacgym/_bindings/src/gymtorch
 
 ########################################################
 ## Helpful message
 ########################################################
 RUN echo 'echo "Remember to run: xhost +local:docker on the host to enable GUI applications."' >> ${HOME}/.bashrc
+
+RUN echo 'source zsh' >> ${HOME}/.bashrc
+
+RUN export DISPLAY=:1

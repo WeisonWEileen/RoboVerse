@@ -10,7 +10,7 @@ services:
         - DOCKER_UID=${DOCKER_UID:-1000}
         - DOCKER_GID=${DOCKER_GID:-1000}
         - DOCKER_USER=${DOCKER_USER:-user}
-    container_name: metasim
+    container_name: metasim_pw
     privileged: true
     runtime: nvidia
     environment:
