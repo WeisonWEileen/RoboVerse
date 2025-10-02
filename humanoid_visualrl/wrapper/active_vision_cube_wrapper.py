@@ -41,6 +41,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             / 2.0
             / 50.0
         )
+        self.see_flag_avg = 0.0
         # self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
 
         self.success_thres = (
@@ -551,19 +552,21 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # 检查是否已经收集了足够的see_flag历史数据
         if not self.see_flag_history_full and self.see_flag_history_ptr < self.cfg.curriculum_win_length:
-            self.extra_buf["episode_metrics"]["see_flag_avg"] = 0.0
+            # self.extra_buf["episode_metrics"]["see_flag_avg"] = 0.0
+            self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
             return
 
         # 计算过去2000个step的see_flag平均值
         if self.see_flag_history_full:
             # 使用完整的2000个step
             see_flag_avg = self.see_flag_history.float().mean()
-            self.extra_buf["episode_metrics"]["see_flag_avg"] = see_flag_avg
+            self.see_flag_avg = see_flag_avg.item()
+            self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
 
         else:
             # 使用当前收集到的step数
-            see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean()
-            self.extra_buf["episode_metrics"]["see_flag_avg"] = see_flag_avg
+            self.see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean()
+            self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
 
             return
 

@@ -418,9 +418,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
         action = self._pre_physics_step(actions)
         # start_step = time.time()
         self._physics_step(action)
+        self._post_physics_step()
         # end_step = time.time()
         # print(f"Step time: {end_step - start_step}")
-        self._post_physics_step()
         return self.obs_buf, self.rew_buf, self.reset_buf, self.extra_buf
 
     def _pre_reset_hook(self, env_ids):

@@ -1,14 +1,16 @@
 # train with walking
 
 python ./humanoid_visualrl/scripts/train.py \
-    --num_envs  144 \
+    --num_envs  124 \
     --task "active_vision" \
-    --run_name "cnn_pretrain" \
+    --run_name "cnn_pretrain_16g" \
     --enable_opencv_display \
-    --resume \
-    --load_run "2025_1002_043437" \
-    --checkpoint 400 \
-    --wandb
+    --wandb 
+
+    # --resume \
+    # --load_run "2025_1002_043437" \
+    # --checkpoint 400 \
+    # --wandb
     # --debug 
     # --wandb 
     # --use_fixed_gazing \

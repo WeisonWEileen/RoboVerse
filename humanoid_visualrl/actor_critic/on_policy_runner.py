@@ -219,7 +219,7 @@ class OnPolicyRunner:
         lenbuffer = deque(maxlen=100)
         cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
         cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
-        see_flag_avg = 0.0  # Initialize see_flag_avg in the correct scope
+        # see_flag_avg = 0.0  # Initialize see_flag_avg in the correct scope
 
         # create buffers for logging extrinsic and intrinsic rewards
         if self.alg.rnd:
