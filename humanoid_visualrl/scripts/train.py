@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Literal
 
 import rootutils
 import torch
 from metasim.scenario.lights import DomeLightCfg
-
-import tyro
-from metasim.scenario.cameras import PinholeCameraCfg
 
 from loguru import logger as log
 from rich.logging import RichHandler
@@ -29,6 +25,8 @@ if __name__ == "__main__":
     task_cfg_cls = get_task_cfg_class(args.task)
 
     task_cfg = task_cfg_cls(finetune=args.resume)
+    if args.resume:
+        log.info(f"Finetuning Model from: {args.load_run}")
 
     # initialize scenario
     scenario = ScenarioCfg(

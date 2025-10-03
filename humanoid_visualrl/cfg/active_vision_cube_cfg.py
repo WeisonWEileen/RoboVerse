@@ -450,7 +450,7 @@ class BaseTableHumanoidTaskCfg:
 
             self.reward_weights = {
                 "see_cube": 0.5,
-                "pixel_norm_at_cube": 0.5,
+                "wrist_close_to_cube": 1.0,
             }
         else:
             self.update_curriculum_iteration = 400
