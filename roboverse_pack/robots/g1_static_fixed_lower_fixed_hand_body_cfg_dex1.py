@@ -25,9 +25,12 @@ class G1StaticDex1Cfg(RobotCfg):
     collapse_fixed_joints: bool = True
 
     actuators: dict[str, BaseActuatorCfg] = {
-        "waist_yaw_joint": BaseActuatorCfg(stiffness=400, damping=5),
-        "waist_roll_joint": BaseActuatorCfg(stiffness=400, damping=5),
-        "waist_pitch_joint": BaseActuatorCfg(stiffness=400, damping=5),
+        # "waist_yaw_joint": BaseActuatorCfg(stiffness=400, damping=5),
+        # "waist_roll_joint": BaseActuatorCfg(stiffness=400, damping=5),
+        # "waist_pitch_joint": BaseActuatorCfg(stiffness=400, damping=5),
+        "waist_yaw_joint": BaseActuatorCfg(stiffness=60, damping=5),
+        "waist_roll_joint": BaseActuatorCfg(stiffness=60, damping=5),
+        "waist_pitch_joint": BaseActuatorCfg(stiffness=60, damping=5),
         "left_shoulder_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "left_shoulder_roll_joint": BaseActuatorCfg(stiffness=40, damping=10),
         "left_shoulder_yaw_joint": BaseActuatorCfg(stiffness=40, damping=10),

@@ -456,7 +456,7 @@ class BaseTableHumanoidTaskCfg:
             self.update_curriculum_iteration = 400
             self.randomize_cube_yaw_range = 2.3
             self.curriculum_cube_yaw = True
-            self.curriculum_win_length = 2000
+            self.warm_up_beforecurriculum = 40000
             self.curriculum_avg_thres = 0.85
             self.curriculum_randomize_iteration_interval = 200
 

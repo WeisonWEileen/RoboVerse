@@ -98,18 +98,16 @@ def play(args):
     # set fixed command
     yaw = (random.random()-0.5) * 0.3 - 3.14/3
     yaw = torch.tensor(yaw, device=env_wrapper.device)
+
+
     for i in range(10000):
 
         if i % reset_interval == 0:
-            # if i == 0:
-                # yaw = torch.tensor(-1.0, device=env_wrapper.device)
-            # randomly add a value between 0 and 3.14
-            # yaw = torch.tensor(3.14/2, device=env_wrapper.device)
-            yaw += 0.2
-            radius = task_cfg.randomize_cube_radius 
-            radius_bias = (
-                2 * random.random() * task_cfg.randomize_cube_radius_range
-            )
+            yaw += 0.3
+            radius = task_cfg.randomize_cube_radius -0.1
+            # radius_bias = 2 * random.random() * 0.8
+            radius_bias = 0.0
+            
             cube_x = torch.cos(yaw) * (radius + radius_bias)
             cube_y = torch.sin(yaw) * (radius + radius_bias)
             cube_state = env_wrapper.init_states.objects["cube"].root_state
@@ -123,13 +121,7 @@ def play(args):
             actions = policy(obs)
         else:
             actions = policy(obs.detach())
-        # print(actions)
-        # breakpoint()
-        # for i in task_cfg.decimation:
         obs, _, _, _ = env_wrapper.step(actions.detach())
-        env_states = env_wrapper.env.get_states()
-        print(env_wrapper._reward_wrist_close_to_cube(env_states, task_cfg.robot, task_cfg))
-        # log.info(f"step: {i}")
 
     env_wrapper.env.close()
 

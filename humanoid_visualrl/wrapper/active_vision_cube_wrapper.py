@@ -551,9 +551,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             return
 
         # 检查是否已经收集了足够的see_flag历史数据
-        if not self.see_flag_history_full and self.see_flag_history_ptr < self.cfg.curriculum_win_length:
-            # self.extra_buf["episode_metrics"]["see_flag_avg"] = 0.0
-            self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
+        if self.common_step_counter < self.cfg.warm_up_beforecurriculum:
             return
 
         # 计算过去2000个step的see_flag平均值
@@ -586,3 +584,4 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 # 重置历史记录，准备下一次评估
                 self.see_flag_history_ptr = 0
                 self.see_flag_history_full = False
+                self.see_flag_history.zero_()

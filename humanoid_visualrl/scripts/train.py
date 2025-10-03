@@ -20,7 +20,6 @@ from metasim.scenario.scenario import ScenarioCfg
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 from humanoid_visualrl.utils.utils import get_log_dir, get_args, get_load_path, dump_instance_file
 
-import shutil
 import os
 from metasim.task.registry import get_task_class, get_task_cfg_class
 
@@ -79,13 +78,13 @@ if __name__ == "__main__":
 
     if args.wandb and not args.debug:
         env.train_cfg["logger"] = "wandb"
+
     ppo_runner = OnPolicyRunner(
         env=env,
         train_cfg=env.train_cfg,
         device=device,
         log_dir=log_dir,
         use_vision=task_cfg.use_vision,
-
     )
 
     if args.resume:
