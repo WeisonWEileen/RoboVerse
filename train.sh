@@ -5,7 +5,8 @@ python ./humanoid_visualrl/scripts/train.py \
     --task "active_vision" \
     --run_name "cnn_pretrain_16g" \
     --enable_opencv_display \
-    --wandb 
+    --debug
+    # --wandb 
 
     # --resume \
     # --load_run "2025_1002_043437" \

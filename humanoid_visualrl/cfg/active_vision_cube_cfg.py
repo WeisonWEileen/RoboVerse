@@ -459,6 +459,7 @@ class BaseTableHumanoidTaskCfg:
             self.warm_up_beforecurriculum = 40000
             self.curriculum_avg_thres = 0.85
             self.curriculum_randomize_iteration_interval = 200
+        self.see_flag_his_win_length = 2000
 
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
         self.randomize_cube_radius_range = 0.12

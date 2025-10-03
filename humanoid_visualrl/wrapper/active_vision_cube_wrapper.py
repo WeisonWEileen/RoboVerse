@@ -64,7 +64,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # Curriculum tracking based on see_flag
         self.see_flag_history = torch.zeros(
-            self.cfg.curriculum_win_length, self.num_envs, device=self.device, dtype=torch.bool
+            self.cfg.see_flag_his_win_length, self.num_envs, device=self.device, dtype=torch.bool
         )
         self.see_flag_history_ptr = 0
         self.see_flag_history_full = False
@@ -261,7 +261,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # Update pointer
         self.see_flag_history_ptr += 1
-        if self.see_flag_history_ptr >= self.cfg.curriculum_win_length:
+        if self.see_flag_history_ptr >= self.cfg.see_flag_his_win_length:
             self.see_flag_history_ptr = 0
             self.see_flag_history_full = True
 
