@@ -37,7 +37,7 @@ class LeggedRobotRunnerCfg:
         """Hidden dimensions for actor network."""
         critic_hidden_dims = [768, 256, 128]
         """Hidden dimensions for critic network."""
-        rnn_hidden_dim = 128
+        rnn_hidden_dim = 256
         vision_height = 96
         vision_width = 128
         finetune = False
@@ -225,7 +225,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 20
+    env_spacing: float = 5
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -492,4 +492,5 @@ class BaseTableHumanoidTaskCfg:
         self.enable_opencv_display = True
         self.use_vision = True
         self.use_fixed_gazing = True
+        # breakpoint()
         self.ppo_cfg.policy.finetune = self.finetune

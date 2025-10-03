@@ -1,16 +1,15 @@
 # train with walking
 
-python ./humanoid_visualrl/scripts/train.py \
+/home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
     --num_envs  124 \
     --task "active_vision" \
-    --run_name "cnn_pretrain_16g" \
+    --run_name "cnn_pretrain_bl_finetune" \
     --enable_opencv_display \
-    --debug
-    # --wandb 
-
-    # --resume \
-    # --load_run "2025_1002_043437" \
-    # --checkpoint 400 \
+    --wandb \
+    --resume \
+    --load_run "2025_0918_0000" \
+    --checkpoint 4400 \
+    # --debug
     # --wandb
     # --debug 
     # --wandb 
