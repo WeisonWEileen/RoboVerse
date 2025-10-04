@@ -101,6 +101,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
         )
 
+
     def _init_buffers(self):
         super()._init_buffers()
         self.obs_buf_state = torch.zeros(self.num_envs, self.cfg.num_observations, device=self.device)

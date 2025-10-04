@@ -106,6 +106,7 @@ class IsaacsimHandler(BaseSimHandler):
             return  # headless 情况直接返回
 
         import omni.kit.viewport.utility as kit_viewport
+
         kit_viewport.frame_viewport_prims("/World/envs/env_0/g1_static_dex1/torso_link/d435_link/camera_first_person")
 
     def _init_scene(self) -> None:
@@ -121,6 +122,7 @@ class IsaacsimHandler(BaseSimHandler):
         args.headless = self.headless
         app_launcher = AppLauncher(args)
         self.simulation_app = app_launcher.app
+
 
         import isaaclab.sim as sim_utils
 
@@ -190,7 +192,6 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
 
-    
     def filter_collisions(self, robot_name: str, obj_name: str):
         """Filter collisions between robot and obj"""
         from pxr import Usd, UsdPhysics, PhysxSchema
@@ -218,6 +219,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         # self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
+        self._set_perspective_camera_look_at("/World/envs/env_0")
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         # self._setup_selective_collision()
         self.sim.reset()
@@ -250,6 +252,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._init_viewports()
         self._is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
 
+
     def close(self) -> None:
         log.info("close Isaacsim Handler")
         if not self._is_closed:
@@ -266,6 +269,39 @@ class IsaacsimHandler(BaseSimHandler):
         self.close()
         self._input.unsubscribe_from_keyboard_events(self._keyboard, self._keyboard_sub)
         self._keyboard_sub = None
+
+    def _set_perspective_camera_look_at(self, target_prim: str) -> None:
+        from pxr import UsdGeom, Gf
+        import omni.usd
+        from omni.kit.viewport.utility import get_active_viewport
+
+        target_prim = omni.usd.get_context().get_stage().GetPrimAtPath(target_prim)
+
+        target_prim_xform_mat = UsdGeom.Xformable(target_prim).GetLocalTransformation()
+
+        # The target location (target_loc) is for this particular prim,
+        # but could also be any arbitrary location
+        target_loc = target_prim_xform_mat.ExtractTranslation()
+
+        viewport = get_active_viewport()
+        active_camera_path = viewport.camera_path.pathString
+        # camera_pos = self.camera_target_pos
+        camera_pos = Gf.Vec3d(2, 2, 2)
+
+        # get camera prim
+        camera_prim = omni.usd.get_context().get_stage().GetPrimAtPath(active_camera_path)
+
+        new_cam_mat = Gf.Matrix4d(1.0)
+        new_cam_mat.SetLookAt(camera_pos, target_loc, Gf.Vec3d(1, 1, 0))
+        # destXformAttr = camera_prim.GetAttribute("xformOp:transform")
+        # destXformAttr.Set(new_cam_mat.GetInverse())
+
+        xform_api = UsdGeom.Xformable(camera_prim)
+        xform_api.ClearXformOpOrder()
+        # xform_api.AddTransformOp(new_cam_mat.GetInverse())
+
+        xform_op = xform_api.AddTransformOp(UsdGeom.XformOp.PrecisionDouble)
+        xform_op.Set(new_cam_mat.GetInverse())
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
         # if states is list[DictEnvState], iterate over it and set state
@@ -382,7 +418,7 @@ class IsaacsimHandler(BaseSimHandler):
         object_states = {}
         for obj in self.objects:
             if obj.name == "table":
-                    continue
+                continue
             if isinstance(obj, ArticulationObjCfg):
                 obj_inst = self.scene.articulations[obj.name]
                 joint_reindex = self.get_joint_reindex(obj.name)
@@ -504,7 +540,7 @@ class IsaacsimHandler(BaseSimHandler):
         # from isaaclab.sim import SimulationContext
 
         # is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
-        
+
         self.scene.write_data_to_sim()
         self.sim.step(render=False)
         if self._step_counter % self._render_interval == 0 and self._is_rendering:
@@ -1130,7 +1166,8 @@ class IsaacsimHandler(BaseSimHandler):
             # update the index of mount link for camera
         else:
             prim_path = f"/World/envs/env_.*/{camera.mount_to}/{camera.mount_link}/{camera.name}"
-            offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
+            # offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
+            offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="ros")
 
         camera_inst = TiledCamera(
             TiledCameraCfg(

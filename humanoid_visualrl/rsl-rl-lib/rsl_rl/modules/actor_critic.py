@@ -79,19 +79,18 @@ class ActorCritic(nn.Module):
         # disable args validation for speedup
         Normal.set_default_validate_args(False)
 
-
-        self.mask = torch.ones(num_actions, dtype=torch.float, device='cuda')
+        self.mask = torch.ones(num_actions, dtype=torch.float, device="cuda")
         if not finetune:
             #  mask all none waist actions
             self.mask[0:14] = 0.0
         else:
             # mask left hand
             self.mask[0:7] = 0.0
-            # mask right wrist 
+            # mask right wrist
             self.mask[11:14] = 0.0
         from loguru import logger as log
-        log.info(f"Action Masking: {self.mask}")
 
+        log.info(f"Action Masking: {self.mask}")
 
     @staticmethod
     # not used at the moment
@@ -129,7 +128,7 @@ class ActorCritic(nn.Module):
             std = torch.exp(self.log_std).expand_as(mean)
         else:
             raise ValueError(f"Unknown standard deviation type: {self.noise_std_type}. Should be 'scalar' or 'log'")
-        
+
         # Apply action masking to the mean
         masked_mean = mean * self.mask
         # create distribution with masked mean

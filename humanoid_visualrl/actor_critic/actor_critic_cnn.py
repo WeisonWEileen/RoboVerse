@@ -77,22 +77,22 @@ class ActorCriticCNN(nn.Module):
         #     nn.Flatten(),
         # )
 
-        # self.vision_encoder = nn.Sequential(
-        #     nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
-        #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
-        #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
-        #     nn.ReLU(inplace=True),
-        #     # ↓↓↓ 新增 ↓↓↓
-        #     nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=64
-        #     nn.Flatten(),  # (B, 64)
-        #     nn.Linear(64, 512),  # 压缩 / 投影到 512 维
-        #     nn.ReLU(inplace=True),
-        # )
+        self.vision_encoder = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
+            nn.ReLU(inplace=True),
+            # ↓↓↓ 新增 ↓↓↓
+            nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=64
+            nn.Flatten(),  # (B, 64)
+            nn.Linear(64, 64),  # 压缩 / 投影到 512 维
+            nn.ReLU(inplace=True),
+        )
 
         # FIXME hard code here
-        self.vision_encoder = VisionBackbonePDC(output_dim=64)
+        # self.vision_encoder = VisionBackbonePDC(output_dim=64)
         vision_fea_dim = self.vision_encoder(torch.zeros(1, 3, 96, 128)).shape[1]
         # vision_fea_dim = (torch.zeros(1, 3, 96, 128)).shape[1]
         mlp_input_dim_a = num_actor_obs

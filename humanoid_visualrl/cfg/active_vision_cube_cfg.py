@@ -225,7 +225,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 20
+    env_spacing: float = 100
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -253,7 +253,7 @@ class BaseTableHumanoidTaskCfg:
     objects = [
         RigidObjCfg(
             name="table",
-            scale=(0.44, 0.2, 0.44),
+            scale=(0.40, 0.2, 0.40),
             physics=PhysicStateType.GEOM,
             usd_path="roboverse_data/ring_table.usd",
             fix_base_link=True,
@@ -312,7 +312,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.62, 0.0, 0.875]),
+                    "pos": torch.tensor([0.58, 0.0, 0.875]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -376,7 +376,7 @@ class BaseTableHumanoidTaskCfg:
     c_frame_stack = 1
 
     # obs
-    visual_dim: int = 512
+    visual_dim: int = 64
 
     if use_vision:
         # s
@@ -400,19 +400,36 @@ class BaseTableHumanoidTaskCfg:
     from metasim.scenario.cameras import PinholeCameraCfg
 
     cameras = [
+        # PinholeCameraCfg(
+        #     name="camera_first_person",
+        #     data_types=["rgb", "semantic_seg"],
+        #     # data_types=["rgb", "instance_id_seg"],
+        #     # data_types=["rgb", "semantic_seg"],
+        #     width=128,
+        #     height=96,
+        #     pos=(1.5, -1.5, 1.5),
+        #     look_at=(0.0, 0.0, 0.0),
+        #     mount_to="g1_static_dex1",
+        #     mount_link="torso_link/d435_link",
+        #     mount_pos=(0.0, 0.0, 0.0),
+        #     mount_quat=(1.0, 0.0, 0.0, 0.0),
+        # )
+        # same as unitree isaacsim
         PinholeCameraCfg(
             name="camera_first_person",
             data_types=["rgb", "semantic_seg"],
             # data_types=["rgb", "instance_id_seg"],
             # data_types=["rgb", "semantic_seg"],
-            width=128,
-            height=96,
+            width=640,
+            height=480,
             pos=(1.5, -1.5, 1.5),
             look_at=(0.0, 0.0, 0.0),
             mount_to="g1_static_dex1",
             mount_link="torso_link/d435_link",
             mount_pos=(0.0, 0.0, 0.0),
-            mount_quat=(1.0, 0.0, 0.0, 0.0),
+            mount_quat=(0.5, -0.5, 0.5, -0.5),
+            focal_length=7.6,
+            horizontal_aperture=20.0
         )
     ]
 
@@ -445,7 +462,7 @@ class BaseTableHumanoidTaskCfg:
             self.update_curriculum_iteration = 100
             # self.randomize_cube_yaw_range = 1.8
             # self.randomize_cube_yaw_range = 1.8
-            self.randomize_cube_yaw_range = 0.8
+            self.randomize_cube_yaw_range = 1.2
             self.curriculum_cube_yaw = False
 
             self.reward_weights = {
@@ -462,7 +479,7 @@ class BaseTableHumanoidTaskCfg:
         self.see_flag_his_win_length = 2000
 
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
-        self.randomize_cube_radius_range = 0.12
+        self.randomize_cube_radius_range = 0.1
         # self.randomize_cube_radius = 0.85  # max
         # self.randomize_cube_radius = 0.55
         # self.randomize_cube_radius -= 0.07
@@ -473,7 +490,7 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_cube_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
         self.curriculum_cube_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
-        self.actor_critic_class = "use_rnn"
+        self.actor_critic_class = "use_vision"
 
         if self.actor_critic_class == "use_vision":
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"

@@ -50,6 +50,8 @@ def play(args):
 
     task_cfg.commands.curriculum = False
     task_cfg.ppo_cfg.resume = True
+    task_cfg.ppo_cfg.finetune = True
+    task_cfg.ppo_cfg.policy.finetune = True
     # add objects
     scenario.objects = task_cfg.objects
 
@@ -96,17 +98,17 @@ def play(args):
     reset_interval = 75
     yaw = torch.tensor(0.0, device=env_wrapper.device)
     # set fixed command
-    yaw = (random.random()-0.5) * 0.3 - 3.14/3
+    yaw = (random.random()-0.5) * 0.3 + 3.14/3
     yaw = torch.tensor(yaw, device=env_wrapper.device)
 
 
     for i in range(10000):
 
         if i % reset_interval == 0:
-            yaw += 0.3
-            radius = task_cfg.randomize_cube_radius -0.1
-            # radius_bias = 2 * random.random() * 0.8
-            radius_bias = 0.0
+            yaw -= 0.3
+            radius = task_cfg.randomize_cube_radius 
+            radius_bias = 2 * (random.random() - 0.5) * 0.1
+            # radius_bias = 0.0
             
             cube_x = torch.cos(yaw) * (radius + radius_bias)
             cube_y = torch.sin(yaw) * (radius + radius_bias)

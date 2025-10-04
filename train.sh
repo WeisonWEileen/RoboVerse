@@ -1,14 +1,16 @@
 # train with walking
 
-/home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
-    --num_envs  124 \
+# /home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
+python3 ./humanoid_visualrl/scripts/train.py \
+    --num_envs  96 \
     --task "active_vision" \
-    --run_name "cnn_pretrain_bl_finetune" \
+    --run_name "cnn_pretrain_narrow_radius" \
     --enable_opencv_display \
     --wandb \
     --resume \
-    --load_run "2025_0918_0000" \
-    --checkpoint 4400 \
+    --load_run "2025_1003_141008" \
+    --checkpoint 10800 \
+    # --debug
     # --debug
     # --wandb
     # --debug 
