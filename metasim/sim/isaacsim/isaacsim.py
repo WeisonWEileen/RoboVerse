@@ -60,7 +60,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._render_interval = self.scenario.render_interval
 
         # initial do not render anything
-        self._render_viewport = False
+        self._render_viewport = True
 
     def _init_keyboard(self) -> None:
         import carb
@@ -122,7 +122,6 @@ class IsaacsimHandler(BaseSimHandler):
         args.headless = self.headless
         app_launcher = AppLauncher(args)
         self.simulation_app = app_launcher.app
-
 
         import isaaclab.sim as sim_utils
 
@@ -251,7 +250,6 @@ class IsaacsimHandler(BaseSimHandler):
 
         self._init_viewports()
         self._is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
-
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")

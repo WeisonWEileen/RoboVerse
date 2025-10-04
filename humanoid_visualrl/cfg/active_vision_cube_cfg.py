@@ -276,46 +276,6 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        # PrimitiveCubeCfg(
-        #     name="wall1",
-        #     size=(0.07, 0.07, 0.07),
-        #     color=[1.0, 0.0, 0.0],
-        #     physics=PhysicStateType.RIGIDBODY,
-        #     collision_enabled=False,
-        #     fix_base_link=True,
-        #     default_position=(0.3, 0.1, 0.851),
-        #     mass=0.2,  # 增加质量以确保更好的物理行为
-        # ),
-        # PrimitiveCubeCfg(
-        #     name="wall2",
-        #     size=(0.07, 0.07, 0.07),
-        #     color=[1.0, 0.0, 0.0],
-        #     physics=PhysicStateType.RIGIDBODY,
-        #     collision_enabled=False,
-        #     fix_base_link=True,
-        #     default_position=(0.3, 0.1, 0.851),
-        #     mass=0.2,  # 增加质量以确保更好的物理行为
-        # ),
-        # PrimitiveCubeCfg(
-        #     name="wall3",
-        #     size=(0.07, 0.07, 0.07),
-        #     color=[1.0, 0.0, 0.0],
-        #     physics=PhysicStateType.RIGIDBODY,
-        #     collision_enabled=False,
-        #     fix_base_link=True,
-        #     default_position=(0.3, 0.1, 0.851),
-        #     mass=0.2,  # 增加质量以确保更好的物理行为
-        # ),
-        # PrimitiveCubeCfg(
-        #     name="wall4",
-        #     size=(0.07, 0.07, 0.07),
-        #     color=[1.0, 0.0, 0.0],
-        #     physics=PhysicStateType.RIGIDBODY,
-        #     collision_enabled=False,
-        #     fix_base_link=True,
-        #     default_position=(0.3, 0.1, 0.851),
-        #     mass=0.2,  # 增加质量以确保更好的物理行为
-        # ),
         PrimitiveCubeCfg(
             name="cube",
             size=(0.07, 0.07, 0.07),

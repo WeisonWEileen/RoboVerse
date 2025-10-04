@@ -242,55 +242,63 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
 
         # Display the image and check if window is still open
-        rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
-        rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
         
+
         # if self.opencv_render_env_idx in torch.where(self.see_flag)[0]:
-        env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
         
-        # if any draw
-        if env_idx.any():
-            env_pos = torch.where(env_idx)[0][0]
-            
-            weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
-            weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
 
-            # 归一化
-            # center_y = weighted_y / self.pixel_counts[self.see_flag]
-            # center_x = weighted_x / self.pixel_counts[self.see_flag]
-            
-            # 获取env idx的中心点坐标
-            center_x = int(self.center_x[env_pos].item())
-            center_y = int(self.center_y[env_pos].item())
-
-            # 获取env idx的RGB图像并转换为numpy格式用于绘制
-
+        # if specific env draw
+        if self.env._render_viewport:
+            env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
             # 确保图像是uint8格式
-            if rgb_image.dtype != np.uint8:
-                rgb_image = (rgb_image * 255).astype(np.uint8)
+            rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
+            rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
+            if env_idx.any():
+                env_pos = torch.where(env_idx)[0][0]
+                
+                weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+                weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
 
-            # 绘制计算出的中心点（红色圆圈）
-            cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心圆
+                # 归一化
+                # center_y = weighted_y / self.pixel_counts[self.see_flag]
+                # center_x = weighted_x / self.pixel_counts[self.see_flag]
+                
+                # 获取env idx的中心点坐标
+                center_x = int(self.center_x[env_pos].item())
+                center_y = int(self.center_y[env_pos].item())
 
-            # 绘制图像中心点（绿色圆圈）
-            cv2.circle(
-                rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
-            )  # 绿色实心圆
+                # 获取env idx的RGB图像并转换为numpy格式用于绘制
+            
+                # if self.env._render_viewport:
+                # # 确保图像是uint8格式
+                # rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
+                # rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
+            
+                if rgb_image.dtype != np.uint8:
+                    rgb_image = (rgb_image * 255).astype(np.uint8)
 
-            # 绘制连接线
-            cv2.line(
-                rgb_image,
-                (center_x, center_y),
-                (int(self.image_center_x), int(self.image_center_y)),
-                (255, 255, 0),
-                1,
-            )
-        window_open = self.opencv_renderer.display(rgb_image)
-        
-        if not window_open:
-            # User closed the window, disable further display
-            self.enable_opencv_display = False
-            print("OpenCV display window closed by user")
+                # 绘制计算出的中心点（红色圆圈）
+                cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心圆
+
+                # 绘制图像中心点（绿色圆圈）
+                cv2.circle(
+                    rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+                )  # 绿色实心圆
+
+                # 绘制连接线
+                cv2.line(
+                    rgb_image,
+                    (center_x, center_y),
+                    (int(self.image_center_x), int(self.image_center_y)),
+                    (255, 255, 0),
+                    1,
+                )
+            window_open = self.opencv_renderer.display(rgb_image)
+            
+            if not window_open:
+                # User closed the window, disable further display
+                self.enable_opencv_display = False
+                print("OpenCV display window closed by user")
 
 
 

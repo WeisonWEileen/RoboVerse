@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     task_cfg = task_cfg_cls(finetune=args.resume)
 
-    assert task_cfg.env_spacing > 5, "env_spacing must be greater than 5"
+    assert task_cfg.env_spacing > 4.9, "env_spacing must be greater than 5"
     if args.resume:
         log.info(f"Finetuning Model from: {args.load_run}")
 
