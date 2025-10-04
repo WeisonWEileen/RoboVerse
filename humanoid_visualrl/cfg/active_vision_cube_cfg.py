@@ -278,7 +278,7 @@ class BaseTableHumanoidTaskCfg:
         ),
         PrimitiveCubeCfg(
             name="cube",
-            size=(0.07, 0.07, 0.07),
+            size=(0.09, 0.09, 0.09),
             color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
@@ -325,7 +325,7 @@ class BaseTableHumanoidTaskCfg:
         {
             "objects": {
                 "cube": {
-                    "pos": torch.tensor([0.58, 0.0, 0.875]),
+                    "pos": torch.tensor([0.58, 0.0, 0.89]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
