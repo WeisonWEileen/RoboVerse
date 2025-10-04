@@ -48,10 +48,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
         if self.cfg.curriculum_cube_yaw:
-            # self.curriculum_cube_yaw_range = 0.2 * self.cfg.randomize_cube_yaw_range
-            self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
+            self.curriculum_cube_yaw_range = 0.4 * self.cfg.randomize_cube_yaw_range
+            # self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
         else:
             self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
+        log.info(f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}")
+        # exit()
         self.cube_showup = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
 
         self._reset(list(range(self.num_envs)))
@@ -79,7 +81,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.compute_pixel_distance_reward = True
             self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
         else:
-            self.compute_pixel_distance = False
+            self.compute_pixel_distance_reward = False
 
         self.extra_buf["episode_metrics"]["see_flag_avg"] = 0.0
 
@@ -363,8 +365,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if self.cfg.randomize_cube_y = True
 
         if self.cfg.randomization:
-            # yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
-            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.
+            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
+            # yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
             # radius bias randomize_cube_radius_range
             radius_bias = (
                 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_radius_range
@@ -623,7 +625,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
                 old_range = self.curriculum_cube_yaw_range
                 self.curriculum_cube_yaw_range = min(
-                    self.curriculum_cube_yaw_range + self.cfg.randomize_cube_yaw_range * 0.05,
+                    self.curriculum_cube_yaw_range + self.cfg.randomize_cube_yaw_range * self.cfg.randomize_add_scale,
                     self.cfg.randomize_cube_yaw_range,
                 )
                 log.info(

@@ -37,10 +37,10 @@ class LeggedRobotRunnerCfg:
         """Hidden dimensions for actor network."""
         critic_hidden_dims = [768, 256, 128]
         """Hidden dimensions for critic network."""
-        rnn_hidden_dim = 256
-        vision_height = 96
-        vision_width = 128
-        finetune = False
+        rnn_hidden_dim = 128
+        vision_height = 240
+        vision_width = 320
+        masking_all = True
         # action_masking = False
         # masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
@@ -75,7 +75,7 @@ class LeggedRobotRunnerCfg:
     """Policy class name."""
     algorithm_class_name = "PPO"
     """Algorithm class name."""
-    num_steps_per_env = 48  # *0.005*5*48 = 6 s
+    num_steps_per_env = 96  # *0.005*5*48 = 6 s
     """per iteration"""
     max_iterations = 1500
     """max number of iterations"""
@@ -270,7 +270,7 @@ class BaseTableHumanoidTaskCfg:
             physics=PhysicStateType.GEOM,
             usd_path="roboverse_data/wall.usd",
             fix_base_link=True,
-            default_position=(0.0, 0.0, 0.8),
+            default_position=(0.0, 0.0, 0.6),
             # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
             collision_enabled=False,
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
@@ -379,9 +379,9 @@ class BaseTableHumanoidTaskCfg:
     reward_weights: dict[str, float] = {
         # "upper_body_pos": 0.1,
         # "look_at_cube": 0.4,
-        "see_cube": 0.4,
-        "pixel_norm_at_cube": 0.4,
-        # "wrist_close_to_cube": 1.0,
+        "see_cube": 0.8,
+        # "pixel_norm_at_cube": 0.4,
+        "wrist_close_to_cube": 1.0,
         # "cube_showup": 0.1,
     }
 
@@ -433,8 +433,11 @@ class BaseTableHumanoidTaskCfg:
             data_types=["rgb", "semantic_seg"],
             # data_types=["rgb", "instance_id_seg"],
             # data_types=["rgb", "semantic_seg"],
-            width=640,
-            height=480,
+            width=160,
+            # width=640,
+            height=120,
+            # height=480,
+            
             pos=(1.5, -1.5, 1.5),
             look_at=(0.0, 0.0, 0.0),
             mount_to="g1_static_dex1",
@@ -469,10 +472,11 @@ class BaseTableHumanoidTaskCfg:
         self.command_ranges.wrist_max_radius = 0.15
         # self.randomize_cube_y_offset = 0.1
         self.randomize_cube_curriculum = True
+        self.randomize_add_scale = 0.05
 
         if self.finetune:
             # for finetuning, use less frequent curriculum update and less yaw range
-            self.update_curriculum_iteration = 100
+            # self.update_curriculum_iteration = 100
             # self.randomize_cube_yaw_range = 1.8
             # self.randomize_cube_yaw_range = 1.8
             self.randomize_cube_yaw_range = 1.2
@@ -483,13 +487,13 @@ class BaseTableHumanoidTaskCfg:
                 "wrist_close_to_cube": 1.0,
             }
         else:
-            self.update_curriculum_iteration = 400
+            # self.update_curriculum_iteration = 400
             self.randomize_cube_yaw_range = 2.3
             self.curriculum_cube_yaw = True
             self.warm_up_beforecurriculum = 40000
             self.curriculum_avg_thres = 0.85
             self.curriculum_randomize_iteration_interval = 200
-        self.see_flag_his_win_length = 2000
+        self.see_flag_his_win_length = 1000
 
         self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
         self.randomize_cube_radius_range = 0.1
@@ -523,4 +527,8 @@ class BaseTableHumanoidTaskCfg:
         self.use_vision = True
         self.use_fixed_gazing = True
         # breakpoint()
-        self.ppo_cfg.policy.finetune = self.finetune
+        if "wrist_close_to_cube" in self.reward_weights:
+            self.ppo_cfg.policy.masking_all = False
+        else:
+            self.ppo_cfg.policy.masking_all = True
+

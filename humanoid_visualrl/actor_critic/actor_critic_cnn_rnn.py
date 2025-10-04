@@ -60,7 +60,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
         init_noise_std=1.0,
         vision_height=96,
         vision_width=128,
-        finetune=False,
+        masking_all=False,
         **kwargs,
     ):
         if "rnn_hidden_size" in kwargs:
@@ -84,7 +84,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
             critic_hidden_dims=critic_hidden_dims,
             activation=activation,
             init_noise_std=init_noise_std,
-            finetune=finetune,
+            masking_all=masking_all,
         )
 
         activation = resolve_nn_activation(activation)

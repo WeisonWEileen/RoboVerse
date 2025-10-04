@@ -1,12 +1,13 @@
 # train with walking
 
-# /home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
-python3 ./humanoid_visualrl/scripts/train.py \
-    --num_envs  16 \
+# python3 ./humanoid_visualrl/scripts/train.py \
+/home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
+    --num_envs  128 \
     --task "active_vision" \
     --run_name "test" \
     --enable_opencv_display \
-    --wandb
+    --debug 
+    # --wandb
     # --wandb \
     # --resume \
     # --load_run "2025_1003_141008" \

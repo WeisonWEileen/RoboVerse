@@ -39,6 +39,7 @@ from rsl_rl.utils import resolve_nn_activation
 
 from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn import VisionBackbonePDC
 
+
 class ActorCriticCNN(nn.Module):
     """Actor-Critic network with vanilla CNN feature extractor."""
 
@@ -77,23 +78,38 @@ class ActorCriticCNN(nn.Module):
         #     nn.Flatten(),
         # )
 
-        self.vision_encoder = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
-            nn.ReLU(inplace=True),
-            # ↓↓↓ 新增 ↓↓↓
-            nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=64
-            nn.Flatten(),  # (B, 64)
-            nn.Linear(64, 64),  # 压缩 / 投影到 512 维
-            nn.ReLU(inplace=True),
-        )
+        # self.vision_encoder = nn.Sequential(
+        #     nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
+        #     nn.ReLU(inplace=True),
+        #     nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
+        #     nn.ReLU(inplace=True),
+        #     nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
+        #     nn.ReLU(inplace=True),
+        #     # ↓↓↓ 新增 ↓↓↓
+        #     nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=64
+        #     nn.Flatten(),  # (B, 64)
+        #     nn.Linear(64, 512),  # 压缩 / 投影到 512 维
+        #     nn.ReLU(inplace=True),
+        # )
 
         # FIXME hard code here
+        # 原有的VisionBackbonePDC - 已注释
         # self.vision_encoder = VisionBackbonePDC(output_dim=64)
-        vision_fea_dim = self.vision_encoder(torch.zeros(1, 3, 96, 128)).shape[1]
+
+        # 新的ResNet-18预训练backbone
+        resnet18 = models.resnet18(pretrained=True)
+        # 移除最后的分类层，保留特征提取部分
+        self.vision_encoder = nn.Sequential(*list(resnet18.children())[:-1])  # 移除最后的fc层
+        # 添加一个线性层来匹配输出维度
+        self.vision_projection = nn.Linear(512, 64)  # ResNet-18的fc层输出是512维
+
+        # 计算vision特征维度
+        with torch.no_grad():
+            test_input = torch.zeros(1, 3, 96, 128)
+            vision_fea = self.vision_encoder(test_input)
+            vision_fea = vision_fea.view(vision_fea.size(0), -1)  # flatten
+            vision_fea = self.vision_projection(vision_fea)
+            vision_fea_dim = vision_fea.shape[1]
         # vision_fea_dim = (torch.zeros(1, 3, 96, 128)).shape[1]
         mlp_input_dim_a = num_actor_obs
         mlp_input_dim_c = num_critic_obs
