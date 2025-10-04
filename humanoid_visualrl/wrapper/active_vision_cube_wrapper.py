@@ -48,7 +48,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
         if self.cfg.curriculum_cube_yaw:
-            self.curriculum_cube_yaw_range = 0.2 * self.cfg.randomize_cube_yaw_range
+            # self.curriculum_cube_yaw_range = 0.2 * self.cfg.randomize_cube_yaw_range
+            self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
         else:
             self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
         self.cube_showup = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
@@ -73,9 +74,16 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.mask = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.pixel_counts = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
         self.right_wrist_indice = self.wrist_indices[1]
-        self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
+
+        if "pixel_norm_at_cube" in self.cfg.reward_weights:
+            self.compute_pixel_distance_reward = True
+            self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
+        else:
+            self.compute_pixel_distance = False
 
         self.extra_buf["episode_metrics"]["see_flag_avg"] = 0.0
+
+
 
         # calucalte camera pos due to the bug that camera is not updated
         if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
@@ -143,8 +151,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb / 255.0
         # TODO: normalize it to get better results?
-        mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
-        vision_rgb -= mean_tensor
+        # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
+        vision_rgb -= 0.5
 
         self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
@@ -183,14 +191,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # Update see_flag history for curriculum
         self._update_see_flag_history()
 
-        self._compute_pixel_distance()
+        if self.compute_pixel_distance_reward or (self.enable_opencv_display and self.env._render_viewport):
+            self._compute_pixel_distance()
 
     def _compute_pixel_distance(self):
         # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
         # turn it into float
         self.cube_showup = self.see_flag.float()
 
-        if self.enable_opencv_display and self.env._render_viewport:
+
             # rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
 
             # print(f"rewards: {rewards[0]}")
@@ -213,47 +222,77 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # cv2.putText(rgb_image, distance_text, (text_x, text_y),
             #           font, font_scale, font_color, font_thickness)
 
-            if self.opencv_renderer is not None and self.vision_rgb_buf is not None:
-                # Display the image and check if window is still open
-                rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
-                # if 0 in torch.where(self.see_flag)[0]:
-                #     env_0_idx = torch.where(self.see_flag)[0] == 0
-                # if env_0_idx.any():
-                #     env_0_pos = torch.where(env_0_idx)[0][0]
-                #     # 获取env 0的中心点坐标
-                #     center_x_0 = int(center_x[env_0_pos].item())
-                #     center_y_0 = int(center_y[env_0_pos].item())
 
-                #     # 获取env 0的RGB图像并转换为numpy格式用于绘制
 
-                #     # 确保图像是uint8格式
-                #     if rgb_image.dtype != np.uint8:
-                #         rgb_image = (rgb_image * 255).astype(np.uint8)
 
-                #     # 绘制计算出的中心点（红色圆圈）
-                #     cv2.circle(rgb_image, (center_x_0, center_y_0), 5, (0, 0, 255), -1)  # 红色实心圆
+        if self.see_flag.any():
+            # 计算加权中心点
+            weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+            weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
 
-                #     # 绘制图像中心点（绿色圆圈）
-                #     cv2.circle(
-                #         rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
-                #     )  # 绿色实心圆
+            # 归一化
+            self.center_y = weighted_y / self.pixel_counts[self.see_flag]
+            self.center_x = weighted_x / self.pixel_counts[self.see_flag]
 
-                #     # 绘制连接线
-                #     cv2.line(
-                #         rgb_image,
-                #         (center_x_0, center_y_0),
-                #         (int(self.image_center_x), int(self.image_center_y)),
-                #         (255, 255, 0),
-                #         1,
-                #     )
-                window_open = self.opencv_renderer.display(rgb_image)
-                if not window_open:
-                    # User closed the window, disable further display
-                    self.enable_opencv_display = False
-                    print("OpenCV display window closed by user")
+            # 计算距离
+            # distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
+            # since now we have no pitch dof for waist, we only consider x pixel distance
+            # distance = torch.abs(center_x - self.image_center_x)
 
-        # # if pixel distance is less than 10, done
-        # self.done_buf = self.pixel_rewards_buf > self.success_thres
+            # self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
+
+        # Display the image and check if window is still open
+        rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
+        rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
+        
+        # if self.opencv_render_env_idx in torch.where(self.see_flag)[0]:
+        env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
+        
+        # if any draw
+        if env_idx.any():
+            env_pos = torch.where(env_idx)[0][0]
+            
+            weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+            weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+
+            # 归一化
+            # center_y = weighted_y / self.pixel_counts[self.see_flag]
+            # center_x = weighted_x / self.pixel_counts[self.see_flag]
+            
+            # 获取env idx的中心点坐标
+            center_x = int(self.center_x[env_pos].item())
+            center_y = int(self.center_y[env_pos].item())
+
+            # 获取env idx的RGB图像并转换为numpy格式用于绘制
+
+            # 确保图像是uint8格式
+            if rgb_image.dtype != np.uint8:
+                rgb_image = (rgb_image * 255).astype(np.uint8)
+
+            # 绘制计算出的中心点（红色圆圈）
+            cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心圆
+
+            # 绘制图像中心点（绿色圆圈）
+            cv2.circle(
+                rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+            )  # 绿色实心圆
+
+            # 绘制连接线
+            cv2.line(
+                rgb_image,
+                (center_x, center_y),
+                (int(self.image_center_x), int(self.image_center_y)),
+                (255, 255, 0),
+                1,
+            )
+        window_open = self.opencv_renderer.display(rgb_image)
+        
+        if not window_open:
+            # User closed the window, disable further display
+            self.enable_opencv_display = False
+            print("OpenCV display window closed by user")
+
+
 
     def _update_see_flag_history(self):
         """Update the see_flag history buffer for curriculum learning."""
@@ -316,7 +355,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if self.cfg.randomize_cube_y = True
 
         if self.cfg.randomization:
-            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
+            # yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
+            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.
             # radius bias randomize_cube_radius_range
             radius_bias = (
                 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_radius_range
@@ -381,7 +421,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _reward_pixel_norm_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for gazing at the cube."""
         # return self.pixel_rewards_buf - self.pixel_reward_offset
-        self.pixel_rewards_buf *= 0.0
+        self.pixel_rewards_buf.zero_()
 
         if self.see_flag.any():
             # 计算加权中心点

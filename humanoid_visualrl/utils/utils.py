@@ -325,6 +325,7 @@ def get_args():
         task: str = "active_vision"
         run_name: str = ""
         debug: bool = False
+        opencv_render_env_idx: int = 8
 
         def __post_init__(self):
             """Post-initialization configuration."""

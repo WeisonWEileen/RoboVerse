@@ -75,7 +75,7 @@ class LeggedRobotRunnerCfg:
     """Policy class name."""
     algorithm_class_name = "PPO"
     """Algorithm class name."""
-    num_steps_per_env = 96  # *0.005*5*48 = 6
+    num_steps_per_env = 48  # *0.005*5*48 = 6 s
     """per iteration"""
     max_iterations = 1500
     """max number of iterations"""
@@ -225,7 +225,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 100
+    env_spacing: float = 5
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -263,6 +263,59 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
+        RigidObjCfg(
+            name="wall",
+            # make sure mask each other in ego centric view
+            scale=(3.0, 3.0, 1.0),
+            physics=PhysicStateType.GEOM,
+            usd_path="roboverse_data/wall.usd",
+            fix_base_link=True,
+            default_position=(0.0, 0.0, 0.8),
+            # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
+            collision_enabled=False,
+            # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+            # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        ),
+        # PrimitiveCubeCfg(
+        #     name="wall1",
+        #     size=(0.07, 0.07, 0.07),
+        #     color=[1.0, 0.0, 0.0],
+        #     physics=PhysicStateType.RIGIDBODY,
+        #     collision_enabled=False,
+        #     fix_base_link=True,
+        #     default_position=(0.3, 0.1, 0.851),
+        #     mass=0.2,  # 增加质量以确保更好的物理行为
+        # ),
+        # PrimitiveCubeCfg(
+        #     name="wall2",
+        #     size=(0.07, 0.07, 0.07),
+        #     color=[1.0, 0.0, 0.0],
+        #     physics=PhysicStateType.RIGIDBODY,
+        #     collision_enabled=False,
+        #     fix_base_link=True,
+        #     default_position=(0.3, 0.1, 0.851),
+        #     mass=0.2,  # 增加质量以确保更好的物理行为
+        # ),
+        # PrimitiveCubeCfg(
+        #     name="wall3",
+        #     size=(0.07, 0.07, 0.07),
+        #     color=[1.0, 0.0, 0.0],
+        #     physics=PhysicStateType.RIGIDBODY,
+        #     collision_enabled=False,
+        #     fix_base_link=True,
+        #     default_position=(0.3, 0.1, 0.851),
+        #     mass=0.2,  # 增加质量以确保更好的物理行为
+        # ),
+        # PrimitiveCubeCfg(
+        #     name="wall4",
+        #     size=(0.07, 0.07, 0.07),
+        #     color=[1.0, 0.0, 0.0],
+        #     physics=PhysicStateType.RIGIDBODY,
+        #     collision_enabled=False,
+        #     fix_base_link=True,
+        #     default_position=(0.3, 0.1, 0.851),
+        #     mass=0.2,  # 增加质量以确保更好的物理行为
+        # ),
         PrimitiveCubeCfg(
             name="cube",
             size=(0.07, 0.07, 0.07),
@@ -490,7 +543,7 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_cube_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
         self.curriculum_cube_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
-        self.actor_critic_class = "use_vision"
+        self.actor_critic_class = "use_rnn"
 
         if self.actor_critic_class == "use_vision":
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"

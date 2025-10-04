@@ -160,9 +160,9 @@ class OpenCVRenderer:
         # cv2.putText(image_np, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
         # Add frame counter
-        if self.frame_count % 100 == 0:
-            frame_text = f"Frame: {self.frame_count}"
-            cv2.putText(image_np, frame_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        # if self.frame_count % 100 == 0:
+        #     frame_text = f"Frame: {self.frame_count}"
+        #     cv2.putText(image_np, frame_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
         # Add recording indicator
         if self.recording_active:

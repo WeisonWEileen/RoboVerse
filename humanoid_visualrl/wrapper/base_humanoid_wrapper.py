@@ -29,7 +29,13 @@ class HumanoidBaseWrapper(RslRlWrapper):
     Note that rsl_rl is designed for parallel training fully on GPU, with robust support for Isaac Gym and Isaac Lab.
     """
 
-    def __init__(self, scenario: ScenarioCfg, enable_opencv_display: bool = False, opencv_fps: int = 30):
+    def __init__(
+        self,
+        scenario: ScenarioCfg,
+        enable_opencv_display: bool = False,
+        opencv_render_env_idx: int = 0,
+        opencv_fps: int = 30,
+    ):
         super().__init__(scenario)
 
         self._env_origins = self.env.scene.env_origins.clone()
@@ -46,14 +52,14 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.opencv_renderer = None
         if self.enable_opencv_display:
             self.opencv_renderer = OpenCVRenderer(
-                window_name="Humanoid First Person View",
+                window_name="First Person View of Env " + str(opencv_render_env_idx),
                 window_size=(640, 480),  # Upscale from 64x48 to 640x480
                 fps_limit=opencv_fps,
                 enable_recording=True,  # Allow video recording
                 recording_path="humanoid_vision_recording.mp4",
             )
 
-        # self.right_wrist_indice = 
+        self.opencv_render_env_idx = opencv_render_env_idx
 
     def _parse_indices(self, robot):
         """Parse rigid body indices from robot cfg."""
@@ -405,7 +411,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
             # self.dof_pos = tensor_state.robots[self.robot.name].joint_pos
             # self.dof_vel = tensor_state.robots[self.robot.name].joint_vel
 
-            # test more light weight 
+            # test more light weight
             reindex = self.env.get_joint_reindex(self.robot.name)
             self.dof_pos = self.env.scene.articulations[self.robot.name].data.joint_pos[:, reindex]
             self.dof_vel = self.env.scene.articulations[self.robot.name].data.joint_vel[:, reindex]
@@ -501,7 +507,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         # self._randomize()
         self._update_curriculum()
-    
+
     def _update_curriculum(self):
         pass
 
@@ -536,14 +542,13 @@ class HumanoidBaseWrapper(RslRlWrapper):
         # set small commands to zero
         self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
 
-
     def _randomize(self):
         pass
 
     def _push_robots(self):
         """Randomly set robot's root velocity to simulate a push."""
         if self.cfg.random_push.enabled and self.common_step_counter % self.cfg.random_push.push_interval == 0:
-            pass #due to performace issue, we generally not use get_states
+            pass  # due to performace issue, we generally not use get_states
             # max_vel = self.cfg.random_push.max_push_vel_xy
             # max_push_angular = self.cfg.random_push.max_push_ang_vel
             # tensor_states = self.env.get_states()

@@ -417,7 +417,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         object_states = {}
         for obj in self.objects:
-            if obj.name == "table":
+            if obj.fix_base_link:
                 continue
             if isinstance(obj, ArticulationObjCfg):
                 obj_inst = self.scene.articulations[obj.name]

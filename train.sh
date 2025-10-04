@@ -2,14 +2,15 @@
 
 # /home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
 python3 ./humanoid_visualrl/scripts/train.py \
-    --num_envs  96 \
+    --num_envs  16 \
     --task "active_vision" \
-    --run_name "cnn_pretrain_narrow_radius" \
+    --run_name "test" \
     --enable_opencv_display \
-    --wandb \
-    --resume \
-    --load_run "2025_1003_141008" \
-    --checkpoint 10800 \
+    --wandb
+    # --wandb \
+    # --resume \
+    # --load_run "2025_1003_141008" \
+    # --checkpoint 10800 \
     # --debug
     # --debug
     # --wandb

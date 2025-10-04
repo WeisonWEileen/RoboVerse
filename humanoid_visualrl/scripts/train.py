@@ -21,10 +21,15 @@ from metasim.task.registry import get_task_class, get_task_cfg_class
 
 if __name__ == "__main__":
     args = get_args()
+    assert args.opencv_render_env_idx < args.num_envs, "opencv_render_env_idx must be less than num_envs"
+    
     # task_cfg, cfg_file_path = get_cfg_cls(args)
     task_cfg_cls = get_task_cfg_class(args.task)
+    
 
     task_cfg = task_cfg_cls(finetune=args.resume)
+
+    assert task_cfg.env_spacing > 5, "env_spacing must be greater than 5"
     if args.resume:
         log.info(f"Finetuning Model from: {args.load_run}")
 
@@ -52,20 +57,18 @@ if __name__ == "__main__":
     scenario.task = task_cfg
     scenario.env_spacing = task_cfg.env_spacing
 
-    if args.debug:
-        scenario.env_spacing = 5
-        scenario.env_spacing = 5
-
     log.info(f"Using simulator: {args.sim}")
     env_cls = get_task_class(args.task)
 
     if task_cfg.use_vision:
-        env = env_cls(scenario, enable_opencv_display=args.enable_opencv_display)
+        env = env_cls(
+            scenario, enable_opencv_display=args.enable_opencv_display, opencv_render_env_idx=args.opencv_render_env_idx
+        )
     else:
         env = env_cls(scenario)
     device = torch.device("cuda")
     log_dir, now = get_log_dir(args, scenario)
-    
+
     if args.debug:
         # do not log, faster reset
         log_dir = None
@@ -91,4 +94,4 @@ if __name__ == "__main__":
             raise FileNotFoundError(f"Resume path {resume_path} does not exist")
         log.info(f"Loading model from: {resume_path}")
         ppo_runner.load(resume_path)
-    ppo_runner.learn(num_learning_iterations=args.num_learning_iterations   ,     run_name=f"{args.run_name}_{now}")
+    ppo_runner.learn(num_learning_iterations=args.num_learning_iterations, run_name=f"{args.run_name}_{now}")
