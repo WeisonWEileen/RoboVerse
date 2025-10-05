@@ -325,7 +325,7 @@ def get_args():
         task: str = "active_vision"
         run_name: str = ""
         debug: bool = False
-        opencv_render_env_idx: int = 8
+        opencv_render_env_idx: int = 0
         device: str = "cuda:0"
 
         def __post_init__(self):

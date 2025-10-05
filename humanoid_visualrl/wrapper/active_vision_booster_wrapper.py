@@ -12,7 +12,7 @@ import torch
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 from metasim.types import TensorState
-from metasim.utils.math import quat_apply
+from metasim.utils.math import quat_apply, quat_mul
 from loguru import logger as log
 from metasim.task.registry import register_task
 from humanoid_visualrl.cfg.booster_racket_cfg import BaseTableHumanoidTaskCfg
@@ -47,6 +47,17 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self._reset(list(range(self.num_envs)))
         self.target_id = 2
         self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
+        self.object_name = self.cfg.objects[-1].name
+        self.see_flag = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+
+        # iterate through reward weights and check if pixel norm show up
+        for reward_weight in self.cfg.reward_weights:
+            if "pixel_norm" in reward_weight:
+                self.compute_pixel_distance_reward = True
+                self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
+                break
+        else:
+            self.compute_pixel_distance_reward = False
 
     def _init_buffers(self):
         super()._init_buffers()
@@ -64,151 +75,167 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.arange(height, device=self.device), torch.arange(width, device=self.device), indexing="ij"
         )
 
-        self.shpere_pose_buf = self.init_states.objects[self.cfg.objects[0].name].root_state[:, :7].clone()
+        self.shpere_pose_buf = self.init_states.objects[self.cfg.objects[1].name].root_state[:, :7].clone()
 
         self.vision_seg_buf = torch.zeros(
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
         )
+        if "semantic_seg" in self.cfg.cameras[0].data_types:
+            self.semantic_seg = True
+        else:
+            self.semantic_seg = False
+        if self.semantic_seg:
+            self.vision_seg_buf = torch.zeros(
+                self.num_envs,
+                self.cfg.cameras[0].height,
+                self.cfg.cameras[0].width,
+                device=self.device,
+                dtype=torch.int32,
+            )
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
-        self.shpere_pose_buf = tensor_state.objects[self.cfg.objects[0].name].root_state[:, :7]
 
+        # ======update cube pose======
+        self.cube_pose_buf = tensor_state.objects[self.object_name].root_state[:, :7]
+
+        # ======update vision rgb and seg======
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
-        vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb
-        self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2).float() / 255.0
+        vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb / 255.0
+        # TODO: normalize it to get better results?
+        # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
+        vision_rgb -= 0.5
+
+        # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
+
+        # save a png if count_step is 20
+        # if self.common_step_counter == 20:
+        #     # breakpoint()
+        #     image = (vision_rgb[0] + 0.5).cpu().numpy()
+        #     image = (image * 255).astype(np.uint8)
+        #     cv2.imwrite("vision_rgb.png", image)
+        #     log.info("save vision_rgb.png")
+
+        self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg
+        if self.semantic_seg:
+            self.vision_seg_buf = tensor_state.cameras[self.cfg.cameras[0].name].semantic_seg_data
+            self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
 
-        self.vision_seg_buf = tensor_state.cameras[self.cfg.cameras[0].name].semantic_seg_data
-        self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
-
-        self._compute_pixel_distance()
-
-        # target_id = info["cube"]
-
-        # Convert single channel to three channels by repeating
-        # vision_seg shape: [1, 96, 128] -> [1, 96, 128, 3]
-        # if vision_seg is not None:
-        #     vision_rgb = vision_seg.unsqueeze(-1).repeat(1, 1, 1, 3)  # Repeat the channel dimension 3 times
-        # else:
-        #     vision_rgb = None
-
-        # Display image in OpenCV window if enabled
-        # if self.enable_opencv_display and self.opencv_renderer is not None and vision_rgb is not None:
-        #     # Use the original uint8 RGB image for display (before normalization)
-        #     # vision_rgb is in format (batch_size, height, width, channels)
-        #     display_image = vision_rgb[0].cpu().numpy()  # Take first environment
-
-        #     # Display the image and check if window is still open
-
-        #     window_open = self.opencv_renderer.display(display_image)
-        #     if not window_open:
-        #         # User closed the window, disable further display
-        #         self.enable_opencv_display = False
-        #         log.info("OpenCV display window closed by user")
-
-    def _compute_pixel_distance(self):
-        # target_id = next(k for k, v in self.vision_seg_info.items() if "shpere" in v)
-
+        # ========== update see flag ======
         # 创建掩码：shape (num_envs, height, width)
-        mask = self.vision_seg_buf == self.target_id
+        self.mask = self.vision_seg_buf == self.target_id
 
         # 为每个环境计算加权中心点
-        self.pixel_rewards_buf *= 0.0
+        # self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
 
-        # 计算每个环境的像素数量
-        pixel_counts = mask.sum(dim=(1, 2))
+        self.pixel_counts = self.mask.sum(dim=(1, 2))
+        valid_envs = self.pixel_counts > 0
+        self.see_flag = valid_envs.clone()
 
-        # 只处理有目标像素的环境
-        valid_envs = pixel_counts > 0
+        # Update see_flag history for curriculum
+        # self._update_see_flag_history()
 
-        if valid_envs.any():
+        if self.compute_pixel_distance_reward or (self.enable_opencv_display and self.env._render_viewport):
+            self._compute_pixel_distance()
+
+    def _compute_pixel_distance(self):
+        # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
+        # turn it into float
+        self.cube_showup = self.see_flag.float()
+
+        # rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
+
+        # print(f"rewards: {rewards[0]}")
+
+        # 在env 0的图像上绘制坐标点
+        # if self.env._render_viewport:
+        # 找到env 0在valid_envs中的索引
+
+        # 更新显示缓冲区
+        # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
+
+        # distance_0 = distance[env_0_pos].item()
+        # distance_text = f"Distance: {distance_0:.1f} px"
+        # font = cv2.FONT_HERSHEY_SIMPLEX
+        # font_scale = 0.6
+        # font_color = (255, 255, 255)  # 白色文字
+        # font_thickness = 2
+        # text_x, text_y = 10, 25
+
+        # cv2.putText(rgb_image, distance_text, (text_x, text_y),
+        #           font, font_scale, font_color, font_thickness)
+
+        if self.see_flag.any():
             # 计算加权中心点
-            weighted_y = (mask[valid_envs] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
-            weighted_x = (mask[valid_envs] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+            weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+            weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
 
             # 归一化
-            center_y = weighted_y / pixel_counts[valid_envs]
-            center_x = weighted_x / pixel_counts[valid_envs]
-
-            # 计算距离
-            distance = torch.sqrt((center_x - self.image_center_x) ** 2 + (center_y - self.image_center_y) ** 2)
-            # since now we have no pitch dof for waist, we only consider x pixel distance
-            # distance = torch.abs(center_x - self.image_center_x)
-
-            # 计算奖励
-            self.pixel_rewards_buf[valid_envs] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
-            # print(f"rewards: {rewards[0]}")
-
-            # 在env 0的图像上绘制坐标点
-            if 0 in torch.where(valid_envs)[0] and self.enable_opencv_display and self.env._render_viewport:
-                # 找到env 0在valid_envs中的索引
-                env_0_idx = torch.where(valid_envs)[0] == 0
-                # if env_0_idx.any():
-                #     env_0_pos = torch.where(env_0_idx)[0][0]
-                #     # 获取env 0的中心点坐标
-                #     center_x_0 = int(center_x[env_0_pos].item())
-                #     center_y_0 = int(center_y[env_0_pos].item())
-
-                #     # 获取env 0的RGB图像并转换为numpy格式用于绘制
-
-                rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
-
-                #     # 确保图像是uint8格式
-                #     if rgb_image.dtype != np.uint8:
-                #         rgb_image = (rgb_image * 255).astype(np.uint8)
-
-                #     # 绘制计算出的中心点（红色圆圈）
-                #     cv2.circle(rgb_image, (center_x_0, center_y_0), 5, (0, 0, 255), -1)  # 红色实心圆
-
-                #     # 绘制图像中心点（绿色圆圈）
-                #     cv2.circle(
-                #         rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
-                #     )  # 绿色实心圆
-
-                #     # 绘制连接线
-                #     cv2.line(
-                #         rgb_image,
-                #         (center_x_0, center_y_0),
-                #         (int(self.image_center_x), int(self.image_center_y)),
-                #         (255, 255, 0),
-                #         1,
-                #     )
-
-                    # 更新显示缓冲区
-                    # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
-
-                    # distance_0 = distance[env_0_pos].item()
-                    # distance_text = f"Distance: {distance_0:.1f} px"
-                    # font = cv2.FONT_HERSHEY_SIMPLEX
-                    # font_scale = 0.6
-                    # font_color = (255, 255, 255)  # 白色文字
-                    # font_thickness = 2
-                    # text_x, text_y = 10, 25
-
-                    # cv2.putText(rgb_image, distance_text, (text_x, text_y),
-                    #           font, font_scale, font_color, font_thickness)
-
-                if (
-                    self.enable_opencv_display
-                    and self.opencv_renderer is not None
-                    and self.vision_rgb_buf is not None
-                ):
-                    # Use the original uint8 RGB image for display (before normalization)
-                    # vision_rgb is in format (batch_size, height, width, channels)
-                    # display_image = self.vision_rgb_buf[0]  # Take first environment
-
-                    # Display the image and check if window is still open
-                    window_open = self.opencv_renderer.display(rgb_image)
-                    if not window_open:
-                        # User closed the window, disable further display
-                        self.enable_opencv_display = False
-                        print("OpenCV display window closed by user")
+            self.center_y = weighted_y / self.pixel_counts[self.see_flag]
+            self.center_x = weighted_x / self.pixel_counts[self.see_flag]
 
         # # if pixel distance is less than 10, done
         # self.done_buf = self.pixel_rewards_buf > self.sucess_thres
+
+        # if specific env draw
+        if self.env._render_viewport:
+            env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
+            # 确保图像是uint8格式
+            rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
+            rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
+            if env_idx.any():
+                env_pos = torch.where(env_idx)[0][0]
+
+                weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(
+                    dim=(1, 2)
+                )  # (num_valid_envs,)
+                weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(
+                    dim=(1, 2)
+                )  # (num_valid_envs,)
+
+                # 归一化
+                # center_y = weighted_y / self.pixel_counts[self.see_flag]
+                # center_x = weighted_x / self.pixel_counts[self.see_flag]
+
+                # 获取env idx的中心点坐标
+                center_x = int(self.center_x[env_pos].item())
+                center_y = int(self.center_y[env_pos].item())
+
+                # 获取env idx的RGB图像并转换为numpy格式用于绘制
+
+                # if self.env._render_viewport:
+                # # 确保图像是uint8格式
+                # rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
+                # rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
+
+                if rgb_image.dtype != np.uint8:
+                    rgb_image = (rgb_image * 255).astype(np.uint8)
+
+                # 绘制计算出的中心点（红色圆圈）
+                cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心圆
+
+                # 绘制图像中心点（绿色圆圈）
+                cv2.circle(
+                    rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+                )  # 绿色实心圆
+
+                # 绘制连接线
+                cv2.line(
+                    rgb_image,
+                    (center_x, center_y),
+                    (int(self.image_center_x), int(self.image_center_y)),
+                    (255, 255, 0),
+                    1,
+                )
+            window_open = self.opencv_renderer.display(rgb_image)
+
+            if not window_open:
+                # User closed the window, disable further display
+                self.enable_opencv_display = False
+                print("OpenCV display window closed by user")
 
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
@@ -256,19 +283,19 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
 
     def _post_reset_hook(self, env_ids):
-        self.shpere_pose_buf[env_ids] = self.init_states.objects[self.cfg.objects[0].name].root_state[env_ids, :7]
+        self.shpere_pose_buf[env_ids] = self.init_states.objects[self.cfg.objects[1].name].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
         self.env.sim.render()
         camera_data = self.env.scene.sensors["camera_first_person"].data.output
         self.vision_rgb_buf[env_ids] = camera_data["rgb"][env_ids].permute(0, 3, 1, 2).float() / 255.0
+        if self.semantic_seg:
+            # 添加分割数据的更新
+            self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
         # 添加分割数据的更新
-        self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
 
     def _check_reset(self):
         # move 0.05 to config
-        terminate = (
-            torch.abs(self.root_state[:, 2]) < 0.3
-        )
+        terminate = torch.abs(self.root_state[:, 2]) < 0.3
         self.reset_buf = self.timeout_buf | terminate
         # self.reset_buf = self.timeout_buf
         # self.reset_buf = self.timeout_buf | terminate | self.done_buf

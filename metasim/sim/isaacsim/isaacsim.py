@@ -660,6 +660,8 @@ class IsaacsimHandler(BaseSimHandler):
             )
             return
         if isinstance(obj, PrimitiveSphereCfg):
+            semantic_tags = [("class", "ball")] if obj.name == "ball" else None
+
             self.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
                     prim_path=prim_path,
@@ -670,6 +672,7 @@ class IsaacsimHandler(BaseSimHandler):
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),
                         rigid_props=rigid_props,
+                        semantic_tags=semantic_tags,
                         collision_props=collision_props,
                     ),
                 )

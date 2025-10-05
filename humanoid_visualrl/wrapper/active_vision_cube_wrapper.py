@@ -159,12 +159,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
 
         # save a png if count_step is 20
-        if self.common_step_counter == 20:
-            # breakpoint()
-            image = (vision_rgb[0] + 0.5).cpu().numpy()
-            image = (image * 255).astype(np.uint8)
-            cv2.imwrite("vision_rgb.png", image)
-            log.info("save vision_rgb.png")
+        # if self.common_step_counter == 20:
+        #     # breakpoint()
+        #     image = (vision_rgb[0] + 0.5).cpu().numpy()
+        #     image = (image * 255).astype(np.uint8)
+        #     cv2.imwrite("vision_rgb.png", image)
+        #     log.info("save vision_rgb.png")
 
         self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
@@ -173,18 +173,19 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.vision_seg_buf = tensor_state.cameras[self.cfg.cameras[0].name].semantic_seg_data
             self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
 
-        if self.camera_mount_link_idx is not None:
-            self.camera_mount_link_pos = tensor_state.robots[self.robot.name].body_state[
-                :, self.camera_mount_link_idx, :3
-            ]
-            self.camera_mount_link_quat = tensor_state.robots[self.robot.name].body_state[
-                :, self.camera_mount_link_idx, 3:7
-            ]
+        # uncomment this if you want to use the camera mount link(generally for camera pose usage)
+        # if self.camera_mount_link_idx is not None:
+        #     self.camera_mount_link_pos = tensor_state.robots[self.robot.name].body_state[
+        #         :, self.camera_mount_link_idx, :3
+        #     ]
+        #     self.camera_mount_link_quat = tensor_state.robots[self.robot.name].body_state[
+        #         :, self.camera_mount_link_idx, 3:7
+        #     ]
 
-            self.camera_pos_w = self.camera_mount_link_pos + quat_apply(
-                self.camera_mount_link_quat, self.camera_tran_pos
-            )
-            self.camera_quat_w = quat_mul(self.camera_mount_link_quat, self.camera_tran_quat)
+        #     self.camera_pos_w = self.camera_mount_link_pos + quat_apply(
+        #         self.camera_mount_link_quat, self.camera_tran_pos
+        #     )
+        #     self.camera_quat_w = quat_mul(self.camera_mount_link_quat, self.camera_tran_quat)
 
         # ========== update see flag ======
         # 创建掩码：shape (num_envs, height, width)

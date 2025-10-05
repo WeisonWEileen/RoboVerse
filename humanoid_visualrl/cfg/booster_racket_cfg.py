@@ -8,7 +8,7 @@ from typing import Callable, Literal
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveSphereCfg
+from metasim.scenario.objects import PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.types import TensorState
@@ -214,7 +214,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 2.0
+    env_spacing: float = 5.0
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -240,6 +240,19 @@ class BaseTableHumanoidTaskCfg:
     dt = decimation * sim_params.dt
     """simulation time step in s"""
     objects = [
+        RigidObjCfg(
+            name="wall",
+            # make sure mask each other in ego centric view
+            scale=(3.0, 3.0, 0.5),
+            physics=PhysicStateType.GEOM,
+            usd_path="roboverse_data/wall.usd",
+            fix_base_link=True,
+            default_position=(0.0, 0.0, 0.6),
+            # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
+            collision_enabled=False,
+            # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+            # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        ),
         PrimitiveSphereCfg(
             name="ball",
             radius=0.03,
@@ -353,18 +366,37 @@ class BaseTableHumanoidTaskCfg:
     from metasim.scenario.cameras import PinholeCameraCfg
 
     cameras = [
+        # PinholeCameraCfg(
+        #     name="camera_first_person",
+        #     # data_types=["rgb", "instance_id_seg"],
+        #     data_types=["rgb", "semantic_seg"],
+        #     width=128,
+        #     height=96,
+        #     pos=(1.5, -1.5, 1.5),
+        #     look_at=(0.0, 0.0, 0.0),
+        #     mount_to="t1",
+        #     mount_link="H2/d435_link",
+        #     mount_pos=(0.0, 0.0, 0.0),
+        #     mount_quat=(1.0, 0.0, 0.0, 0.0),
+        # )
         PinholeCameraCfg(
             name="camera_first_person",
-            # data_types=["rgb", "instance_id_seg"],
             data_types=["rgb", "semantic_seg"],
-            width=128,
-            height=96,
+            # data_types=["rgb", "instance_id_seg"],
+            # data_types=["rgb", "semantic_seg"],
+            width=160,
+            # width=640,
+            height=120,
+            # height=480,
             pos=(1.5, -1.5, 1.5),
             look_at=(0.0, 0.0, 0.0),
             mount_to="t1",
             mount_link="H2/d435_link",
             mount_pos=(0.0, 0.0, 0.0),
-            mount_quat=(1.0, 0.0, 0.0, 0.0),
+            mount_quat=(0.5, -0.5, 0.5, -0.5),
+            # mount_quat=(1.0, 0.0, 0.0, 0.0),
+            focal_length=7.6,
+            horizontal_aperture=20.0,
         )
     ]
     finetune = False

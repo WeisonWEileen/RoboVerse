@@ -17,7 +17,7 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --task "active_vision" \
     --run_name "end2end" \
     --headless \
-    --device "cuda:8" 
+    --device "cuda:0" 
     # --enable_opencv_display \
     # --wandb \
     # --resume \

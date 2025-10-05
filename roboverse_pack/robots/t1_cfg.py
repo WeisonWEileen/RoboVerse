@@ -16,7 +16,7 @@ class T1Cfg(RobotCfg):
     name: str = "t1"
     num_joints: int = 23
 
-    usd_path: str = "roboverse_data/robots/T1/T1_test_1.usd"
+    usd_path: str = "roboverse_data/robots/T1/T1_test_1_flattened.usd"
     xml_path: str = MISSING
     urdf_path: str = MISSING
 
