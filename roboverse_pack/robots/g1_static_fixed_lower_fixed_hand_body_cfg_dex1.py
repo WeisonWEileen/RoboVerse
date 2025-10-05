@@ -29,6 +29,7 @@ class G1StaticDex1Cfg(RobotCfg):
         # "waist_roll_joint": BaseActuatorCfg(stiffness=400, damping=5),
         # "waist_pitch_joint": BaseActuatorCfg(stiffness=400, damping=5),
         "waist_yaw_joint": BaseActuatorCfg(stiffness=80, damping=8),
+        # todo: make it even smaller
         "waist_roll_joint": BaseActuatorCfg(stiffness=60, damping=5),
         "waist_pitch_joint": BaseActuatorCfg(stiffness=60, damping=5),
         "left_shoulder_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),

@@ -479,18 +479,19 @@ class BaseTableHumanoidTaskCfg:
             # self.update_curriculum_iteration = 100
             # self.randomize_cube_yaw_range = 1.8
             # self.randomize_cube_yaw_range = 1.8
-            self.randomize_cube_yaw_range = 1.2
+            self.randomize_cube_yaw_range = 3.14
             self.curriculum_cube_yaw = False
 
-            self.reward_weights = {
-                "see_cube": 0.5,
-                "wrist_close_to_cube": 1.0,
-            }
+            # self.reward_weights = {
+            #     "see_cube": 0.5,
+            #     "wrist_close_to_cube": 1.0,
+            # }
         else:
             # self.update_curriculum_iteration = 400
-            self.randomize_cube_yaw_range = 2.3
+            # self.randomize_cube_yaw_range = 2.3
+            self.randomize_cube_yaw_range = 3.14
             self.curriculum_cube_yaw = True
-            self.warm_up_beforecurriculum = 40000
+            self.warm_up_beforecurriculum = 80000
             self.curriculum_avg_thres = 0.85
             self.curriculum_randomize_iteration_interval = 200
         self.see_flag_his_win_length = 1000

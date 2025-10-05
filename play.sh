@@ -11,10 +11,10 @@
 
 
 
-python3 ./humanoid_visualrl/scripts/play.py \
+/home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/play.py \
     --task "active_vision" \
     --resume \
-    --load_run "2025_1003_062949" \
-    --checkpoint 6800 \
+    --load_run "2025_1005_004654" \
+    --checkpoint 3200 \
     --enable_opencv_display 
     # --wandb \

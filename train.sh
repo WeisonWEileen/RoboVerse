@@ -4,14 +4,14 @@
 /home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
     --num_envs  128 \
     --task "active_vision" \
-    --run_name "test" \
+    --run_name "end2end" \
     --enable_opencv_display \
-    --debug 
+    --wandb \
+    --resume \
+    --load_run "2025_1005_004654" \
+    --checkpoint 3200 \
     # --wandb
     # --wandb \
-    # --resume \
-    # --load_run "2025_1003_141008" \
-    # --checkpoint 10800 \
     # --debug
     # --debug
     # --wandb
