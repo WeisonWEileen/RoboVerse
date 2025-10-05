@@ -1,15 +1,28 @@
 # train with walking
 
-# python3 ./humanoid_visualrl/scripts/train.py \
-/home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
-    --num_envs  128 \
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7,8
+# /home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
+
+
+if [ "$USER_NAME" = "balen" ]; then
+    PYTHON_PATH="/home/balen/conda/envs/metasim/bin/python"
+elif [ "$USER_NAME" = "ghr" ]; then
+    PYTHON_PATH="/datasets/v2p/current/pw-workspace/conda/isaaclab211/bin/python"
+else
+    PYTHON_PATH="python3"
+fi
+
+$PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
+    --num_envs  16 \
     --task "active_vision" \
     --run_name "end2end" \
-    --enable_opencv_display \
-    --wandb \
-    --resume \
-    --load_run "2025_1005_004654" \
-    --checkpoint 3200 \
+    --headless \
+    --device "cuda:8" 
+    # --enable_opencv_display \
+    # --wandb \
+    # --resume \
+    # --load_run "2025_1005_004654" \
+    # --checkpoint 3200 \
     # --wandb
     # --wandb \
     # --debug

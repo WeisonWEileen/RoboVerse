@@ -56,6 +56,7 @@ if __name__ == "__main__":
     scenario.render_interval = scenario.decimation
     scenario.task = task_cfg
     scenario.env_spacing = task_cfg.env_spacing
+    scenario.device = args.device
 
     log.info(f"Using simulator: {args.sim}")
     env_cls = get_task_class(args.task)
@@ -66,7 +67,7 @@ if __name__ == "__main__":
         )
     else:
         env = env_cls(scenario)
-    device = torch.device("cuda")
+    device = torch.device(args.device)
     log_dir, now = get_log_dir(args, scenario)
 
     if args.debug:

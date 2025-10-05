@@ -326,6 +326,7 @@ def get_args():
         run_name: str = ""
         debug: bool = False
         opencv_render_env_idx: int = 8
+        device: str = "cuda:0"
 
         def __post_init__(self):
             """Post-initialization configuration."""

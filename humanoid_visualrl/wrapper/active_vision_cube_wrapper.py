@@ -156,6 +156,16 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
         vision_rgb -= 0.5
 
+        # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
+
+        # save a png if count_step is 20
+        if self.common_step_counter == 20:
+            # breakpoint()
+            image = (vision_rgb[0] + 0.5).cpu().numpy()
+            image = (image * 255).astype(np.uint8)
+            cv2.imwrite("vision_rgb.png", image)
+            log.info("save vision_rgb.png")
+
         self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg

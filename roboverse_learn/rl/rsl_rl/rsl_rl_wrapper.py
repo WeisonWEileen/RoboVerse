@@ -29,7 +29,7 @@ class RslRlWrapper(VecEnv):
             raise NotImplementedError(
                 f"RslRlWrapper in Roboverse now only supports {SimType.ISAACGYM}, but got {scenario.sim}"
             )
-        self.device = torch.device("cuda" if torch.cuda.is_available else "cpu")
+        self.device = torch.device(scenario.device if torch.cuda.is_available() else "cpu")
         log.info(f"using device {self.device}")
         self._parse_cfg(scenario)
 

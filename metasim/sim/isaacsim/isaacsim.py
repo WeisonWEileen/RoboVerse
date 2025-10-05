@@ -49,7 +49,8 @@ class IsaacsimHandler(BaseSimHandler):
         self._robot_init_quat = {robot.name: robot.default_orientation for robot in self.robots}
         self._cameras = scenario_cfg.cameras
 
-        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._device = torch.device(scenario_cfg.device if torch.cuda.is_available() else "cpu")
+        log.info(f"Using device: {self._device}")
         self._num_envs: int = scenario_cfg.num_envs
         self._episode_length_buf = [0 for _ in range(self.num_envs)]
 
@@ -118,6 +119,7 @@ class IsaacsimHandler(BaseSimHandler):
         parser = argparse.ArgumentParser()
         AppLauncher.add_app_launcher_args(parser)
         args = parser.parse_args([])
+        args.device = self.scenario_cfg.device
         args.enable_cameras = True
         args.headless = self.headless
         app_launcher = AppLauncher(args)
