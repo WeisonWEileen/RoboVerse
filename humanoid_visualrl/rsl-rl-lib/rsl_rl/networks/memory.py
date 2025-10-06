@@ -16,6 +16,7 @@ class Memory(torch.nn.Module):
         super().__init__()
         # RNN
         rnn_cls = nn.GRU if type.lower() == "gru" else nn.LSTM
+
         self.rnn = rnn_cls(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers)
         self.hidden_states = None
 

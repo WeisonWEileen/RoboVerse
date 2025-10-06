@@ -203,6 +203,7 @@ class BaseTableHumanoidTaskCfg:
     reward_weights: dict[str, float] = MISSING
 
     robots: list[RobotCfg] | None = None
+    robot: str = "g1_static_inpire_left_fixed"
     """List of robots in the environment."""
     command_ranges: CommandRanges = CommandRanges()
     """Command Ranges for random command sampling when training."""
@@ -345,32 +346,12 @@ class BaseTableHumanoidTaskCfg:
                 #         "right_elbow_joint": 1.45,
                 #     },
                 # },
-                "g1_static_dex1": {
-                    "pos": torch.tensor([0.0, 0.0, 0.60]),
-                    "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
-                    "dof_pos": {
-                        "waist_yaw_joint": 0.0,
-                        "waist_roll_joint": 0.0,
-                        "waist_pitch_joint": 0.0,
-                        "left_shoulder_pitch_joint": 0.0,
-                        "left_shoulder_roll_joint": 0.0,
-                        "left_shoulder_yaw_joint": 0.0,
-                        "left_elbow_joint": 0.0,
-                        "left_wrist_roll_joint": 0.0,
-                        "left_wrist_pitch_joint": 0.0,
-                        "left_wrist_yaw_joint": 0.0,
-                        "right_shoulder_pitch_joint": 0.0,
-                        "right_shoulder_roll_joint": 0.0,
-                        "right_shoulder_yaw_joint": 0.0,
-                        "right_elbow_joint": 0.0,
-                        "right_wrist_roll_joint": 0.0,
-                        "right_wrist_pitch_joint": 0.0,
-                        "right_wrist_yaw_joint": 0.0,
-                    },
-                },
+
             },
         }
+
     ]
+
 
     command_dim = 14
     num_actions = 17
@@ -522,7 +503,8 @@ class BaseTableHumanoidTaskCfg:
         log.info("================================================")
 
         # training runtime highly relevant
-        self.robot = "g1_static_dex1"
+        # self.robot = "g1_static_dex1"
+        self.robot = "g1_static_inpire_left_fixed"
         self.num_envs = 64
         self.enable_opencv_display = True
         self.use_vision = True
@@ -533,3 +515,79 @@ class BaseTableHumanoidTaskCfg:
         else:
             self.ppo_cfg.policy.masking_all = True
 
+        if self.robot == "g1_static_dex1":
+            self.init_states[0]["robots"] = {
+                "g1_static_dex1": {
+                    "pos": torch.tensor([0.0, 0.0, 0.60]),
+                    "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
+                    "dof_pos": {
+                        "waist_yaw_joint": 0.0,
+                        "waist_roll_joint": 0.0,
+                        "waist_pitch_joint": 0.0,
+                        "left_shoulder_pitch_joint": 0.0,
+                        "left_shoulder_roll_joint": 0.0,
+                        "left_shoulder_yaw_joint": 0.0,
+                        "left_elbow_joint": 0.0,
+                        "left_wrist_roll_joint": 0.0,
+                        "left_wrist_pitch_joint": 0.0,
+                        "left_wrist_yaw_joint": 0.0,
+                        "right_shoulder_pitch_joint": 0.0,
+                        "right_shoulder_roll_joint": 0.0,
+                        "right_shoulder_yaw_joint": 0.0,
+                        "right_elbow_joint": 0.0,
+                        "right_wrist_roll_joint": 0.0,
+                        "right_wrist_pitch_joint": 0.0,
+                        "right_wrist_yaw_joint": 0.0,
+                    },
+                },
+            }
+            self.cameras[0].mount_to = "g1_static_dex1"
+            self.cameras[0].mount_link = "torso_link/d435_link"
+            self.num_joints = 17
+
+        elif self.robot == "g1_static_inpire_left_fixed":
+            self.init_states[0]["robots"] = {
+                "g1_static_inpire_left_fixed": {
+                    "pos": torch.tensor([0.0, 0.0, 0.60]),
+                    "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
+                    "dof_pos": {
+                        "waist_yaw_joint": 0.0,
+                        "waist_roll_joint": 0.0,
+                        "waist_pitch_joint": 0.0,
+                        "left_shoulder_pitch_joint": 0.0,
+                        "left_shoulder_roll_joint": 0.0,
+                        "left_shoulder_yaw_joint": 0.0,
+                        "left_elbow_joint": 0.0,
+                        "left_wrist_roll_joint": 0.0,
+                        "left_wrist_pitch_joint": 0.0,
+                        "left_wrist_yaw_joint": 0.0,
+                        "right_shoulder_pitch_joint": 0.0,
+                        "right_shoulder_roll_joint": 0.0,
+                        "right_shoulder_yaw_joint": 0.0,
+                        "right_elbow_joint": 0.0,
+                        "right_wrist_roll_joint": 0.0,
+                        "right_wrist_pitch_joint": 0.0,
+                        "right_wrist_yaw_joint": 0.0,
+                        "R_index_proximal_joint": 0.0,
+                        "R_index_intermediate_joint": 0.0,
+                        "R_middle_proximal_joint": 0.0,
+                        "R_middle_intermediate_joint": 0.0,
+                        "R_pinky_proximal_joint": 0.0,
+                        "R_pinky_intermediate_joint": 0.0,
+                        "R_ring_proximal_joint": 0.0,
+                        "R_ring_intermediate_joint": 0.0,
+                        "R_thumb_proximal_yaw_joint": 0.0,
+                        "R_thumb_proximal_pitch_joint": 0.0,
+                        "R_thumb_intermediate_joint": 0.0,
+                        "R_thumb_distal_joint": 0.0,
+                    },
+                },
+            }
+            self.cameras[0].mount_to = "g1_static_inpire_left_fixed"
+            self.cameras[0].mount_link = "d435_link"
+            self.num_joints = 29
+
+        self.num_single_obs = self.num_joints * 3
+        self.num_observations: int = int(self.frame_stack * self.num_single_obs)
+        self.single_num_privileged_obs: int = self.num_joints * 3
+        self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)

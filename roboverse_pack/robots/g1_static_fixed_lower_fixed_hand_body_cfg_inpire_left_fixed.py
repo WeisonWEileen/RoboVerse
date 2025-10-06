@@ -8,13 +8,11 @@ from metasim.utils import configclass
 
 
 @configclass
-class G1StaticDex1Cfg(RobotCfg):
-    name: str = "g1_static_dex1"
-    num_joints: int = 17
-    # usd_path: str = "roboverse_data/robots/g1/xml/g1_29dof_lock_waist_rev_1_0_modified_lower_fixed.usd"
-    usd_path: str = "roboverse_data/robots/g1_inspire/g1_29dof_with_inspire_rev_1_0.usd"
+class G1StaticInpireLeftFixedCfg(RobotCfg):
+    name: str = "g1_static_inpire_left_fixed"
+    usd_path: str = "/home/panwei/RoboVerse/roboverse_data/robots/g1_inspire/g1_29dof_with_inspire_rev_1_0.usd"
     xml_path: str = MISSING
-    urdf_path: str = "roboverse_data/robots/g1/test_8_31.usd"
+    urdf_path: str = MISSING
     enabled_gravity: bool = True
     fix_base_link: bool = True
     # fix_base_link: bool = False
@@ -23,11 +21,7 @@ class G1StaticDex1Cfg(RobotCfg):
     collapse_fixed_joints: bool = True
 
     actuators: dict[str, BaseActuatorCfg] = {
-        # "waist_yaw_joint": BaseActuatorCfg(stiffness=400, damping=5),
-        # "waist_roll_joint": BaseActuatorCfg(stiffness=400, damping=5),
-        # "waist_pitch_joint": BaseActuatorCfg(stiffness=400, damping=5),
         "waist_yaw_joint": BaseActuatorCfg(stiffness=80, damping=8),
-        # todo: make it even smaller
         "waist_roll_joint": BaseActuatorCfg(stiffness=60, damping=5),
         "waist_pitch_joint": BaseActuatorCfg(stiffness=60, damping=5),
         "left_shoulder_pitch_joint": BaseActuatorCfg(stiffness=40, damping=10),
@@ -44,6 +38,18 @@ class G1StaticDex1Cfg(RobotCfg):
         "right_wrist_roll_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
         "right_wrist_yaw_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
         "right_wrist_pitch_joint": BaseActuatorCfg(stiffness=4, damping=0.2),
+        "R_index_proximal_joint": BaseActuatorCfg(stiffness=2, damping=0.1),
+        "R_index_intermediate_joint": BaseActuatorCfg(stiffness=2, damping=0.1),
+        "R_middle_proximal_joint": BaseActuatorCfg(stiffness=2, damping=0.1),
+        "R_middle_intermediate_joint": BaseActuatorCfg(stiffness=2, damping=0.1),
+        "R_pinky_proximal_joint": BaseActuatorCfg(stiffness=2, damping=0.1),
+        "R_pinky_intermediate_joint": BaseActuatorCfg(stiffness=2, damping=0.1),
+        "R_ring_proximal_joint": BaseActuatorCfg(stiffness=2, damping=0.1),
+        "R_ring_intermediate_joint": BaseActuatorCfg(stiffness=2, damping=0.1),
+        "R_thumb_proximal_yaw_joint": BaseActuatorCfg(stiffness=3, damping=0.15),
+        "R_thumb_proximal_pitch_joint": BaseActuatorCfg(stiffness=3, damping=0.15),
+        "R_thumb_intermediate_joint": BaseActuatorCfg(stiffness=3, damping=0.15),
+        "R_thumb_distal_joint": BaseActuatorCfg(stiffness=3, damping=0.15),
     }
     joint_limits: dict[str, tuple[float, float]] = {
         "waist_yaw_joint": (-2.618, 2.618),
@@ -83,6 +89,18 @@ class G1StaticDex1Cfg(RobotCfg):
         "right_wrist_pitch_joint": 25,
         "right_wrist_roll_joint": 25,
         "right_wrist_yaw_joint": 25,
+        "R_index_proximal_joint": 2,
+        "R_index_intermediate_joint": 2,
+        "R_middle_proximal_joint": 2,
+        "R_middle_intermediate_joint": 2,
+        "R_pinky_proximal_joint": 2,
+        "R_pinky_intermediate_joint": 2,
+        "R_ring_proximal_joint": 2,
+        "R_ring_intermediate_joint": 2,
+        "R_thumb_proximal_yaw_joint": 3,
+        "R_thumb_proximal_pitch_joint": 3,
+        "R_thumb_intermediate_joint": 3,
+        "R_thumb_distal_joint": 3,
     }
 
     default_joint_positions: dict[str, float] = {  # = target angles [rad] when action = 0.0
@@ -103,6 +121,19 @@ class G1StaticDex1Cfg(RobotCfg):
         "right_wrist_pitch_joint": 0.0,
         "right_wrist_roll_joint": 0.0,
         "right_wrist_yaw_joint": 0.0,
+
+        "R_index_proximal_joint": 0.0,
+        "R_index_intermediate_joint": 0.0,
+        "R_middle_proximal_joint": 0.0,
+        "R_middle_intermediate_joint": 0.0,
+        "R_pinky_proximal_joint": 0.0,
+        "R_pinky_intermediate_joint": 0.0,
+        "R_ring_proximal_joint": 0.0,
+        "R_ring_intermediate_joint": 0.0,
+        "R_thumb_proximal_yaw_joint": 0.0,
+        "R_thumb_proximal_pitch_joint": 0.0,
+        "R_thumb_intermediate_joint": 0.0,
+        "R_thumb_distal_joint": 0.0,
     }
 
     control_type: dict[str, Literal["position", "effort"]] = {
@@ -123,6 +154,18 @@ class G1StaticDex1Cfg(RobotCfg):
         "right_wrist_pitch_joint": "effort",
         "right_wrist_roll_joint": "effort",
         "right_wrist_yaw_joint": "effort",
+        "R_index_proximal_joint": "effort",
+        "R_index_intermediate_joint": "effort",
+        "R_middle_proximal_joint": "effort",
+        "R_middle_intermediate_joint": "effort",
+        "R_pinky_proximal_joint": "effort",
+        "R_pinky_intermediate_joint": "effort",
+        "R_ring_proximal_joint": "effort",
+        "R_ring_intermediate_joint": "effort",
+        "R_thumb_proximal_yaw_joint": "effort",
+        "R_thumb_proximal_pitch_joint": "effort",
+        "R_thumb_intermediate_joint": "effort",
+        "R_thumb_distal_joint": "effort",
     }
 
     # rigid body name substrings, to find indices of different rigid bodies.
@@ -144,3 +187,5 @@ class G1StaticDex1Cfg(RobotCfg):
         "waist_roll_joint",
         "wrist",
     ]
+
+    num_joints: int = len(actuators)

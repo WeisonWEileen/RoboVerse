@@ -1,42 +1,67 @@
-from isaacsim import SimulationApp
-simulation_app = SimulationApp({"headless": True})
-# load isaaclab 
-import omni.kit.commands
-from omni.kit.viewport.utility import get_active_viewport
-from pxr import Sdf, Usd, UsdGeom
+# create a isaacsim window
+from isaaclab.app import AppLauncher
 
-# Useful variables that will be passed to the FramePrimsCommand
-camera_path = None
-prim_to_frame = "/World/Cube"
-time = Usd.TimeCode.Default()
-resolution = (1, 1)
-zoom = 0.6
+app_launcher = AppLauncher(headless=True)
+# app_launcher.launch()
+from pxr import Usd, UsdGeom, UsdPhysics, Gf, PhysxSchema
+import omni.usd
 
-# Get the stage
+# Create a stage
+omni.usd.get_context().new_stage()
 stage = omni.usd.get_context().get_stage()
 
-active_viewport = get_active_viewport()
-if active_viewport:
-    # Pull meaningful information from the Viewport to frame a specific prim
-    time = active_viewport.time
-    resolution = active_viewport.resolution
-    camera_path = active_viewport.camera_path
-else:
-    # Otherwise, create a camera that will be used to frame the prim_to_frame
-    camera_path = "/World/New_Camera"
-    UsdGeom.Camera.Define(stage, camera_path)
+# Define the root Xform (transformable object)
+rootxform = UsdGeom.Xform.Define(stage, "/World")
 
-# Finally run the undo-able FramePrimsCommand
-omni.kit.commands.execute(
-    "FramePrimsCommand",
-    # The path to the camera that is begin moved
-    prim_to_move=camera_path,
-    # The prim that is begin framed / looked at
-    prims_to_frame=[prim_to_frame],
-    # The Usd.TimCode that camera_path will use to set new location and orientation
-    time_code=time,
-    # The aspect_ratio of the image-place that is being viewed
-    aspect_ratio=resolution[0] / resolution[1],
-    # Additional slop to use for the framing
-    zoom=zoom,
-)
+rigidBodyPaths = ["/World/rigidBody0", "/World/rigidBody1"]
+revoluteJointPath = "/World/revoluteJoint"
+fixedJointPath = "/World/fixedJoint"
+
+# The initial pose of the root link.
+rootLinkStartPosition = Gf.Vec3f(0, 0, 0)
+rootLinkStartRotation = Gf.Quatf(1.0)
+# The joint frames of the revolute joint coupling
+# the two links of the articulation.
+revoluteJointlocalPositions = [Gf.Vec3f(0.0, 10.0, 0.0), Gf.Vec3f(0.0, 0.0, 0.0)]
+revoluteJointLocalRotations = [Gf.Quatf(1.0), Gf.Quatf(1.0)]
+
+# body0 is chosen to be the root link.
+rootLinkId = 0
+rigidBodyXforms = [None] * 2
+
+for i in range(2):
+    # Create the rigid body
+    rigidBodyXform = UsdGeom.Xform.Define(stage, rigidBodyPaths[i])
+    rigidBodyXforms[i] = rigidBodyXform
+    rigidBodyPrim = rigidBodyXform.GetPrim()
+    rigidBodyAPI = UsdPhysics.RigidBodyAPI.Apply(rigidBodyPrim)
+    rigidBodyAPI.CreateRigidBodyEnabledAttr(True)
+    massAPI = UsdPhysics.MassAPI.Apply(rigidBodyPrim)
+    massAPI.CreateMassAttr(2.0)
+
+
+# Create a revolute joint between the two rigid body prims
+revoluteJoint = UsdPhysics.RevoluteJoint.Define(stage, revoluteJointPath)
+
+breakpoint()
+revoluteJoint.CreateAxisAttr(UsdPhysics.Tokens.y)
+revoluteJoint.CreateBody0Rel().AddTarget(rigidBodyPaths[0])
+revoluteJoint.CreateBody1Rel().AddTarget(rigidBodyPaths[1])
+revoluteJoint.CreateLocalPos0Attr().Set(revoluteJointlocalPositions[0])
+revoluteJoint.CreateLocalRot0Attr().Set(revoluteJointLocalRotations[0])
+revoluteJoint.CreateLocalPos1Attr().Set(revoluteJointlocalPositions[1])
+revoluteJoint.CreateLocalRot1Attr().Set(revoluteJointLocalRotations[1])
+
+# Create a fixed joint between the root link and the world.
+# Mark the fixed joint as the root. This will create a fixed
+# base articulation with body0 as the root link.
+fixedJoint = UsdPhysics.FixedJoint.Define(stage, fixedJointPath)
+fixedJoint.CreateBody0Rel().AddTarget(rigidBodyPaths[rootLinkId])
+UsdPhysics.ArticulationRootAPI.Apply(fixedJoint.GetPrim())
+
+# Set the initial pose of the root link
+rigidBodyXforms[rootLinkId].AddTranslateOp().Set(rootLinkStartPosition)
+rigidBodyXforms[rootLinkId].AddOrientOp().Set(rootLinkStartRotation)
+
+from loguru import logger as log
+log.info("Done")

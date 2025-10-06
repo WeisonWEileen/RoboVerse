@@ -271,6 +271,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._keyboard_sub = None
 
     def _set_perspective_camera_look_at(self, target_prim: str) -> None:
+        # TODO it was not successful
         from pxr import UsdGeom, Gf
         import omni.usd
         from omni.kit.viewport.utility import get_active_viewport
@@ -608,6 +609,45 @@ class IsaacsimHandler(BaseSimHandler):
             cfg.actuators[joint_name].velocity_limit = actuator.velocity_limit
         robot_inst = Articulation(cfg)
         self.scene.articulations[robot.name] = robot_inst
+
+        from pxr import Usd, UsdPhysics
+        import omni.usd
+
+        stage = omni.usd.get_context().get_stage()
+        robot_joint_prim_root = stage.GetPrimAtPath(f"/World/envs/env_0/{robot.name}/joints")  # 你的机器人路径
+
+        joint_list = []
+        if robot_joint_prim_root and robot_joint_prim_root.IsValid():
+            for prim in robot_joint_prim_root.GetChildren():
+                if prim.GetTypeName() == "PhysicsRevoluteJoint":
+                    # get joint name
+                    joint_name = prim.GetName()
+                    if not joint_name in self.robots[0].actuators.keys():
+                        # get the two prim that the joint is connected to
+                        # body0 = prim.GetAttribute("body0")
+                        # body1 = prim.GetAttribute("body1")
+                        revolute_joint = UsdPhysics.RevoluteJoint.Get(stage, prim.GetPath())
+
+
+                        # 获取关节连接的两个 body
+                        body0 = revolute_joint.GetBody0Rel().GetTargets()
+                        body1 = revolute_joint.GetBody1Rel().GetTargets()
+
+                        # deleted this revolute joint and convert it to a fixed joint
+                        stage.RemovePrim(prim.GetPath())
+                        fixed_joint = UsdPhysics.FixedJoint.Define(stage, prim.GetPath())
+                        fixed_joint.CreateBody0Rel().AddTarget(body0[0])
+                        fixed_joint.CreateBody1Rel().AddTarget(body1[0])
+                        continue
+                    # stage.RemovePrim(prim.GetPath())
+
+                    # joint_list.append((body0.GetPath().pathString, body1.GetPath().pathString))
+                    joint_list.append(prim.GetPath().pathString)
+                # else print the joint type
+        else:
+            print(f"Robot prim not found at: /World/envs/env_0/{robot.name}")
+        print("Joints found:", joint_list)
+        print("=" * 100)
 
     def _add_object(self, obj: BaseObjCfg) -> None:
         """Add an object to the scene."""
