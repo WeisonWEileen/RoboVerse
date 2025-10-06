@@ -16,6 +16,7 @@ from metasim.types import TensorState
 from metasim.utils.math import quat_apply, quat_mul
 from loguru import logger as log
 from metasim.task.registry import register_task
+from humanoid_visualrl.utils.utils import get_joint_reindexed_indices_from_substring
 
 
 @register_task("active_vision")
@@ -84,9 +85,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.compute_pixel_distance_reward = False
 
         self.extra_buf["episode_metrics"]["see_flag_avg"] = 0.0
-
-
-
+        self._get_joint_masking_indices()
         # calucalte camera pos due to the bug that camera is not updated
         if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
             name = self.env.get_body_names(self.robot.name)
@@ -111,6 +110,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
         )
 
+    def _get_joint_masking_indices(self):
+        mask_joint_names = self.cfg.mask_joint_names
+        self.mask_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env, self.robot.name, mask_joint_names, device=self.device
+        )
+        self.action_masking = torch.ones(self.num_actions, device=self.device, dtype=torch.float)
+        self.action_masking[self.mask_joint_indices] = 0.0
 
     def _init_buffers(self):
         super()._init_buffers()
@@ -212,31 +218,27 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # turn it into float
         self.cube_showup = self.see_flag.float()
 
+        # rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
 
-            # rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
+        # print(f"rewards: {rewards[0]}")
 
-            # print(f"rewards: {rewards[0]}")
+        # 在env 0的图像上绘制坐标点
+        # if self.env._render_viewport:
+        # 找到env 0在valid_envs中的索引
 
-            # 在env 0的图像上绘制坐标点
-            # if self.env._render_viewport:
-            # 找到env 0在valid_envs中的索引
+        # 更新显示缓冲区
+        # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
 
-            # 更新显示缓冲区
-            # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
+        # distance_0 = distance[env_0_pos].item()
+        # distance_text = f"Distance: {distance_0:.1f} px"
+        # font = cv2.FONT_HERSHEY_SIMPLEX
+        # font_scale = 0.6
+        # font_color = (255, 255, 255)  # 白色文字
+        # font_thickness = 2
+        # text_x, text_y = 10, 25
 
-            # distance_0 = distance[env_0_pos].item()
-            # distance_text = f"Distance: {distance_0:.1f} px"
-            # font = cv2.FONT_HERSHEY_SIMPLEX
-            # font_scale = 0.6
-            # font_color = (255, 255, 255)  # 白色文字
-            # font_thickness = 2
-            # text_x, text_y = 10, 25
-
-            # cv2.putText(rgb_image, distance_text, (text_x, text_y),
-            #           font, font_scale, font_color, font_thickness)
-
-
-
+        # cv2.putText(rgb_image, distance_text, (text_x, text_y),
+        #           font, font_scale, font_color, font_thickness)
 
         if self.see_flag.any():
             # 计算加权中心点
@@ -255,10 +257,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
 
         # Display the image and check if window is still open
-        
 
         # if self.opencv_render_env_idx in torch.where(self.see_flag)[0]:
-        
 
         # if specific env draw
         if self.env._render_viewport:
@@ -268,25 +268,29 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
             if env_idx.any():
                 env_pos = torch.where(env_idx)[0][0]
-                
-                weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
-                weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
+
+                weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(
+                    dim=(1, 2)
+                )  # (num_valid_envs,)
+                weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(
+                    dim=(1, 2)
+                )  # (num_valid_envs,)
 
                 # 归一化
                 # center_y = weighted_y / self.pixel_counts[self.see_flag]
                 # center_x = weighted_x / self.pixel_counts[self.see_flag]
-                
+
                 # 获取env idx的中心点坐标
                 center_x = int(self.center_x[env_pos].item())
                 center_y = int(self.center_y[env_pos].item())
 
                 # 获取env idx的RGB图像并转换为numpy格式用于绘制
-            
+
                 # if self.env._render_viewport:
                 # # 确保图像是uint8格式
                 # rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
                 # rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
-            
+
                 if rgb_image.dtype != np.uint8:
                     rgb_image = (rgb_image * 255).astype(np.uint8)
 
@@ -307,13 +311,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     1,
                 )
             window_open = self.opencv_renderer.display(rgb_image)
-            
+
             if not window_open:
                 # User closed the window, disable further display
                 self.enable_opencv_display = False
                 print("OpenCV display window closed by user")
-
-
 
     def _update_see_flag_history(self):
         """Update the see_flag history buffer for curriculum learning."""

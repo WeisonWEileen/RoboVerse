@@ -449,6 +449,16 @@ class BaseTableHumanoidTaskCfg:
 
     finetune = False
 
+    mask_joint_names = [
+        "left_elbow_joint",
+        "left_shoulder_pitch_joint",
+        "left_shoulder_roll_joint",
+        "left_shoulder_yaw_joint",
+        "left_wrist_pitch_joint",
+        "left_wrist_roll_joint",
+        "left_wrist_yaw_joint",
+    ]
+
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
         # self.randomize_cube_y_offset = 0.1

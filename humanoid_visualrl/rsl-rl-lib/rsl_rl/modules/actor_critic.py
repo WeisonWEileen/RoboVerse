@@ -20,6 +20,7 @@ class ActorCritic(nn.Module):
         num_actor_obs,
         num_critic_obs,
         num_actions,
+        action_masking,
         actor_hidden_dims=[256, 256, 256],
         critic_hidden_dims=[256, 256, 256],
         activation="elu",
@@ -79,17 +80,8 @@ class ActorCritic(nn.Module):
         # disable args validation for speedup
         Normal.set_default_validate_args(False)
 
-        self.mask = torch.ones(num_actions, dtype=torch.float, device="cuda")
-        if masking_all:
-            #  mask all none waist actions
-            self.mask[0:14] = 0.0
-        else:
-            # mask left hand
-            self.mask[0:7] = 0.0
-            # mask right wrist
-            self.mask[11:14] = 0.0
+        self.mask = action_masking.clone()
         from loguru import logger as log
-
         log.info(f"Action Masking: {self.mask}")
 
     @staticmethod
