@@ -220,7 +220,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         # self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
-        self._set_perspective_camera_look_at("/World/envs/env_0")
+        # self._set_perspective_camera_look_at("/World/envs/env_0")
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         # self._setup_selective_collision()
         self.sim.reset()
@@ -271,7 +271,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._keyboard_sub = None
 
     def _set_perspective_camera_look_at(self, target_prim: str) -> None:
-        # TODO it was not successful
+        # TODO it was not successful, it do not update in the schema
         from pxr import UsdGeom, Gf
         import omni.usd
         from omni.kit.viewport.utility import get_active_viewport
@@ -303,6 +303,9 @@ class IsaacsimHandler(BaseSimHandler):
 
         xform_op = xform_api.AddTransformOp(UsdGeom.XformOp.PrecisionDouble)
         xform_op.Set(new_cam_mat.GetInverse())
+
+
+
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
         # if states is list[DictEnvState], iterate over it and set state
@@ -614,7 +617,7 @@ class IsaacsimHandler(BaseSimHandler):
         import omni.usd
 
         stage = omni.usd.get_context().get_stage()
-        robot_joint_prim_root = stage.GetPrimAtPath(f"/World/envs/env_0/{robot.name}/joints")  # 你的机器人路径
+        robot_joint_prim_root = stage.GetPrimAtPath(f"/World/envs/env_0/{robot.name}/joints")  # 你的机器人joints路径
 
         joint_list = []
         if robot_joint_prim_root and robot_joint_prim_root.IsValid():

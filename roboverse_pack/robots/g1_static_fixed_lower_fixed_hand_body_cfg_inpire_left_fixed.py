@@ -10,7 +10,7 @@ from metasim.utils import configclass
 @configclass
 class G1StaticInpireLeftFixedCfg(RobotCfg):
     name: str = "g1_static_inpire_left_fixed"
-    usd_path: str = "/home/panwei/RoboVerse/roboverse_data/robots/g1_inspire/g1_29dof_with_inspire_rev_1_0.usd"
+    usd_path: str = "roboverse_data/robots/g1_inspire/g1_29dof_with_inspire_rev_1_0_1.usd"
     xml_path: str = MISSING
     urdf_path: str = MISSING
     enabled_gravity: bool = True

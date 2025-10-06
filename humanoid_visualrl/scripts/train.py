@@ -42,7 +42,7 @@ if __name__ == "__main__":
     )
     scenario.lights = [
         DomeLightCfg(
-            intensity=100.0,
+            intensity=1000.0,
             color=(0.85, 0.9, 1.0),
         ),
     ]
