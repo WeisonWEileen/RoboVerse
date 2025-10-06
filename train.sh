@@ -2,18 +2,21 @@
 
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7,8
 # /home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
-
+USER_NAME=$(whoami)
 
 if [ "$USER_NAME" = "balen" ]; then
     PYTHON_PATH="/home/balen/conda/envs/metasim/bin/python"
+    echo "Using balen's python path"
 elif [ "$USER_NAME" = "ghr" ]; then
     PYTHON_PATH="/datasets/v2p/current/pw-workspace/conda/isaaclab211/bin/python"
+    echo "Using ghr's python path"
 else
     PYTHON_PATH="python3"
+    echo "Using default python path"
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs  16 \
+    --num_envs  64 \
     --task "active_vision" \
     --run_name "end2end" \
     --headless \
