@@ -295,7 +295,7 @@ class BaseTableHumanoidTaskCfg:
             # size=(0.09, 0.09, 0.09),
             # color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
-            usd_path="roboverse_data/objects/visdex_objects/USD/1ewirxhn/1ewirxhn.usd",
+            usd_path="roboverse_data/objects/visdex_objects/USD/2h0dnrqc/2h0dnrqc.usd",
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.3, 0.1, 0.951),
@@ -369,20 +369,14 @@ class BaseTableHumanoidTaskCfg:
 
     ]
 
-
     command_dim = 14
     num_actions = 17
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
-        # "upper_body_pos": 0.1,
-        # "look_at_object": 0.4,
         "see_object": 0.8,
-        # "pixel_norm_at_object": 0.4,
-        # "wrist_close_to_object": 1.0,
-        # "object_showup": 0.1,
         "hand_to_object_dist": 1.0,
-        "lift_object": 1.0,
+        "lift_object": 2.0,
     }
 
     frame_stack = 1
@@ -431,13 +425,8 @@ class BaseTableHumanoidTaskCfg:
         PinholeCameraCfg(
             name="camera_first_person",
             data_types=["rgb", "semantic_seg"],
-            # data_types=["rgb", "instance_id_seg"],
-            # data_types=["rgb", "semantic_seg"],
             width=160,
-            # width=640,
             height=120,
-            # height=480,
-            
             pos=(1.5, -1.5, 1.5),
             look_at=(0.0, 0.0, 0.0),
             mount_to="g1_static_dex1",
@@ -449,25 +438,8 @@ class BaseTableHumanoidTaskCfg:
         )
     ]
 
-    @configclass
-    class PushRandomCfg:
-        """Configuration for random push forces."""
-
-        enabled: bool = False
-        """Whether to enable random push forces."""
-        max_push_vel_xy: float = 0.2
-        """Maximum push velocity in xy plane."""
-        max_push_ang_vel: float = 0.4
-        """Maximum push angular velocity."""
-        push_interval: int = 4
-        """Interval in steps for applying random push forces and torques."""
-
-    random_push = PushRandomCfg(enabled=False)
-
     randomization = True
-
     finetune = False
-
     mask_joint_names = [
         "left_elbow_joint",
         "left_shoulder_pitch_joint",
@@ -483,6 +455,7 @@ class BaseTableHumanoidTaskCfg:
     reward_lift_object_z = init_states[0]["objects"]["object"]["pos"][2] + 0.10
     reward_lift_object_exp_shapeness = 4.0
     reward_object2goal_exp_shapeness = 15
+    reward_wrist_close_to_object_exp_sharpness = 4.0
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
@@ -505,7 +478,8 @@ class BaseTableHumanoidTaskCfg:
         else:
             # self.update_curriculum_iteration = 400
             # self.randomize_object_yaw_range = 2.3
-            self.randomize_object_yaw_range = 3.14
+            # self.randomize_object_yaw_range = 3.14
+            self.randomize_object_yaw_range = 2.9
             self.curriculum_object_yaw = True
             self.warm_up_beforecurriculum = 80000
             self.curriculum_avg_thres = 0.85

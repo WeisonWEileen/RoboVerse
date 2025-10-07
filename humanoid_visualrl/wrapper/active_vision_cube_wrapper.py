@@ -17,7 +17,7 @@ from metasim.utils.math import quat_apply
 from loguru import logger as log
 from metasim.task.registry import register_task
 from humanoid_visualrl.utils.utils import get_joint_reindexed_indices_from_substring,get_body_reindexed_indices_from_substring
-
+from metasim.utils.math import quat_from_euler_xyz
 
 @register_task("active_vision")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
@@ -56,7 +56,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
         log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")
         # exit()
-        self.object_showup = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.see_flag_float = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
 
         self._reset(list(range(self.num_envs)))
 
@@ -110,6 +110,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.vision_seg_buf = torch.zeros(
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
         )
+        # find the objcfg with name "object"
+        for obj in self.cfg.objects:
+            if obj.name == "object":
+                self.env.randomize_obj_material(obj)
+                break
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -213,6 +218,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 只处理有目标像素的环境
         valid_envs = self.pixel_counts > 0
         self.see_flag = valid_envs.clone()
+        # self.see_flag_float = self.see_flag.float()
+        self.see_flag_float = self.see_flag.float()
 
         # Update see_flag history for curriculum
         self._update_see_flag_history()
@@ -223,7 +230,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _compute_pixel_distance(self):
         # target_id = next(k for k, v in self.vision_seg_info.items() if "object" in v)
         # turn it into float
-        self.object_showup = self.see_flag.float()
 
         # rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
 
@@ -397,6 +403,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.init_states.objects["object"].root_state[env_ids, 0] = object_x
             self.init_states.objects["object"].root_state[env_ids, 1] = object_y
             # self.done_buf[env_ids] = False
+            # randomize yaw
+            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
+            quat = quat_from_euler_xyz(torch.zeros(len(env_ids), device=self.device), torch.zeros(len(env_ids), device=self.device), yaw)
+            self.init_states.objects["object"].root_state[env_ids, 3:7] = quat
+
 
     def _post_reset_hook(self, env_ids):
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
@@ -408,7 +419,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # 添加分割数据的更新
             self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
         # FIXME: this is a hack to reset the object_showup
-        self.object_showup[env_ids] = 0.0
+        self.see_flag_float[env_ids] = 0.0
 
     def _check_reset(self):
         # move 0.05 to config
@@ -497,18 +508,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 使用平滑的奖励函数：当dot_product接近1时奖励接近1
         reward = torch.clamp(dot_product, min=0.0)  # 只考虑正向的对准
 
-        if self.env._render_viewport:
-            self._update_marker_viz(camera_pos, camera_quat, direction_vec)
+        # if self.env._render_viewport:
+        #     self._update_marker_viz(camera_pos, camera_quat, direction_vec)
 
         return reward
 
     def _reward_see_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for seeing the object."""
-        return self.see_flag.float()
+        return self.see_flag_float
 
     def _reward_object_showup(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for being in the pixel range of the object."""
-        return self.object_showup
+        return self.see_flag_float
 
     # def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
     #     """Reward for right hand being close to the object."""
@@ -530,12 +541,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         hand_to_object_pos_error = (
             torch.norm(hand_pos - self.object_pose_buf[:, None, :3], dim=-1).max(dim=-1).values
         )
-        return self.see_flag.float() * torch.exp(-self.cfg.reward_hand_object_dist_exp_sharpness * hand_to_object_pos_error)
+        return self.see_flag_float * torch.exp(
+            -self.cfg.reward_hand_object_dist_exp_sharpness * hand_to_object_pos_error
+        )
 
     def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         right_wrist_pos = tensor_state.robots[robot_name].body_state[:, self.right_wrist_indice, :7]
         dist = torch.norm(right_wrist_pos[:, :3] - self.object_pose_buf[:, :3], dim=1)
-        reward = self.see_flag.float() * torch.exp(-dist * 4)
+        reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
         return reward
 
     def _reward_goal_object_dist(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
@@ -543,7 +556,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         pass
 
     def _reward_lift_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        dist_squared = self.see_flag.float() * torch.square(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
+        dist_squared = self.see_flag_float * torch.square(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
         return torch.exp(-self.cfg.reward_lift_object_exp_shapeness * dist_squared)
 
     def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):

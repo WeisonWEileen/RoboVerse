@@ -68,6 +68,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.object_textures = glob.glob(
             os.path.join("roboverse_data/materials/object_textures", "**", "*.png"), recursive=True
         )
+        # TODO  randomize this
 
     def _init_keyboard(self) -> None:
         import carb
@@ -229,7 +230,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.clone_environments(copy_from_source=False)
         # self._set_perspective_camera_look_at("/World/envs/env_0")
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
-        self.filter_collisions(self.robots[0].name, "object")
+        # self.filter_collisions(self.robots[0].name, "object")
 
         # self._setup_selective_collision()
         self.sim.reset()
@@ -687,7 +688,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         ## Primitive object
         if isinstance(obj, PrimitiveCubeCfg):
-            semantic_tags = [("class", "cube")] if obj.name == "cube" else None
+            semantic_tags = [("class", "object")] if obj.name == "object" else None
             self.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
                     prim_path=prim_path,
@@ -762,6 +763,7 @@ class IsaacsimHandler(BaseSimHandler):
         ## Rigid object
         if isinstance(obj, RigidObjCfg):
             # if not fix base link, refresh rigid properties
+            semantic_tags = [("class", "object")] if obj.name == "object" else None
             if not obj.fix_base_link:
                 rigid_props = sim_utils.RigidBodyPropertiesCfg(
                     kinematic_enabled=False,
@@ -779,6 +781,7 @@ class IsaacsimHandler(BaseSimHandler):
                 usd_path=obj.usd_path,
                 rigid_props=rigid_props,
                 collision_props=collision_props,
+                semantic_tags=semantic_tags,
                 scale=obj.scale,
                 mass_props=sim_utils.MassPropertiesCfg(density=obj.mass_density),
                 # fix_base_link=obj.fix_base_link,
@@ -801,12 +804,32 @@ class IsaacsimHandler(BaseSimHandler):
                     # TODO add more control param
                 ),
             )
-            if obj.randomize_material:
+
+            from isaacsim.core.utils.prims import set_prim_attribute_value
+            import omni.usd
+
+            stage = omni.usd.get_context().get_stage()
+            baselink_prim_env0 = stage.GetPrimAtPath("/World/envs/env_0/" + obj.name + "/baseLink")
+            if baselink_prim_env0 and baselink_prim_env0.IsValid():
+                set_prim_attribute_value(
+                    prim_path="/World/envs/env_0/" + obj.name + "/baseLink",
+                    attribute_name="physxArticulation:articulationEnabled",
+                    value=False,
+                )
+            return
+        
+      
+
+        raise ValueError(f"Unsupported object type: {type(obj)}")
+    
+    def randomize_obj_material(self, obj: BaseObjCfg):
+        if obj.randomize_material:
+            for i in range(self.scene.cfg.num_envs):
                 # get stage
                 import omni.usd
 
                 stage = omni.usd.get_context().get_stage()
-                prim = stage.GetPrimAtPath(f"/World/envs/env_0/{obj.name}")
+                prim = stage.GetPrimAtPath(f"/World/envs/env_{i}/{obj.name}")
                 material_prim = prim.GetChildren()[0].GetChildren()[0].GetChildren()[0]
                 rand_attributes = [
                     "diffuse_texture",
@@ -853,32 +876,19 @@ class IsaacsimHandler(BaseSimHandler):
                         shader.CreateInput(attribute_name, attribute_type)
                     material_prim.GetAttribute(disp_name).Set(value)
 
-            from isaacsim.core.utils.prims import set_prim_attribute_value
-            import omni.usd
 
-            stage = omni.usd.get_context().get_stage()
-
-            baselink_prim_env0 = stage.GetPrimAtPath("/World/envs/env_0/" + obj.name + "/baseLink")
-            if baselink_prim_env0 and baselink_prim_env0.IsValid():
-                set_prim_attribute_value(
-                    prim_path="/World/envs/env_0/" + obj.name + "/baseLink",
-                    attribute_name="physxArticulation:articulationEnabled",
-                    value=False,
-                )
-                # for i in range(self.scene.cfg.num_envs):
-                #     prim_path_i = f"/World/envs/env_{i}/{obj.name}"
-                #     baselink_prim_i = stage.GetPrimAtPath(prim_path_i+"/baseLink")
-                #     if baselink_prim_i and baselink_prim_i.IsValid():
-                #         set_prim_attribute_value(
-                #             prim_path=prim_path_i+"/baseLink",
-                #             attribute_name="physxArticulation:articulationEnabled",
-                #             value=False
-                #         )
-                #     else:
-                #         log.error(f"BaseLink prim not found at: {prim_path_i}/baseLink, envs not aligned")
-            return
-
-        raise ValueError(f"Unsupported object type: {type(obj)}")
+            # for i in range(self.scene.cfg.num_envs):
+            #     prim_path_i = f"/World/envs/env_{i}/{obj.name}"
+            #     baselink_prim_i = stage.GetPrimAtPath(prim_path_i+"/baseLink")
+            #     if baselink_prim_i and baselink_prim_i.IsValid():
+            #         set_prim_attribute_value(
+            #             prim_path=prim_path_i+"/baseLink",
+            #             attribute_name="physxArticulation:articulationEnabled",
+            #             value=False
+            #         )
+            #     else:
+            #         log.error(f"BaseLink prim not found at: {prim_path_i}/baseLink, envs not aligned")
+        return
 
     def _load_terrain(self) -> None:
         # TODO support multiple terrains cfg
