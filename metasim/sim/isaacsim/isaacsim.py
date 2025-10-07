@@ -31,7 +31,6 @@ from metasim.utils.state import CameraState, ObjectState, RobotState, TensorStat
 
 import omni
 import weakref
-from metasim.utils.math import convert_camera_frame_orientation_convention
 
 
 class IsaacsimHandler(BaseSimHandler):
@@ -65,6 +64,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         import glob
         import os
+
         self.object_textures = glob.glob(
             os.path.join("roboverse_data/materials/object_textures", "**", "*.png"), recursive=True
         )
@@ -201,17 +201,17 @@ class IsaacsimHandler(BaseSimHandler):
 
     def filter_collisions(self, robot_name: str, obj_name: str):
         """Filter collisions between robot and obj"""
-        from pxr import Usd, UsdPhysics, PhysxSchema
+        from pxr import UsdPhysics
         import omni.usd
 
         stage = omni.usd.get_context().get_stage()
 
         for env_id in range(self.num_envs):
             robot_path = f"/World/envs/env_{env_id}/{robot_name}"
-            cube_path = f"/World/envs/env_{env_id}/{obj_name}"
+            object_path = f"/World/envs/env_{env_id}/{obj_name}"
             robot_prim = stage.GetPrimAtPath(robot_path)
             filteredPairsAPIBox0 = UsdPhysics.FilteredPairsAPI.Apply(robot_prim)
-            filteredPairsAPIBox0.CreateFilteredPairsRel().AddTarget(cube_path)
+            filteredPairsAPIBox0.CreateFilteredPairsRel().AddTarget(object_path)
 
     def launch(self) -> None:
         self._init_scene()
@@ -222,12 +222,15 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_objects()
         self._load_lights()
         if "active" in self.scenario_cfg.task.task_name:
-            self.init_marker_viz()
+            pass
+            # self.init_marker_viz()
 
         # self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
         # self._set_perspective_camera_look_at("/World/envs/env_0")
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
+        self.filter_collisions(self.robots[0].name, "object")
+
         # self._setup_selective_collision()
         self.sim.reset()
         indices = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
@@ -799,9 +802,9 @@ class IsaacsimHandler(BaseSimHandler):
                 ),
             )
             if obj.randomize_material:
-
                 # get stage
                 import omni.usd
+
                 stage = omni.usd.get_context().get_stage()
                 prim = stage.GetPrimAtPath(f"/World/envs/env_0/{obj.name}")
                 material_prim = prim.GetChildren()[0].GetChildren()[0].GetChildren()[0]
@@ -828,7 +831,7 @@ class IsaacsimHandler(BaseSimHandler):
                     Sdf.ValueTypeNames.Float,
                 ]
 
-                    # mat_prim = self.object_mat_prims[env_id]
+                # mat_prim = self.object_mat_prims[env_id]
                 property_names = material_prim.GetPropertyNames()
                 rand_attribute_vals = [
                     random.choice(self.object_textures),
@@ -849,7 +852,6 @@ class IsaacsimHandler(BaseSimHandler):
                         shader = UsdShade.Shader(omni.usd.get_shader_from_material(material_prim.GetParent(), True))
                         shader.CreateInput(attribute_name, attribute_type)
                     material_prim.GetAttribute(disp_name).Set(value)
-                
 
             from isaacsim.core.utils.prims import set_prim_attribute_value
             import omni.usd

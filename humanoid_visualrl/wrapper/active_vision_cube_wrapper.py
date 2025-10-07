@@ -28,7 +28,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.env.filter_collisions(self.robot.name, "object")
+        # self.env.filter_collisions(self.robot.name, "object")
+        # print(self.env.scene.physics_context.get_filtered_pairs())
 
         self.image_center_x = self.cfg.cameras[0].width / 2
         self.image_center_y = self.cfg.cameras[0].height / 2
@@ -389,7 +390,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             object_y = torch.sin(yaw) * radius
             self.init_states.objects["object"].root_state[env_ids, 0] = object_x
             self.init_states.objects["object"].root_state[env_ids, 1] = object_y
-            self.done_buf[env_ids] = False
+            # self.done_buf[env_ids] = False
 
     def _post_reset_hook(self, env_ids):
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
@@ -405,9 +406,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _check_reset(self):
         # move 0.05 to config
-        # terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.5
-        self.reset_buf = self.timeout_buf
-        # self.reset_buf = self.timeout_buf | terminate | self.done_buf
+        terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.5
+        # self.reset_buf = self.timeout_buf
+        self.reset_buf = self.timeout_buf | terminate
         return self.reset_buf
 
     # ==== reward functions ====
@@ -638,7 +639,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
                 old_range = self.curriculum_object_yaw_range
                 self.curriculum_object_yaw_range = min(
-                    self.curriculum_object_yaw_range + self.cfg.randomize_object_yaw_range * self.cfg.randomize_add_scale,
+                    self.curriculum_object_yaw_range
+                    + self.cfg.randomize_object_yaw_range * self.cfg.randomize_add_scale,
                     self.cfg.randomize_object_yaw_range,
                 )
                 log.info(
