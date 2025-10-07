@@ -301,6 +301,7 @@ class BaseTableHumanoidTaskCfg:
             default_position=(0.3, 0.1, 0.951),
             enable_gyroscopic_forces=True,
             mass_density=500.0,
+            randomize_material=True,
         ),
     ]
     # cameras

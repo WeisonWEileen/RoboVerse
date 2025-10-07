@@ -63,6 +63,12 @@ class IsaacsimHandler(BaseSimHandler):
         # initial do not render anything
         self._render_viewport = True
 
+        import glob
+        import os
+        self.object_textures = glob.glob(
+            os.path.join("roboverse_data/materials/object_textures", "**", "*.png"), recursive=True
+        )
+
     def _init_keyboard(self) -> None:
         import carb
 
@@ -792,6 +798,59 @@ class IsaacsimHandler(BaseSimHandler):
                     # TODO add more control param
                 ),
             )
+            if obj.randomize_material:
+
+                # get stage
+                import omni.usd
+                stage = omni.usd.get_context().get_stage()
+                prim = stage.GetPrimAtPath(f"/World/envs/env_0/{obj.name}")
+                material_prim = prim.GetChildren()[0].GetChildren()[0].GetChildren()[0]
+                rand_attributes = [
+                    "diffuse_texture",
+                    "project_uvw",
+                    "texture_scale",
+                    "diffuse_tint",
+                    "reflection_roughness_constant",
+                    "metallic_constant",
+                    "specular_level",
+                ]
+                from pxr import UsdShade, Sdf
+                import numpy as np
+                import random
+
+                attribute_types = [
+                    Sdf.ValueTypeNames.Asset,
+                    Sdf.ValueTypeNames.Bool,
+                    Sdf.ValueTypeNames.Float2,
+                    Sdf.ValueTypeNames.Color3f,
+                    Sdf.ValueTypeNames.Float,
+                    Sdf.ValueTypeNames.Float,
+                    Sdf.ValueTypeNames.Float,
+                ]
+
+                    # mat_prim = self.object_mat_prims[env_id]
+                property_names = material_prim.GetPropertyNames()
+                rand_attribute_vals = [
+                    random.choice(self.object_textures),
+                    True,
+                    tuple(np.random.uniform(0.7, 5, size=(2))),
+                    tuple(np.random.rand(3)),
+                    np.random.uniform(0.0, 1.0),
+                    np.random.uniform(0.0, 1.0),
+                    np.random.uniform(0.0, 1.0),
+                ]
+                for attribute_name, attribute_type, value in zip(
+                    rand_attributes,
+                    attribute_types,
+                    rand_attribute_vals,
+                ):
+                    disp_name = "inputs:" + attribute_name
+                    if disp_name not in property_names:
+                        shader = UsdShade.Shader(omni.usd.get_shader_from_material(material_prim.GetParent(), True))
+                        shader.CreateInput(attribute_name, attribute_type)
+                    material_prim.GetAttribute(disp_name).Set(value)
+                
+
             from isaacsim.core.utils.prims import set_prim_attribute_value
             import omni.usd
 
