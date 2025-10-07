@@ -13,10 +13,10 @@ from humanoid_visualrl.cfg.active_vision_cube_cfg import BaseTableHumanoidTaskCf
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 from metasim.types import TensorState
-from metasim.utils.math import quat_apply, quat_mul
+from metasim.utils.math import quat_apply
 from loguru import logger as log
 from metasim.task.registry import register_task
-from humanoid_visualrl.utils.utils import get_joint_reindexed_indices_from_substring
+from humanoid_visualrl.utils.utils import get_joint_reindexed_indices_from_substring,get_body_reindexed_indices_from_substring
 
 
 @register_task("active_vision")
@@ -28,7 +28,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.env.filter_collisions(self.robot.name, "object")
+        self.env.filter_collisions(self.robot.name, "object")
         # print(self.env.scene.physics_context.get_filtered_pairs())
 
         self.image_center_x = self.cfg.cameras[0].width / 2
@@ -109,6 +109,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.vision_seg_buf = torch.zeros(
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
+        )
+
+    def _parse_indices(self, robot):
+        super()._parse_indices(robot)
+        self.right_hand_palm_indices = get_body_reindexed_indices_from_substring(
+            self.env, self.robot.name, self.robot.right_hand_palm_links, device=self.device
         )
 
     def _get_joint_masking_indices(self):
@@ -519,17 +525,30 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     #     wrist_pos_error[self.see_flag] = dist[self.see_flag]
     #     return torch.exp(-4 * wrist_pos_error)
 
+    def _reward_hand_to_object_dist(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        hand_pos = tensor_state.robots[robot_name].body_state[:, self.right_hand_palm_indices, :3]
+        hand_to_object_pos_error = (
+            torch.norm(hand_pos - self.object_pose_buf[:, None, :3], dim=-1).max(dim=-1).values
+        )
+        return self.see_flag.float() * torch.exp(-self.cfg.reward_hand_object_dist_exp_sharpness * hand_to_object_pos_error)
+
     def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         right_wrist_pos = tensor_state.robots[robot_name].body_state[:, self.right_wrist_indice, :7]
         dist = torch.norm(right_wrist_pos[:, :3] - self.object_pose_buf[:, :3], dim=1)
-        # 用一个“特征距离” d0 决定衰减强度（见下文）
-        # d0 = 0.10  # 10 cm 附近作为“半好不坏”的参考尺度
-        # 只对看见方块的 env 计分，没看见直接 0
         reward = self.see_flag.float() * torch.exp(-dist * 4)
-
-        # test to visualize  wrist pos
-        # self._update_marker_viz(right_wrist_pos[:, :3], right_wrist_pos[:, 3:7], right_wrist_pos[:, :3] - self.object_pose_buf[:, :3])
         return reward
+
+    def _reward_goal_object_dist(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        # TODO: implement this
+        pass
+
+    def _reward_lift_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        dist_squared = self.see_flag.float() * torch.square(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
+        return torch.exp(-self.cfg.reward_lift_object_exp_shapeness * dist_squared)
+
+    def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        # TODO: define curl pose
+        pass
 
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
         # cupdate
@@ -651,3 +670,5 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.see_flag_history_ptr = 0
                 self.see_flag_history_full = False
                 self.see_flag_history.zero_()
+
+

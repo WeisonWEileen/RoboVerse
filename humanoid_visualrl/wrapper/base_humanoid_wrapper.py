@@ -20,7 +20,6 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
 from metasim.utils.math import quat_apply, quat_rotate_inverse
 from roboverse_learn.rl.rsl_rl.rsl_rl_wrapper import RslRlWrapper
-import time
 
 
 class HumanoidBaseWrapper(RslRlWrapper):

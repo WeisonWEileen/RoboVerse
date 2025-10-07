@@ -189,3 +189,6 @@ class G1StaticInpireLeftFixedCfg(RobotCfg):
     ]
 
     num_joints: int = len(actuators)
+
+
+    right_hand_palm_links: list[str] = ["R_index_proximal","R_middle_proximal", "R_ring_proximal", "R_pinky_proximal"]

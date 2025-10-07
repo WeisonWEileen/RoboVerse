@@ -379,8 +379,10 @@ class BaseTableHumanoidTaskCfg:
         # "look_at_object": 0.4,
         "see_object": 0.8,
         # "pixel_norm_at_object": 0.4,
-        "wrist_close_to_object": 1.0,
+        # "wrist_close_to_object": 1.0,
         # "object_showup": 0.1,
+        "hand_to_object_dist": 1.0,
+        "lift_object": 1.0,
     }
 
     frame_stack = 1
@@ -475,6 +477,12 @@ class BaseTableHumanoidTaskCfg:
         "left_wrist_roll_joint",
         "left_wrist_yaw_joint",
     ]
+
+
+    reward_hand_object_dist_exp_sharpness = 10.0
+    reward_lift_object_z = init_states[0]["objects"]["object"]["pos"][2] + 0.10
+    reward_lift_object_exp_shapeness = 4.0
+    reward_object2goal_exp_shapeness = 15
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
