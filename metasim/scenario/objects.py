@@ -142,6 +142,8 @@ class BaseArticulationObjCfg(BaseObjCfg):
 @configclass
 class RigidObjCfg(_FileBasedMixin, BaseRigidObjCfg):
     """Rigid object cfg."""
+    enable_gyroscopic_forces: bool = False
+    mass_density: float = 1.0
 
 
 @configclass

@@ -304,9 +304,6 @@ class IsaacsimHandler(BaseSimHandler):
         xform_op = xform_api.AddTransformOp(UsdGeom.XformOp.PrecisionDouble)
         xform_op.Set(new_cam_mat.GetInverse())
 
-
-
-
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
         # if states is list[DictEnvState], iterate over it and set state
         if isinstance(states, list):
@@ -631,7 +628,6 @@ class IsaacsimHandler(BaseSimHandler):
                         # body1 = prim.GetAttribute("body1")
                         revolute_joint = UsdPhysics.RevoluteJoint.Get(stage, prim.GetPath())
 
-
                         # 获取关节连接的两个 body
                         body0 = revolute_joint.GetBody0Rel().GetTargets()
                         body1 = revolute_joint.GetBody1Rel().GetTargets()
@@ -756,24 +752,70 @@ class IsaacsimHandler(BaseSimHandler):
 
         ## Rigid object
         if isinstance(obj, RigidObjCfg):
+            # if not fix base link, refresh rigid properties
+            if not obj.fix_base_link:
+                rigid_props = sim_utils.RigidBodyPropertiesCfg(
+                    kinematic_enabled=False,
+                    disable_gravity=obj.fix_base_link,
+                    enable_gyroscopic_forces=obj.enable_gyroscopic_forces,
+                    solver_position_iteration_count=8,
+                    solver_velocity_iteration_count=0,
+                    sleep_threshold=0.005,
+                    stabilization_threshold=0.0025,
+                    max_linear_velocity=1000.0,
+                    max_angular_velocity=1000.0,
+                    max_depenetration_velocity=1000.0,
+                )
             usd_file_cfg = sim_utils.UsdFileCfg(
                 usd_path=obj.usd_path,
                 rigid_props=rigid_props,
                 collision_props=collision_props,
                 scale=obj.scale,
+                mass_props=sim_utils.MassPropertiesCfg(density=obj.mass_density),
                 # fix_base_link=obj.fix_base_link,
             )
-            if isinstance(obj, RigidObjCfg):
-                self.scene.rigid_objects[obj.name] = RigidObject(
-                    RigidObjectCfg(
-                        prim_path=prim_path,
-                        spawn=usd_file_cfg,
-                        init_state=RigidObjectCfg.InitialStateCfg(
-                            pos=obj.default_position, rot=obj.default_orientation
-                        ),
-                    )
+            # usd_file_cfg = sim_utils.UsdFileCfg(
+            #     usd_path=obj.usd_path,
+            #     rigid_props=rigid_props,
+            #     collision_props=collision_props,
+            #     scale=obj.scale,
+            # # fix_base_link=obj.fix_base_link,
+            # )
+            self.scene.rigid_objects[obj.name] = RigidObject(
+                RigidObjectCfg(
+                    prim_path=prim_path,
+                    spawn=usd_file_cfg,
+                    init_state=RigidObjectCfg.InitialStateCfg(pos=obj.default_position, rot=obj.default_orientation),
+                    # kinematic_enabled=False,
+                    # disable_gravity=False,
+                    # enable_gyroscopic_forces=obj.enable_gyroscopic_forces,
+                    # TODO add more control param
+                ),
+            )
+            from isaacsim.core.utils.prims import set_prim_attribute_value
+            import omni.usd
+
+            stage = omni.usd.get_context().get_stage()
+
+            baselink_prim_env0 = stage.GetPrimAtPath("/World/envs/env_0/" + obj.name + "/baseLink")
+            if baselink_prim_env0 and baselink_prim_env0.IsValid():
+                set_prim_attribute_value(
+                    prim_path="/World/envs/env_0/" + obj.name + "/baseLink",
+                    attribute_name="physxArticulation:articulationEnabled",
+                    value=False,
                 )
-                return
+                # for i in range(self.scene.cfg.num_envs):
+                #     prim_path_i = f"/World/envs/env_{i}/{obj.name}"
+                #     baselink_prim_i = stage.GetPrimAtPath(prim_path_i+"/baseLink")
+                #     if baselink_prim_i and baselink_prim_i.IsValid():
+                #         set_prim_attribute_value(
+                #             prim_path=prim_path_i+"/baseLink",
+                #             attribute_name="physxArticulation:articulationEnabled",
+                #             value=False
+                #         )
+                #     else:
+                #         log.error(f"BaseLink prim not found at: {prim_path_i}/baseLink, envs not aligned")
+            return
 
         raise ValueError(f"Unsupported object type: {type(obj)}")
 

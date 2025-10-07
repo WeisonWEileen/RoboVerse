@@ -28,7 +28,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.env.filter_collisions(self.robot.name, "cube")
+        self.env.filter_collisions(self.robot.name, "object")
 
         self.image_center_x = self.cfg.cameras[0].width / 2
         self.image_center_y = self.cfg.cameras[0].height / 2
@@ -48,14 +48,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.success_thres = (
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
-        if self.cfg.curriculum_cube_yaw:
-            self.curriculum_cube_yaw_range = 0.7 * self.cfg.randomize_cube_yaw_range
-            # self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
+        if self.cfg.curriculum_object_yaw:
+            self.curriculum_object_yaw_range = 0.7 * self.cfg.randomize_object_yaw_range
+            # self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
         else:
-            self.curriculum_cube_yaw_range = self.cfg.randomize_cube_yaw_range
-        log.info(f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}")
+            self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
+        log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")
         # exit()
-        self.cube_showup = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.object_showup = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
 
         self._reset(list(range(self.num_envs)))
 
@@ -78,7 +78,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.pixel_counts = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
         self.right_wrist_indice = self.wrist_indices[1]
 
-        if "pixel_norm_at_cube" in self.cfg.reward_weights:
+        if "pixel_norm_at_object" in self.cfg.reward_weights:
             self.compute_pixel_distance_reward = True
             self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
         else:
@@ -134,7 +134,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.arange(height, device=self.device), torch.arange(width, device=self.device), indexing="ij"
         )
 
-        self.cube_pose_buf = self.init_states.objects["cube"].root_state[:, :7].clone()
+        self.object_pose_buf = self.init_states.objects["object"].root_state[:, :7].clone()
         if "semantic_seg" in self.cfg.cameras[0].data_types:
             self.semantic_seg = True
         else:
@@ -151,8 +151,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
 
-        # ======update cube pose======
-        self.cube_pose_buf = tensor_state.objects["cube"].root_state[:, :7]
+        # ======update object pose======
+        self.object_pose_buf = tensor_state.objects["object"].root_state[:, :7]
 
         # ======update vision rgb and seg======
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
@@ -214,9 +214,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self._compute_pixel_distance()
 
     def _compute_pixel_distance(self):
-        # target_id = next(k for k, v in self.vision_seg_info.items() if "cube" in v)
+        # target_id = next(k for k, v in self.vision_seg_info.items() if "object" in v)
         # turn it into float
-        self.cube_showup = self.see_flag.float()
+        self.object_showup = self.see_flag.float()
 
         # rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
 
@@ -333,12 +333,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
 
         # visual_features = self.resnet_features
-        # cube_pose_obs = self.cube_pose_buf
+        # object_pose_obs = self.object_pose_buf
 
         self.privileged_obs_buf = torch.cat(
             (
                 # ref_wrist_pos_obs,  # 14
-                # cube_pose_obs,
+                # object_pose_obs,
                 # wrist_pos_obs,  # 14
                 q,  # |A|
                 dq,  # |A|
@@ -374,25 +374,25 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
 
     def _pre_reset_hook(self, env_ids=None):
-        # randomly set y of cube in range (-randomize_cube_y_range, randomize_cube_y_range)
-        # if self.cfg.randomize_cube_y = True
+        # randomly set y of object in range (-randomize_object_y_range, randomize_object_y_range)
+        # if self.cfg.randomize_object_y = True
 
         if self.cfg.randomization:
-            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_cube_yaw_range
+            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_object_yaw_range
             # yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
-            # radius bias randomize_cube_radius_range
+            # radius bias randomize_object_radius_range
             radius_bias = (
-                2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_cube_radius_range
+                2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_object_radius_range
             )
-            radius = self.cfg.randomize_cube_radius + radius_bias
-            cube_x = torch.cos(yaw) * radius
-            cube_y = torch.sin(yaw) * radius
-            self.init_states.objects["cube"].root_state[env_ids, 0] = cube_x
-            self.init_states.objects["cube"].root_state[env_ids, 1] = cube_y
+            radius = self.cfg.randomize_object_radius + radius_bias
+            object_x = torch.cos(yaw) * radius
+            object_y = torch.sin(yaw) * radius
+            self.init_states.objects["object"].root_state[env_ids, 0] = object_x
+            self.init_states.objects["object"].root_state[env_ids, 1] = object_y
             self.done_buf[env_ids] = False
 
     def _post_reset_hook(self, env_ids):
-        self.cube_pose_buf[env_ids] = self.init_states.objects["cube"].root_state[env_ids, :7]
+        self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
         self.env.sim.render()
         camera_data = self.env.scene.sensors["camera_first_person"].data.output
@@ -400,12 +400,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.semantic_seg:
             # 添加分割数据的更新
             self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
-        # FIXME: this is a hack to reset the cube_showup
-        self.cube_showup[env_ids] = 0.0
+        # FIXME: this is a hack to reset the object_showup
+        self.object_showup[env_ids] = 0.0
 
     def _check_reset(self):
         # move 0.05 to config
-        # terminate = torch.abs(self.cube_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["cube"]["pos"][2]) > 0.5
+        # terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.5
         self.reset_buf = self.timeout_buf
         # self.reset_buf = self.timeout_buf | terminate | self.done_buf
         return self.reset_buf
@@ -441,8 +441,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             dim=1,
         )
 
-    def _reward_pixel_norm_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for gazing at the cube."""
+    def _reward_pixel_norm_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for gazing at the object."""
         # return self.pixel_rewards_buf - self.pixel_reward_offset
         self.pixel_rewards_buf.zero_()
 
@@ -463,16 +463,16 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
         return self.pixel_rewards_buf
 
-    def _reward_look_at_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for looking at the cube."""
+    def _reward_look_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for looking at the object."""
         # 获取相机的世界坐标位置 (num_envs, 3)
         camera_pos = self.camera_pos_w
 
         # 获取立方体的世界坐标位置 (num_envs, 3)
-        cube_pos = tensor_state.objects["cube"].root_state[:, :3]
+        object_pos = tensor_state.objects["object"].root_state[:, :3]
 
         # 计算从相机到立方体的方向向量 (num_envs, 3)
-        direction_vec = cube_pos - camera_pos
+        direction_vec = object_pos - camera_pos
         direction_vec = direction_vec / (torch.norm(direction_vec, dim=1, keepdim=True) + 1e-8)  # 归一化
 
         # 获取相机的朝向向量 (num_envs, 3)
@@ -495,22 +495,22 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         return reward
 
-    def _reward_see_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for seeing the cube."""
+    def _reward_see_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for seeing the object."""
         return self.see_flag.float()
 
-    def _reward_cube_showup(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for being in the pixel range of the cube."""
-        return self.cube_showup
+    def _reward_object_showup(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for being in the pixel range of the object."""
+        return self.object_showup
 
-    # def _reward_wrist_close_to_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-    #     """Reward for right hand being close to the cube."""
+    # def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    #     """Reward for right hand being close to the object."""
 
-    #     # for envs that can see the cube
+    #     # for envs that can see the object
     #     wrist_pos_error = torch.zeros(self.num_envs, device=self.device)
     #     wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
     #     wrist_pos_diff = (
-    #         wrist_pos[:, 0, :3] - self.cube_pose_buf[:, :3]
+    #         wrist_pos[:, 0, :3] - self.object_pose_buf[:, :3]
     #     )  # [num_envs, 2, 3], two hands, position only
     #     wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
     #     # euclidean distance
@@ -518,16 +518,16 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     #     wrist_pos_error[self.see_flag] = dist[self.see_flag]
     #     return torch.exp(-4 * wrist_pos_error)
 
-    def _reward_wrist_close_to_cube(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         right_wrist_pos = tensor_state.robots[robot_name].body_state[:, self.right_wrist_indice, :7]
-        dist = torch.norm(right_wrist_pos[:, :3] - self.cube_pose_buf[:, :3], dim=1)
+        dist = torch.norm(right_wrist_pos[:, :3] - self.object_pose_buf[:, :3], dim=1)
         # 用一个“特征距离” d0 决定衰减强度（见下文）
         # d0 = 0.10  # 10 cm 附近作为“半好不坏”的参考尺度
         # 只对看见方块的 env 计分，没看见直接 0
         reward = self.see_flag.float() * torch.exp(-dist * 4)
 
         # test to visualize  wrist pos
-        # self._update_marker_viz(right_wrist_pos[:, :3], right_wrist_pos[:, 3:7], right_wrist_pos[:, :3] - self.cube_pose_buf[:, :3])
+        # self._update_marker_viz(right_wrist_pos[:, :3], right_wrist_pos[:, 3:7], right_wrist_pos[:, :3] - self.object_pose_buf[:, :3])
         return reward
 
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
@@ -608,10 +608,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)
 
     def _update_curriculum(self):
-        self._update_curriculum_cube_yaw_range()
+        self._update_curriculum_object_yaw_range()
 
-    def _update_curriculum_cube_yaw_range(self):
-        if not self.cfg.curriculum_cube_yaw:
+    def _update_curriculum_object_yaw_range(self):
+        if not self.cfg.curriculum_object_yaw:
             return
 
         # 检查是否已经收集了足够的see_flag历史数据
@@ -635,14 +635,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 如果平均值大于0.5，则增加curriculum难度
         if see_flag_avg > self.cfg.curriculum_avg_thres:
             # 只有当范围还没到最大时才增长
-            if self.curriculum_cube_yaw_range < self.cfg.randomize_cube_yaw_range:
-                old_range = self.curriculum_cube_yaw_range
-                self.curriculum_cube_yaw_range = min(
-                    self.curriculum_cube_yaw_range + self.cfg.randomize_cube_yaw_range * self.cfg.randomize_add_scale,
-                    self.cfg.randomize_cube_yaw_range,
+            if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
+                old_range = self.curriculum_object_yaw_range
+                self.curriculum_object_yaw_range = min(
+                    self.curriculum_object_yaw_range + self.cfg.randomize_object_yaw_range * self.cfg.randomize_add_scale,
+                    self.cfg.randomize_object_yaw_range,
                 )
                 log.info(
-                    f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_cube_yaw_range:.4f}"
+                    f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
                 )
 
                 # 重置历史记录，准备下一次评估

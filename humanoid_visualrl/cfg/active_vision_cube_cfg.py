@@ -251,6 +251,8 @@ class BaseTableHumanoidTaskCfg:
     """Simulation parameters with physics engine settings."""
     dt = decimation * sim_params.dt
     """simulation time step in s"""
+
+    objects = ["33o1zhw3", "cube", "270o9y3w"]
     objects = [
         RigidObjCfg(
             name="table",
@@ -274,18 +276,31 @@ class BaseTableHumanoidTaskCfg:
             default_position=(0.0, 0.0, 0.6),
             # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
             collision_enabled=False,
+            enable_gyroscopic_forces=False,
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        PrimitiveCubeCfg(
-            name="cube",
-            size=(0.09, 0.09, 0.09),
-            color=[1.0, 0.0, 0.0],
+        # PrimitiveCubeCfg(
+        #     name="object",
+        #     size=(0.09, 0.09, 0.09),
+        #     color=[1.0, 0.0, 0.0],
+        #     physics=PhysicStateType.RIGIDBODY,
+        #     collision_enabled=True,
+        #     fix_base_link=False,
+        #     default_position=(0.3, 0.1, 0.851),
+        #     mass=0.2,  # 增加质量以确保更好的物理行为
+        # ),
+        RigidObjCfg(
+            name="object",
+            # size=(0.09, 0.09, 0.09),
+            # color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
+            usd_path="roboverse_data/objects/visdex_objects/USD/1ewirxhn/1ewirxhn.usd",
             collision_enabled=True,
             fix_base_link=False,
-            default_position=(0.3, 0.1, 0.851),
-            mass=0.2,  # 增加质量以确保更好的物理行为
+            default_position=(0.3, 0.1, 0.951),
+            enable_gyroscopic_forces=True,
+            mass_density=500.0,
         ),
     ]
     # cameras
@@ -325,7 +340,8 @@ class BaseTableHumanoidTaskCfg:
     init_states = [
         {
             "objects": {
-                "cube": {
+                # "cube": {
+                "object": {
                     "pos": torch.tensor([0.58, 0.0, 0.89]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
@@ -359,11 +375,11 @@ class BaseTableHumanoidTaskCfg:
 
     reward_weights: dict[str, float] = {
         # "upper_body_pos": 0.1,
-        # "look_at_cube": 0.4,
-        "see_cube": 0.8,
-        # "pixel_norm_at_cube": 0.4,
-        "wrist_close_to_cube": 1.0,
-        # "cube_showup": 0.1,
+        # "look_at_object": 0.4,
+        "see_object": 0.8,
+        # "pixel_norm_at_object": 0.4,
+        "wrist_close_to_object": 1.0,
+        # "object_showup": 0.1,
     }
 
     frame_stack = 1
@@ -461,43 +477,43 @@ class BaseTableHumanoidTaskCfg:
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
-        # self.randomize_cube_y_offset = 0.1
-        self.randomize_cube_curriculum = True
+        # self.randomize_object_y_offset = 0.1
+        self.randomize_object_curriculum = True
         self.randomize_add_scale = 0.05
 
         if self.finetune:
             # for finetuning, use less frequent curriculum update and less yaw range
             # self.update_curriculum_iteration = 100
-            # self.randomize_cube_yaw_range = 1.8
-            # self.randomize_cube_yaw_range = 1.8
-            self.randomize_cube_yaw_range = 3.14
-            self.curriculum_cube_yaw = False
+            # self.randomize_object_yaw_range = 1.8
+            # self.randomize_object_yaw_range = 1.8
+            self.randomize_object_yaw_range = 3.14
+            self.curriculum_object_yaw = False
 
             # self.reward_weights = {
-            #     "see_cube": 0.5,
-            #     "wrist_close_to_cube": 1.0,
+            #     "see_object": 0.5,
+            #     "wrist_close_to_object": 1.0,
             # }
         else:
             # self.update_curriculum_iteration = 400
-            # self.randomize_cube_yaw_range = 2.3
-            self.randomize_cube_yaw_range = 3.14
-            self.curriculum_cube_yaw = True
+            # self.randomize_object_yaw_range = 2.3
+            self.randomize_object_yaw_range = 3.14
+            self.curriculum_object_yaw = True
             self.warm_up_beforecurriculum = 80000
             self.curriculum_avg_thres = 0.85
             self.curriculum_randomize_iteration_interval = 200
         self.see_flag_his_win_length = 1000
 
-        self.randomize_cube_radius = self.init_states[0]["objects"]["cube"]["pos"][0]
-        self.randomize_cube_radius_range = 0.1
-        # self.randomize_cube_radius = 0.85  # max
-        # self.randomize_cube_radius = 0.55
-        # self.randomize_cube_radius -= 0.07
+        self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
+        self.randomize_object_radius_range = 0.1
+        # self.randomize_object_radius = 0.85  # max
+        # self.randomize_object_radius = 0.55
+        # self.randomize_object_radius -= 0.07
         # if self.finetune:
-        #     self.randomize_cube_radius -= 0.07
+        #     self.randomize_object_radius -= 0.07
 
-        self.curriculum_cube_yaw_stages = [0.2, 0.5, 1.0]  # Multipliers for randomize_cube_yaw_range
-        self.curriculum_cube_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
-        self.curriculum_cube_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
+        self.curriculum_object_yaw_stages = [0.2, 0.5, 1.0]  # Multipliers for randomize_object_yaw_range
+        self.curriculum_object_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
+        self.curriculum_object_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
         self.actor_critic_class = "use_rnn"
 
@@ -520,7 +536,7 @@ class BaseTableHumanoidTaskCfg:
         self.use_vision = True
         self.use_fixed_gazing = True
         # breakpoint()
-        if "wrist_close_to_cube" in self.reward_weights:
+        if "wrist_close_to_object" in self.reward_weights:
             self.ppo_cfg.policy.masking_all = False
         else:
             self.ppo_cfg.policy.masking_all = True
