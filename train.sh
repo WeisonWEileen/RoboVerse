@@ -16,11 +16,12 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs  64 \
+    --num_envs  128 \
     --task "active_vision" \
-    --run_name "end2end" \
+    --run_name "end2end1ObjRandText" \
     --device "cuda:0" \
     --enable_opencv_display \
+    --wandb
 
     # --wandb
     # --headless \
