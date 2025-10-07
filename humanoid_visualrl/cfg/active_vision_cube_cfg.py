@@ -321,6 +321,8 @@ class BaseTableHumanoidTaskCfg:
     num_actions: int = 9
     num_privileged_obs: int = 9
     max_episode_length: int = 2400
+    randomize_obj_material: bool = True
+    update_obj_material_step_interval: int = 96 * 15
 
     @configclass
     class HumanoidExtraCfg:

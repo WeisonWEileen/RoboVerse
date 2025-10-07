@@ -20,9 +20,10 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --task "active_vision" \
     --run_name "end2end" \
     --device "cuda:0" \
-    --wandb
+    --enable_opencv_display \
+
+    # --wandb
     # --headless \
-    # --enable_opencv_display \
     # --wandb \
     # --resume \
     # --load_run "2025_1005_004654" \

@@ -58,6 +58,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # exit()
         self.see_flag_float = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
 
+        for obj in self.cfg.objects:
+            if obj.name == "object":
+                self.obj = obj
+                break
+
         self._reset(list(range(self.num_envs)))
 
         # get segmatic id
@@ -110,11 +115,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.vision_seg_buf = torch.zeros(
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
         )
+        self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
         # find the objcfg with name "object"
-        for obj in self.cfg.objects:
-            if obj.name == "object":
-                self.env.randomize_obj_material(obj)
-                break
+        
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -421,6 +424,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # FIXME: this is a hack to reset the object_showup
         self.see_flag_float[env_ids] = 0.0
 
+
     def _check_reset(self):
         # move 0.05 to config
         terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.5
@@ -641,7 +645,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)
 
     def _update_curriculum(self):
+        
+        self._update_obj_material()
         self._update_curriculum_object_yaw_range()
+
+
+    def _update_obj_material(self):
+        if self.cfg.randomize_obj_material and self.common_step_counter % self.cfg.update_obj_material_step_interval == 0:
+            self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
+            log.info("Updated object material")
 
     def _update_curriculum_object_yaw_range(self):
         if not self.cfg.curriculum_object_yaw:

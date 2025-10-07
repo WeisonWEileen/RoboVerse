@@ -68,6 +68,15 @@ class IsaacsimHandler(BaseSimHandler):
         self.object_textures = glob.glob(
             os.path.join("roboverse_data/materials/object_textures", "**", "*.png"), recursive=True
         )
+        self.rand_attributes = [
+                "diffuse_texture",
+                "project_uvw",
+                "texture_scale",
+                "diffuse_tint",
+                "reflection_roughness_constant",
+                "metallic_constant",
+                "specular_level",
+            ]
         # TODO  randomize this
 
     def _init_keyboard(self) -> None:
@@ -822,59 +831,51 @@ class IsaacsimHandler(BaseSimHandler):
 
         raise ValueError(f"Unsupported object type: {type(obj)}")
     
-    def randomize_obj_material(self, obj: BaseObjCfg):
-        if obj.randomize_material:
-            for i in range(self.scene.cfg.num_envs):
-                # get stage
-                import omni.usd
+    def randomize_obj_material(self, env_ids, obj: BaseObjCfg):
 
-                stage = omni.usd.get_context().get_stage()
-                prim = stage.GetPrimAtPath(f"/World/envs/env_{i}/{obj.name}")
-                material_prim = prim.GetChildren()[0].GetChildren()[0].GetChildren()[0]
-                rand_attributes = [
-                    "diffuse_texture",
-                    "project_uvw",
-                    "texture_scale",
-                    "diffuse_tint",
-                    "reflection_roughness_constant",
-                    "metallic_constant",
-                    "specular_level",
-                ]
-                from pxr import UsdShade, Sdf
-                import numpy as np
-                import random
+        for i in range(len(env_ids)):
+            # get stage
+            import omni.usd
 
-                attribute_types = [
-                    Sdf.ValueTypeNames.Asset,
-                    Sdf.ValueTypeNames.Bool,
-                    Sdf.ValueTypeNames.Float2,
-                    Sdf.ValueTypeNames.Color3f,
-                    Sdf.ValueTypeNames.Float,
-                    Sdf.ValueTypeNames.Float,
-                    Sdf.ValueTypeNames.Float,
-                ]
+            stage = omni.usd.get_context().get_stage()
+            prim = stage.GetPrimAtPath(f"/World/envs/env_{env_ids[i]}/object")
+            material_prim = prim.GetChildren()[0].GetChildren()[0].GetChildren()[0]
 
-                # mat_prim = self.object_mat_prims[env_id]
-                property_names = material_prim.GetPropertyNames()
-                rand_attribute_vals = [
-                    random.choice(self.object_textures),
-                    True,
-                    tuple(np.random.uniform(0.7, 5, size=(2))),
-                    tuple(np.random.rand(3)),
-                    np.random.uniform(0.0, 1.0),
-                    np.random.uniform(0.0, 1.0),
-                    np.random.uniform(0.0, 1.0),
-                ]
-                for attribute_name, attribute_type, value in zip(
-                    rand_attributes,
-                    attribute_types,
-                    rand_attribute_vals,
-                ):
-                    disp_name = "inputs:" + attribute_name
-                    if disp_name not in property_names:
-                        shader = UsdShade.Shader(omni.usd.get_shader_from_material(material_prim.GetParent(), True))
-                        shader.CreateInput(attribute_name, attribute_type)
-                    material_prim.GetAttribute(disp_name).Set(value)
+            from pxr import UsdShade, Sdf
+            import numpy as np
+            import random
+
+            attribute_types = [
+                Sdf.ValueTypeNames.Asset,
+                Sdf.ValueTypeNames.Bool,
+                Sdf.ValueTypeNames.Float2,
+                Sdf.ValueTypeNames.Color3f,
+                Sdf.ValueTypeNames.Float,
+                Sdf.ValueTypeNames.Float,
+                Sdf.ValueTypeNames.Float,
+            ]
+
+            # mat_prim = self.object_mat_prims[env_id]
+            property_names = material_prim.GetPropertyNames()
+            rand_attribute_vals = [
+                random.choice(self.object_textures),
+                True,
+                tuple(np.random.uniform(0.7, 5, size=(2))),
+                tuple(np.random.rand(3)),
+                np.random.uniform(0.0, 1.0),
+                np.random.uniform(0.0, 1.0),
+                np.random.uniform(0.0, 1.0),
+            ]
+            for attribute_name, attribute_type, value in zip(
+                self.rand_attributes,
+                attribute_types,
+                rand_attribute_vals,
+            ):
+                disp_name = "inputs:" + attribute_name
+                if disp_name not in property_names:
+                    shader = UsdShade.Shader(omni.usd.get_shader_from_material(material_prim.GetParent(), True))
+                    shader.CreateInput(attribute_name, attribute_type)
+                material_prim.GetAttribute(disp_name).Set(value)
 
 
             # for i in range(self.scene.cfg.num_envs):
