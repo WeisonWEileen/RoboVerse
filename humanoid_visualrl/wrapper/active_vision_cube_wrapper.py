@@ -28,7 +28,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.env.filter_collisions(self.robot.name, "object")
+        # self.env.filter_collisions(self.robot.name, "object")
         # print(self.env.scene.physics_context.get_filtered_pairs())
 
         self.image_center_x = self.cfg.cameras[0].width / 2

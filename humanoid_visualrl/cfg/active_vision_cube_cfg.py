@@ -294,7 +294,7 @@ class BaseTableHumanoidTaskCfg:
             name="object",
             # size=(0.09, 0.09, 0.09),
             # color=[1.0, 0.0, 0.0],
-            scale=(1.4, 1.4, 1.4),
+            scale=(1.2, 1.2, 1.2),
             physics=PhysicStateType.RIGIDBODY,
             usd_path="roboverse_data/objects/visdex_objects/USD/2h0dnrqc/2h0dnrqc.usd",
             collision_enabled=True,
@@ -483,7 +483,8 @@ class BaseTableHumanoidTaskCfg:
             # self.update_curriculum_iteration = 400
             # self.randomize_object_yaw_range = 2.3
             # self.randomize_object_yaw_range = 3.14
-            self.randomize_object_yaw_range = 3.06
+            # self.randomize_object_yaw_range = 3.06
+            self.randomize_object_yaw_range = 1.06
             self.curriculum_object_yaw = True
             self.warm_up_beforecurriculum = 80000
             self.curriculum_avg_thres = 0.85

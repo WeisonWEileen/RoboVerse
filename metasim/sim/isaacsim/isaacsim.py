@@ -694,7 +694,7 @@ class IsaacsimHandler(BaseSimHandler):
         if obj.collision_enabled:
             collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
         else:
-            collision_props = None
+            collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=False)
 
         ## Primitive object
         if isinstance(obj, PrimitiveCubeCfg):
