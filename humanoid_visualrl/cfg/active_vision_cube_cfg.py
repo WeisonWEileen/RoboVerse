@@ -294,6 +294,7 @@ class BaseTableHumanoidTaskCfg:
             name="object",
             # size=(0.09, 0.09, 0.09),
             # color=[1.0, 0.0, 0.0],
+            scale=(1.4, 1.4, 1.4),
             physics=PhysicStateType.RIGIDBODY,
             usd_path="roboverse_data/objects/visdex_objects/USD/2h0dnrqc/2h0dnrqc.usd",
             collision_enabled=True,
@@ -376,7 +377,7 @@ class BaseTableHumanoidTaskCfg:
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
-        "see_object": 0.8,
+        "see_object": 0.1,
         # "hand_to_object_dist": 1.0,
         "wrist_close_to_object": 1.0,
         # "lift_object": 2.0,

@@ -192,3 +192,5 @@ class G1StaticInpireLeftFixedCfg(RobotCfg):
 
 
     right_hand_palm_links: list[str] = ["R_index_proximal","R_middle_proximal", "R_ring_proximal", "R_pinky_proximal"]
+
+    right_index_intermediate_link: str = ["R_index_intermediate"]

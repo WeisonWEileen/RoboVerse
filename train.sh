@@ -22,6 +22,7 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --device "cuda:0" \
     --enable_opencv_display \
     --wandb
+    # --debug
 
     # --wandb
     # --headless \

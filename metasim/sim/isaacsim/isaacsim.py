@@ -231,9 +231,9 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_terrain()
         self._load_objects()
         self._load_lights()
-        if "active" in self.scenario_cfg.task.task_name:
-            pass
-            # self.init_marker_viz()
+        # if "active" in self.scenario_cfg.task.task_name:
+        #     pass
+        #     self.init_marker_viz()
 
         # self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
