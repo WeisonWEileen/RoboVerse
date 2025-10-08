@@ -8,6 +8,7 @@ import os
 import torch
 from loguru import logger as log
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.scenario.lights import DomeLightCfg
 
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 from humanoid_visualrl.utils.utils import (
@@ -46,7 +47,14 @@ def play(args):
         cameras=[],
     )
     scenario.num_envs = 1
+    scenario.device = args.device
     # scenario.task
+    scenario.lights = [
+        DomeLightCfg(
+            intensity=1000.0,
+            color=(0.85, 0.9, 1.0),
+        ),
+    ]
 
     task_cfg.commands.curriculum = False
     task_cfg.ppo_cfg.resume = True
@@ -86,8 +94,8 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, export_jit_path)
         log.info(f"Exported policy as jit script to: {export_jit_path}")
 
-    # env.init_states.objects["cube"].root_state[0, :1] = 0.2
-    env_wrapper.init_states.objects["cube"].root_state[0, 1] = 0.0
+    # env.init_states.objects["object"].root_state[0, :1] = 0.2
+    env_wrapper.init_states.objects["object"].root_state[0, 1] = 0.0
     # breakpoint()
     env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
@@ -106,16 +114,16 @@ def play(args):
 
         if i % reset_interval == 0:
             yaw -= 0.3
-            radius = task_cfg.randomize_cube_radius 
+            radius = task_cfg.randomize_object_radius 
             radius_bias = 2 * (random.random() - 0.5) * 0.1
             # radius_bias = 0.0
             
-            cube_x = torch.cos(yaw) * (radius + radius_bias)
-            cube_y = torch.sin(yaw) * (radius + radius_bias)
-            cube_state = env_wrapper.init_states.objects["cube"].root_state
-            cube_state[0, 0] = cube_x
-            cube_state[0, 1] = cube_y
-            env_wrapper.env._set_object_pose(env_wrapper.cfg.objects[2], cube_state[:, :3], cube_state[:, 3:7], env_ids=[0])
+            object_x = torch.cos(yaw) * (radius + radius_bias)
+            object_y = torch.sin(yaw) * (radius + radius_bias)
+            object_state = env_wrapper.init_states.objects["object"].root_state
+            object_state[0, 0] = object_x
+            object_state[0, 1] = object_y
+            env_wrapper.env._set_object_pose(env_wrapper.cfg.objects[2], object_state[:, :3], object_state[:, 3:7], env_ids=[0])
             env_wrapper._compute_observations()
             # ppo_runner.alg.policy.reset([0])
         

@@ -377,8 +377,9 @@ class BaseTableHumanoidTaskCfg:
 
     reward_weights: dict[str, float] = {
         "see_object": 0.8,
-        "hand_to_object_dist": 1.0,
-        "lift_object": 2.0,
+        # "hand_to_object_dist": 1.0,
+        "wrist_close_to_object": 1.0,
+        # "lift_object": 2.0,
     }
 
     frame_stack = 1
@@ -481,7 +482,7 @@ class BaseTableHumanoidTaskCfg:
             # self.update_curriculum_iteration = 400
             # self.randomize_object_yaw_range = 2.3
             # self.randomize_object_yaw_range = 3.14
-            self.randomize_object_yaw_range = 2.9
+            self.randomize_object_yaw_range = 3.06
             self.curriculum_object_yaw = True
             self.warm_up_beforecurriculum = 80000
             self.curriculum_avg_thres = 0.85

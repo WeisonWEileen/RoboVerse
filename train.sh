@@ -16,9 +16,9 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs  128 \
+    --num_envs  64 \
     --task "active_vision" \
-    --run_name "end2end1ObjRandText" \
+    --run_name "end2endNoCollWristReaching" \
     --device "cuda:0" \
     --enable_opencv_display \
     --wandb
