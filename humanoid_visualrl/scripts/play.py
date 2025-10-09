@@ -106,14 +106,15 @@ def play(args):
     reset_interval = 75
     yaw = torch.tensor(0.0, device=env_wrapper.device)
     # set fixed command
-    yaw = (random.random()-0.5) * 0.3 + 3.14/3
+    yaw = (random.random()-0.5) * 2 * task_cfg.randomize_object_yaw_range
     yaw = torch.tensor(yaw, device=env_wrapper.device)
 
 
     for i in range(10000):
 
         if i % reset_interval == 0:
-            yaw -= 0.3
+            yaw = (random.random()-0.5) * 2 * task_cfg.randomize_object_yaw_range
+            yaw = torch.tensor(yaw, device=env_wrapper.device)
             radius = task_cfg.randomize_object_radius 
             radius_bias = 2 * (random.random() - 0.5) * 0.1
             # radius_bias = 0.0
@@ -125,6 +126,9 @@ def play(args):
             object_state[0, 1] = object_y
             env_wrapper.env._set_object_pose(env_wrapper.cfg.objects[2], object_state[:, :3], object_state[:, 3:7], env_ids=[0])
             env_wrapper._compute_observations()
+
+            # reset texture and material
+            env_wrapper.env.randomize_obj_material(list(range(env_wrapper.num_envs)), env_wrapper.obj)
             # ppo_runner.alg.policy.reset([0])
         
         if task_cfg.use_vision:

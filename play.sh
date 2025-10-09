@@ -27,7 +27,7 @@ fi
 $PYTHON_PATH  ./humanoid_visualrl/scripts/play.py \
     --task "active_vision" \
     --resume \
-    --load_run "2025_1007_112707" \
-    --checkpoint 3200 \
+    --load_run "2025_1008_042642" \
+    --checkpoint 200 \
     --enable_opencv_display 
     # --wandb \
