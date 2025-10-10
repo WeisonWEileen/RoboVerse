@@ -599,7 +599,7 @@ class IsaacsimHandler(BaseSimHandler):
                     solver_position_iteration_count=4,
                     solver_velocity_iteration_count=0,
                 ),
-                collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=False),
+                collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
             ),
             actuators={
                 # jn: ImplicitActuatorCfg(
