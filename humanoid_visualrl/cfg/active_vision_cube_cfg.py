@@ -54,7 +54,7 @@ class LeggedRobotRunnerCfg:
         """Use clipped value loss."""
         clip_param = 0.2
         """Clipping parameter for PPO."""
-        entropy_coef = 0.001
+        entropy_coef = 0.01
         """Entropy coefficient."""
         num_learning_epochs = 5
         """Number of learning epochs."""
