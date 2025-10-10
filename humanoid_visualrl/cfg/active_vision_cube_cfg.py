@@ -373,14 +373,15 @@ class BaseTableHumanoidTaskCfg:
     ]
 
     command_dim = 14
-    num_actions = 17
+    num_actions = 17 - 6
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
-        "see_object": 0.1,
+        "see_object": 0.2,
         # "hand_to_object_dist": 1.0,
-        "wrist_close_to_object": 1.0,
+        # "wrist_close_to_object_and_grasp": 1.0,
         # "lift_object": 2.0,
+        "fuse_wrist_close_to_object_and_grasp": 0.5,
     }
 
     frame_stack = 1
@@ -445,13 +446,13 @@ class BaseTableHumanoidTaskCfg:
     randomization = True
     finetune = False
     mask_joint_names = [
-        "left_elbow_joint",
-        "left_shoulder_pitch_joint",
-        "left_shoulder_roll_joint",
-        "left_shoulder_yaw_joint",
-        "left_wrist_pitch_joint",
-        "left_wrist_roll_joint",
-        "left_wrist_yaw_joint",
+        # "left_elbow_joint",
+        # "left_shoulder_pitch_joint",
+        # "left_shoulder_roll_joint",
+        # "left_shoulder_yaw_joint",
+        # "left_wrist_pitch_joint",
+        # "left_wrist_roll_joint",
+        # "left_wrist_yaw_joint",
     ]
 
 
@@ -557,7 +558,7 @@ class BaseTableHumanoidTaskCfg:
             }
             self.cameras[0].mount_to = "g1_static_dex1"
             self.cameras[0].mount_link = "torso_link/d435_link"
-            self.num_joints = 17
+            self.num_joints = 17 - 7
 
         elif self.robot == "g1_static_inpire_left_fixed":
             self.init_states[0]["robots"] = {
@@ -568,13 +569,13 @@ class BaseTableHumanoidTaskCfg:
                         "waist_yaw_joint": 0.0,
                         "waist_roll_joint": 0.0,
                         "waist_pitch_joint": 0.0,
-                        "left_shoulder_pitch_joint": 0.0,
-                        "left_shoulder_roll_joint": 0.0,
-                        "left_shoulder_yaw_joint": 0.0,
-                        "left_elbow_joint": 0.0,
-                        "left_wrist_roll_joint": 0.0,
-                        "left_wrist_pitch_joint": 0.0,
-                        "left_wrist_yaw_joint": 0.0,
+                        # "left_shoulder_pitch_joint": 0.0,
+                        # "left_shoulder_roll_joint": 0.0,
+                        # "left_shoulder_yaw_joint": 0.0,
+                        # "left_elbow_joint": 0.0,
+                        # "left_wrist_roll_joint": 0.0,
+                        # "left_wrist_pitch_joint": 0.0,
+                        # "left_wrist_yaw_joint": 0.0,
                         "right_shoulder_pitch_joint": 0.0,
                         "right_shoulder_roll_joint": 0.0,
                         "right_shoulder_yaw_joint": 0.0,
@@ -599,7 +600,7 @@ class BaseTableHumanoidTaskCfg:
             }
             self.cameras[0].mount_to = "g1_static_inpire_left_fixed"
             self.cameras[0].mount_link = "d435_link"
-            self.num_joints = 29
+            self.num_joints = 29 - 7 # -
 
         self.num_single_obs = self.num_joints * 3
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)
