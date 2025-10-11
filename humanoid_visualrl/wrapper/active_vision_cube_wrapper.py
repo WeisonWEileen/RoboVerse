@@ -17,7 +17,7 @@ from metasim.utils.math import quat_apply
 from loguru import logger as log
 from metasim.task.registry import register_task
 from humanoid_visualrl.utils.utils import get_joint_reindexed_indices_from_substring,get_body_reindexed_indices_from_substring
-from metasim.utils.math import quat_from_euler_xyz
+from metasim.utils.math import quat_from_euler_xyz, quat_mul
 
 @register_task("active_vision")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
@@ -64,6 +64,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 break
 
         self._reset(list(range(self.num_envs)))
+
+        self._update_camera_pose = False
 
         # get segmatic id
         # tensor_state = self.env.get_states()
@@ -198,18 +200,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.vision_seg_info = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg_id2label
 
         # uncomment this if you want to use the camera mount link(generally for camera pose usage)
-        # if self.camera_mount_link_idx is not None:
-        #     self.camera_mount_link_pos = tensor_state.robots[self.robot.name].body_state[
-        #         :, self.camera_mount_link_idx, :3
-        #     ]
-        #     self.camera_mount_link_quat = tensor_state.robots[self.robot.name].body_state[
-        #         :, self.camera_mount_link_idx, 3:7
-        #     ]
+        if self._update_camera_pose:
+            self.camera_mount_link_pos = tensor_state.robots[self.robot.name].body_state[
+                :, self.camera_mount_link_idx, :3
+            ]
+            self.camera_mount_link_quat = tensor_state.robots[self.robot.name].body_state[
+                :, self.camera_mount_link_idx, 3:7
+            ]
 
-        #     self.camera_pos_w = self.camera_mount_link_pos + quat_apply(
-        #         self.camera_mount_link_quat, self.camera_tran_pos
-        #     )
-        #     self.camera_quat_w = quat_mul(self.camera_mount_link_quat, self.camera_tran_quat)
+            self.camera_pos_w = self.camera_mount_link_pos + quat_apply(
+                self.camera_mount_link_quat, self.camera_tran_pos
+            )
+            self.camera_quat_w = quat_mul(self.camera_mount_link_quat, self.camera_tran_quat)
 
         # ========== update see flag ======
         # 创建掩码：shape (num_envs, height, width)

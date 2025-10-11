@@ -32,6 +32,9 @@ from metasim.utils.state import CameraState, ObjectState, RobotState, TensorStat
 import omni
 import weakref
 
+from isaaclab.app import AppLauncher
+
+
 
 class IsaacsimHandler(BaseSimHandler):
     """
@@ -130,7 +133,6 @@ class IsaacsimHandler(BaseSimHandler):
         """
         Initializes the isaacsim simulation environment.
         """
-        from isaaclab.app import AppLauncher
 
         parser = argparse.ArgumentParser()
         AppLauncher.add_app_launcher_args(parser)
