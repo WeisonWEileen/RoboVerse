@@ -130,6 +130,7 @@ def play(args):
             # reset texture and material
             env_wrapper.env.randomize_obj_material(list(range(env_wrapper.num_envs)), env_wrapper.obj)
             # ppo_runner.alg.policy.reset([0])
+            print(a)
 
         if task_cfg.use_vision:
             actions = policy(obs)

@@ -93,6 +93,9 @@ if __name__ == "__main__":
 
     log.info(f"Using simulator: {args.sim}")
     env_class = get_sim_handler_class(SimType(args.sim))
+    scenario.device = "cuda"
+    scenario.render_interval = 4
+
     env = env_class(scenario)
 
     init_states = [

@@ -142,6 +142,7 @@ class IsaacsimHandler(BaseSimHandler):
         args.headless = self.headless
         app_launcher = AppLauncher(args)
         self.simulation_app = app_launcher.app
+        print("=======!!!=====")
 
         import isaaclab.sim as sim_utils
 
@@ -170,7 +171,6 @@ class IsaacsimHandler(BaseSimHandler):
                 # friction_correlation_distance=self.scenario.sim_params.friction_correlation_distance,
             ),
         )
-
         from isaaclab.assets import AssetBaseCfg
         from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
