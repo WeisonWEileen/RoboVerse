@@ -366,10 +366,8 @@ class BaseTableHumanoidTaskCfg:
                 #         "right_elbow_joint": 1.45,
                 #     },
                 # },
-
             },
         }
-
     ]
 
     command_dim = 14
@@ -377,6 +375,7 @@ class BaseTableHumanoidTaskCfg:
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
+        "pixel_norm_at_object": 0.05,
         "see_object": 0.2,
         # "hand_to_object_dist": 1.0,
         # "wrist_close_to_object_and_grasp": 1.0,
@@ -439,12 +438,13 @@ class BaseTableHumanoidTaskCfg:
             mount_pos=(0.0, 0.0, 0.0),
             mount_quat=(0.5, -0.5, 0.5, -0.5),
             focal_length=7.6,
-            horizontal_aperture=20.0
+            horizontal_aperture=20.0,
         )
     ]
 
     randomization = True
     finetune = False
+
     mask_joint_names = [
         # "left_elbow_joint",
         # "left_shoulder_pitch_joint",
@@ -453,8 +453,14 @@ class BaseTableHumanoidTaskCfg:
         # "left_wrist_pitch_joint",
         # "left_wrist_roll_joint",
         # "left_wrist_yaw_joint",
+        "right_elbow_joint",
+        "right_shoulder_pitch_joint",
+        "right_shoulder_roll_joint",
+        "right_shoulder_yaw_joint",
+        # "right_wrist_pitch_joint",
+        # "right_wrist_roll_joint",
+        # "right_wrist_yaw_joint",
     ]
-
 
     reward_hand_object_dist_exp_sharpness = 10.0
     reward_lift_object_z = init_states[0]["objects"]["object"]["pos"][2] + 0.10
@@ -487,7 +493,7 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 3.06
             self.randomize_object_yaw_range = 1.8
             self.curriculum_object_yaw = True
-            self.warm_up_beforecurriculum = 80000 #  80000 / 96 =  833 iteration
+            self.warm_up_beforecurriculum = 80000  #  80000 / 96 =  833 iteration
             self.curriculum_avg_thres = 0.85
             self.curriculum_randomize_iteration_interval = 200
         self.see_flag_his_win_length = 1000
@@ -527,8 +533,15 @@ class BaseTableHumanoidTaskCfg:
         # breakpoint()
         if "wrist_close_to_object" in self.reward_weights:
             self.ppo_cfg.policy.masking_all = False
+            self.mask_joint_names = []
         else:
             self.ppo_cfg.policy.masking_all = True
+            self.mask_joint_names = [
+                "right_elbow_joint",
+                "right_shoulder_pitch_joint",
+                "right_shoulder_roll_joint",
+                "right_shoulder_yaw_joint",
+            ]
 
         if self.robot == "g1_static_dex1":
             self.init_states[0]["robots"] = {
@@ -601,7 +614,7 @@ class BaseTableHumanoidTaskCfg:
             }
             self.cameras[0].mount_to = "g1_static_inpire_left_fixed"
             self.cameras[0].mount_link = "d435_link"
-            self.num_joints = 29 - 7 # -
+            self.num_joints = 29 - 7  # -
 
         self.num_single_obs = self.num_joints * 3
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)

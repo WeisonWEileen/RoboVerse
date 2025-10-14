@@ -18,7 +18,7 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs  64 \
     --task "active_vision" \
-    --run_name "end2endNoCollWristFusionGrasp" \
+    --run_name "curriculum_vision" \
     --device "cuda:0" \
     --enable_opencv_display \
     --wandb
