@@ -117,7 +117,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.vision_seg_buf = torch.zeros(
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
         )
-        self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
+        if self.cfg.randomize_obj_material:
+            self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
+
         # find the objcfg with name "object"
         
 
@@ -290,7 +292,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if self.opencv_render_env_idx in torch.where(self.see_flag)[0]:
 
         # if specific env draw
-        if self.env._render_viewport:
+        if self.env._render_viewport and self.enable_opencv_display:
             env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
             # 确保图像是uint8格式
             rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5

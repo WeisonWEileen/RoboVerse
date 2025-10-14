@@ -18,10 +18,11 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs  64 \
     --task "active_vision" \
-    --run_name "curriculum_vision" \
+    --run_name "curriculum_vision_cube" \
     --device "cuda:0" \
-    --enable_opencv_display \
-    --wandb
+    --wandb \
+    --headless
+    # --enable_opencv_display \
     # --debug
 
     # --wandb

@@ -280,30 +280,30 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        # PrimitiveCubeCfg(
-        #     name="object",
-        #     size=(0.09, 0.09, 0.09),
-        #     color=[1.0, 0.0, 0.0],
-        #     physics=PhysicStateType.RIGIDBODY,
-        #     collision_enabled=True,
-        #     fix_base_link=False,
-        #     default_position=(0.3, 0.1, 0.851),
-        #     mass=0.2,  # 增加质量以确保更好的物理行为
-        # ),
-        RigidObjCfg(
+        PrimitiveCubeCfg(
             name="object",
-            # size=(0.09, 0.09, 0.09),
-            # color=[1.0, 0.0, 0.0],
-            scale=(1.2, 1.2, 1.2),
+            size=(0.09, 0.09, 0.09),
+            color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
-            usd_path="roboverse_data/objects/visdex_objects/USD/2h0dnrqc/2h0dnrqc.usd",
             collision_enabled=True,
             fix_base_link=False,
-            default_position=(0.3, 0.1, 0.951),
-            enable_gyroscopic_forces=True,
-            mass_density=500.0,
-            randomize_material=True,
+            default_position=(0.3, 0.1, 0.851),
+            mass=0.2,  # 增加质量以确保更好的物理行为
         ),
+        # RigidObjCfg(
+        #     name="object",
+        #     # size=(0.09, 0.09, 0.09),
+        #     # color=[1.0, 0.0, 0.0],
+        #     scale=(1.2, 1.2, 1.2),
+        #     physics=PhysicStateType.RIGIDBODY,
+        #     usd_path="roboverse_data/objects/visdex_objects/USD/2h0dnrqc/2h0dnrqc.usd",
+        #     collision_enabled=True,
+        #     fix_base_link=False,
+        #     default_position=(0.3, 0.1, 0.951),
+        #     enable_gyroscopic_forces=True,
+        #     mass_density=500.0,
+        #     randomize_material=True,
+        # ),
     ]
     # cameras
     """objects in the environment"""
@@ -322,7 +322,7 @@ class BaseTableHumanoidTaskCfg:
     num_actions: int = 9
     num_privileged_obs: int = 9
     max_episode_length: int = 2400
-    randomize_obj_material: bool = True
+    randomize_obj_material: bool = False
     update_obj_material_step_interval: int = 96 * 100
 
     @configclass
