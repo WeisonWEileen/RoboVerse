@@ -4,13 +4,13 @@ rootutils.setup_root(__file__, pythonpath=True)
 
 
 import os
+import random
 
 import torch
 from loguru import logger as log
-from metasim.scenario.scenario import ScenarioCfg
-from metasim.scenario.lights import DomeLightCfg
 
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
+from humanoid_visualrl.utils.evaluator import SeeFlagEvaluator
 from humanoid_visualrl.utils.utils import (
     export_policy_as_jit,
     get_args,
@@ -19,8 +19,12 @@ from humanoid_visualrl.utils.utils import (
     load_task_cfg,
     load_wrapper,
 )
+from metasim.scenario.lights import DomeLightCfg
+from metasim.scenario.scenario import ScenarioCfg
 
-import random
+
+IN_DISTRIBUTION_RAW_RANGE = 1.8
+OUT_DISTRIBUTION_RAW_RANGE = 2.8
 
 
 def play(args):
@@ -95,7 +99,7 @@ def play(args):
     # env.init_states.objects["object"].root_state[0, :1] = 0.2
     env_wrapper.init_states.objects["object"].root_state[0, 1] = 0.0
     # breakpoint()
-    env_wrapper.cfg.max_episode_length_s = 100000
+    # env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
     env_wrapper.enable_opencv_display = True
     env_wrapper.env._render_viewport = True
@@ -103,15 +107,28 @@ def play(args):
     env_wrapper._update_camera_pose = True
     obs, _ = env_wrapper.get_observations()
 
+    evalation_save_dir = os.path.join(os.path.dirname(load_path), "evaluation")
+    os.makedirs(evalation_save_dir, exist_ok=True)
+    # Initialize evaluator
+    evaluator = SeeFlagEvaluator(
+        num_envs=env_wrapper.num_envs,
+        window_size=100,  # Rolling average window
+        save_dir=evalation_save_dir,
+        plot_interval=5,  # Update plot every 5 steps
+        enable_plot=True,
+    )
+    log.info(f"Evaluator initialized, saving results to: {os.path.join(os.path.dirname(load_path), 'evaluation')}")
+
     reset_interval = 75
     yaw = torch.tensor(0.0, device=env_wrapper.device)
     # set fixed command
-    yaw = (random.random() - 0.5) * 2 * task_cfg.randomize_object_yaw_range
+    yaw = (random.random() - 0.5) * 2 * 3.14
     yaw = torch.tensor(yaw, device=env_wrapper.device)
 
     for i in range(10000):
         if i % reset_interval == 0:
-            yaw = (random.random() - 0.5) * 2 * task_cfg.randomize_object_yaw_range
+            yaw = (random.random() - 0.5) * 2 * IN_DISTRIBUTION_RAW_RANGE
+
             yaw = torch.tensor(yaw, device=env_wrapper.device)
             radius = task_cfg.randomize_object_radius
             radius_bias = 2 * (random.random() - 0.5) * 0.1
@@ -126,24 +143,39 @@ def play(args):
                 env_wrapper.cfg.objects[2], object_state[:, :3], object_state[:, 3:7], env_ids=[0]
             )
             env_wrapper._compute_observations()
+            see_flag = env_wrapper.see_flag[0]
+
+            # Print reset info
+            log.info(
+                f"Step {i}: Reset - Object at ({object_x:.3f}, {object_y:.3f}), "
+                f"yaw={yaw:.3f}, see_flag={see_flag.item()}"
+            )
 
             # reset texture and material
             env_wrapper.env.randomize_obj_material(list(range(env_wrapper.num_envs)), env_wrapper.obj)
             # ppo_runner.alg.policy.reset([0])
-            print(a)
 
         if task_cfg.use_vision:
             actions = policy(obs)
         else:
             actions = policy(obs.detach())
-        obs, _, _, _ = env_wrapper.step(actions.detach())
+        obs, _, _, infos = env_wrapper.step(actions.detach())
         state = env_wrapper.env.get_states()
         env_wrapper._refreshed_tensors(state)
+
+        # add episode reward for logging
+        if env_wrapper.reset_buf[0] > 0:
+            # devide reward scale to get unscaled reward. [4:] is to remove 'rew_' prefix
+            unscaled_reward = {k: v / env_wrapper.reward_scales[k[4:]] for k, v in infos["episode"].items()}
+            evaluator.update_episode_reward(unscaled_reward)
+
+        # Update evaluator with current see_flag
+        evaluator.update(env_wrapper.see_flag)
 
         # env_wrapper.
         camera_pos = env_wrapper.camera_pos_w[:, :3]
         camera_quat = env_wrapper.camera_quat_w[:, :4]
-        camera_direction = camera_pos - env_wrapper.object_pose_buf[:, :3]
+        camera_direction = env_wrapper.object_pose_buf[:, :3] - camera_pos
 
         env_wrapper._update_marker_viz(
             camera_pos,
@@ -151,6 +183,8 @@ def play(args):
             camera_direction,
         )
 
+    # Close evaluator and save results
+    evaluator.close()
     env_wrapper.env.close()
 
 
