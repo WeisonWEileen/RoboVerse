@@ -641,14 +641,18 @@ class IsaacsimHandler(BaseSimHandler):
         joint_list = []
         if robot_joint_prim_root and robot_joint_prim_root.IsValid():
             for prim in robot_joint_prim_root.GetChildren():
-                if prim.GetTypeName() == "PhysicsRevoluteJoint":
+                prim_type = prim.GetTypeName()
+                if prim_type == "PhysicsRevoluteJoint" or prim_type == "PhysicsPrismaticJoint":
                     # get joint name
                     joint_name = prim.GetName()
                     if not joint_name in self.robots[0].actuators.keys():
                         # get the two prim that the joint is connected to
                         # body0 = prim.GetAttribute("body0")
                         # body1 = prim.GetAttribute("body1")
-                        revolute_joint = UsdPhysics.RevoluteJoint.Get(stage, prim.GetPath())
+                        if prim_type == "PhysicsRevoluteJoint":
+                            revolute_joint = UsdPhysics.RevoluteJoint.Get(stage, prim.GetPath())
+                        else:
+                            revolute_joint = UsdPhysics.PrismaticJoint.Get(stage, prim.GetPath())
 
                         # 获取关节连接的两个 body
                         body0 = revolute_joint.GetBody0Rel().GetTargets()

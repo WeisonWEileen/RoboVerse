@@ -381,7 +381,7 @@ class BaseTableHumanoidTaskCfg:
         # "hand_to_object_dist": 1.0,
         # "wrist_close_to_object_and_grasp": 1.0,
         # "lift_object": 2.0,
-        "fuse_wrist_close_to_object_and_grasp": 0.5,
+        # "fuse_wrist_close_to_object_and_grasp": 0.5,
     }
 
     frame_stack = 1
@@ -473,7 +473,7 @@ class BaseTableHumanoidTaskCfg:
             # self.update_curriculum_iteration = 100
             # self.randomize_object_yaw_range = 1.8
             # self.randomize_object_yaw_range = 1.8
-            self.randomize_object_yaw_range = 3.14
+            self.randomize_object_yaw_range = 1.8
             self.curriculum_object_yaw = False
 
             # self.reward_weights = {
@@ -485,9 +485,9 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 2.3
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
-            self.randomize_object_yaw_range = 1.06
+            self.randomize_object_yaw_range = 1.8
             self.curriculum_object_yaw = True
-            self.warm_up_beforecurriculum = 80000
+            self.warm_up_beforecurriculum = 80000 #  80000 / 96 =  833 iteration
             self.curriculum_avg_thres = 0.85
             self.curriculum_randomize_iteration_interval = 200
         self.see_flag_his_win_length = 1000
@@ -518,8 +518,8 @@ class BaseTableHumanoidTaskCfg:
         log.info("================================================")
 
         # training runtime highly relevant
-        # self.robot = "g1_static_dex1"
-        self.robot = "g1_static_inpire_left_fixed"
+        self.robot = "g1_static_dex1"
+        # self.robot = "g1_static_inpire_left_fixed"
         self.num_envs = 64
         self.enable_opencv_display = True
         self.use_vision = True
@@ -539,26 +539,27 @@ class BaseTableHumanoidTaskCfg:
                         "waist_yaw_joint": 0.0,
                         "waist_roll_joint": 0.0,
                         "waist_pitch_joint": 0.0,
-                        "left_shoulder_pitch_joint": 0.0,
-                        "left_shoulder_roll_joint": 0.0,
-                        "left_shoulder_yaw_joint": 0.0,
-                        "left_elbow_joint": 0.0,
-                        "left_wrist_roll_joint": 0.0,
-                        "left_wrist_pitch_joint": 0.0,
-                        "left_wrist_yaw_joint": 0.0,
+                        # "left_shoulder_pitch_joint": 0.0,
+                        # "left_shoulder_roll_joint": 0.0,
+                        # "left_shoulder_yaw_joint": 0.0,
+                        # "left_elbow_joint": 0.0,
+                        # "left_wrist_roll_joint": 0.0,
+                        # "left_wrist_pitch_joint": 0.0,
+                        # "left_wrist_yaw_joint": 0.0,
                         "right_shoulder_pitch_joint": 0.0,
                         "right_shoulder_roll_joint": 0.0,
                         "right_shoulder_yaw_joint": 0.0,
                         "right_elbow_joint": 0.0,
-                        "right_wrist_roll_joint": 0.0,
-                        "right_wrist_pitch_joint": 0.0,
-                        "right_wrist_yaw_joint": 0.0,
+                        # "right_wrist_roll_joint": 0.0,
+                        # "right_wrist_pitch_joint": 0.0,
+                        # "right_wrist_yaw_joint": 0.0,
                     },
                 },
             }
             self.cameras[0].mount_to = "g1_static_dex1"
-            self.cameras[0].mount_link = "torso_link/d435_link"
-            self.num_joints = 17 - 7
+            self.cameras[0].mount_link = "d435_link"
+            # self.num_joints = 17 - 7
+            self.num_joints = 7
 
         elif self.robot == "g1_static_inpire_left_fixed":
             self.init_states[0]["robots"] = {
