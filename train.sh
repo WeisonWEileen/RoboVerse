@@ -21,8 +21,8 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --run_name "curriculum_vision_cube" \
     --device "cuda:0" \
     --wandb \
-    --headless
-    # --enable_opencv_display \
+    --enable_opencv_display \
+    # --headless
     # --debug
 
     # --wandb
