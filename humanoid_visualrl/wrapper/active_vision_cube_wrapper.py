@@ -28,7 +28,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.env.filter_collisions(self.robot.name, "object")
+        self.env.filter_collisions(self.robot.name, "object")
         # print(self.env.scene.physics_context.get_filtered_pairs())
 
         self.image_center_x = self.cfg.cameras[0].width / 2
@@ -41,7 +41,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 torch.tensor([self.cfg.cameras[0].width ** 2 + self.cfg.cameras[0].height ** 2], device=self.device)
             )
             / 2.0
-            / 50.0
+            / self.cfg.reward_pixel_norm_at_object_exp_sharpness
         )
         self.see_flag_avg = 0.0
         # self.pixel_rewards_buf = torch.zeros(self.num_envs, device=self.device)
@@ -481,7 +481,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # since now we have no pitch dof for waist, we only consider x pixel distance
             # distance = torch.abs(center_x - self.image_center_x)
 
-            self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / 50.0) - self.pixel_reward_offset
+            self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / self.cfg.reward_pixel_norm_at_object_exp_sharpness) - self.pixel_reward_offset
         return self.pixel_rewards_buf
 
     def _reward_look_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
@@ -683,9 +683,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.common_step_counter < self.cfg.warm_up_beforecurriculum:
             return
         
-        self.see_flag_history_ptr = 0
-        self.see_flag_history_full = False
-        self.see_flag_history.zero_()
+
 
 
         # 计算过去2000个step的see_flag平均值
@@ -702,8 +700,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
             return
 
+        self.see_flag_history_ptr = 0
+        self.see_flag_history_full = False
+        self.see_flag_history.zero_()
+        
         # 如果平均值大于curriculum_avg_thres，则增加curriculum难度
-        if see_flag_avg > self.cfg.curriculum_avg_thres:
+        if see_flag_avg > self.cfg.curriculum_avg_thres_higher:
             # 只有当范围还没到最大时才增长
             if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
                 old_range = self.curriculum_object_yaw_range

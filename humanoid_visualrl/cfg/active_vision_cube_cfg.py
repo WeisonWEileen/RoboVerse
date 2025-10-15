@@ -467,6 +467,7 @@ class BaseTableHumanoidTaskCfg:
     reward_lift_object_exp_shapeness = 4.0
     reward_object2goal_exp_shapeness = 15
     reward_wrist_close_to_object_exp_sharpness = 4.0
+    reward_pixel_norm_at_object_exp_sharpness = 25.0
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
@@ -500,7 +501,7 @@ class BaseTableHumanoidTaskCfg:
         self.see_flag_his_win_length = 1000
         self.time_range_increase_curriculum = 0.01
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
-        self.randomize_object_radius_range = 0.0
+        self.randomize_object_radius_range = 0.1
         # self.randomize_object_radius = 0.85  # max
         # self.randomize_object_radius = 0.55
         # self.randomize_object_radius -= 0.07
