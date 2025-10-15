@@ -70,6 +70,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.robot_waist_yaw_joint_indices = get_joint_reindexed_indices_from_substring(
             self.env, self.robot.name, ["waist_yaw_joint"], device=self.device
         )
+        self.curriculum_robot_yaw_range = 0.1 * self.cfg.randomize_robot_yaw_range
 
         self._reset(list(range(self.num_envs)))
 
