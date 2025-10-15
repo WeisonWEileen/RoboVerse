@@ -50,7 +50,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
         if self.cfg.curriculum_object_yaw:
-            self.curriculum_object_yaw_range = 0.8 * self.cfg.randomize_object_yaw_range
+            self.curriculum_object_yaw_range = 0.3 * self.cfg.randomize_object_yaw_range
             # self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
         else:
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range

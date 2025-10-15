@@ -472,7 +472,7 @@ class BaseTableHumanoidTaskCfg:
         self.command_ranges.wrist_max_radius = 0.15
         # self.randomize_object_y_offset = 0.1
         self.randomize_object_curriculum = True
-        self.randomize_add_scale = 0.05
+        self.randomize_add_scale = 0.005
 
         if self.finetune:
             # for finetuning, use less frequent curriculum update and less yaw range
