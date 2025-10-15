@@ -127,7 +127,7 @@ class PPO:
     ):
         # create memory for RND as well :)
         if self.rnd:
-            rnd_state_shape = [self.rnd.num_states]
+            rnd_state_shapprocess_env_stepe = [self.rnd.num_states]
         else:
             rnd_state_shape = None
         # create rollout storage

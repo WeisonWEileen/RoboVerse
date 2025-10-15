@@ -37,7 +37,7 @@ from torch.nn.modules import rnn
 
 from rsl_rl.utils import resolve_nn_activation
 
-from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn import VisionBackbonePDC
+# from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn import VisionBackbonePDC
 
 
 class ActorCriticCNN(nn.Module):
@@ -97,9 +97,9 @@ class ActorCriticCNN(nn.Module):
         # self.vision_encoder = VisionBackbonePDC(output_dim=64)
 
         # 新的ResNet-18预训练backbone
-        resnet18 = models.resnet18(pretrained=True)
+        # resnet18 = models.resnet18(pretrained=True)
         # 移除最后的分类层，保留特征提取部分
-        self.vision_encoder = nn.Sequential(*list(resnet18.children())[:-1])  # 移除最后的fc层
+        # self.vision_encoder = nn.Sequential(*list(resnet18.children())[:-1])  # 移除最后的fc层
         # 添加一个线性层来匹配输出维度
         self.vision_projection = nn.Linear(512, 64)  # ResNet-18的fc层输出是512维
 

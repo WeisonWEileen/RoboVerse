@@ -37,7 +37,7 @@ class LeggedRobotRunnerCfg:
         """Hidden dimensions for actor network."""
         critic_hidden_dims = [768, 256, 128]
         """Hidden dimensions for critic network."""
-        rnn_hidden_dim = 128
+        rnn_hidden_dim = 256
         vision_height = 240
         vision_width = 320
         masking_all = True
@@ -54,7 +54,7 @@ class LeggedRobotRunnerCfg:
         """Use clipped value loss."""
         clip_param = 0.2
         """Clipping parameter for PPO."""
-        entropy_coef = 0.01
+        entropy_coef = 0.001
         """Entropy coefficient."""
         num_learning_epochs = 5
         """Number of learning epochs."""

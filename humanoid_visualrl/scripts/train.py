@@ -95,4 +95,10 @@ if __name__ == "__main__":
             raise FileNotFoundError(f"Resume path {resume_path} does not exist")
         log.info(f"Loading model from: {resume_path}")
         ppo_runner.load(resume_path)
+
+    loaded_dict = torch.load(
+        "/home/haoran/RoboVerse/outputs/active_vision/2025_1015_060102/model_600.pt", weights_only=False
+    )
+        # -- Load model
+    resumed_training = ppo_runner.alg.policy.load_state_dict(loaded_dict["model_state_dict"])
     ppo_runner.learn(num_learning_iterations=args.num_learning_iterations, run_name=f"{args.run_name}_{now}")

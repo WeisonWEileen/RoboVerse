@@ -16,31 +16,31 @@ from rsl_rl.utils import resolve_nn_activation
 from torch import nn
 
 
-class VisionBackbonePDC(nn.Module):
-    def __init__(self, image_height, image_width, output_dim=128):
-        super().__init__()
-        # 假定两个 conv 层，每层 32 通道
-        # 第一个卷积：kernel 8, stride 4 → 从 96×128 到 ( (96-8)//4 +1 , (128-8)//4 +1 ) = (23, 31)
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=8, stride=4, padding=0)
-        self.act1 = nn.ReLU(inplace=True)
-        # 第二个卷积：kernel 4, stride 2 → (23,31) → (10,14)
-        self.conv2 = nn.Conv2d(32, 32, kernel_size=4, stride=2, padding=0)
-        self.act2 = nn.ReLU(inplace=True)
-        # Flatten + FC 映射到 desired 输出维度
-        # 输出的 conv 特征图尺寸要算清楚
-        # conv2 输出的 spatial dims: ((23-4)//2 +1 = 10, (31-4)//2 +1 = 14)
-        # 所以 特征图是 32 × 10 × 14 = 4480 维
-        self.flatten = nn.Flatten()
-        self.fc = nn.Linear(32 * 10 * 14, output_dim)
-        self.act3 = nn.ReLU(inplace=True)
+# class VisionBackbonePDC(nn.Module):
+#     def __init__(self, image_height, image_width, output_dim=128):
+#         super().__init__()
+#         # 假定两个 conv 层，每层 32 通道
+#         # 第一个卷积：kernel 8, stride 4 → 从 96×128 到 ( (96-8)//4 +1 , (128-8)//4 +1 ) = (23, 31)
+#         self.conv1 = nn.Conv2d(3, 32, kernel_size=8, stride=4, padding=0)
+#         self.act1 = nn.ReLU(inplace=True)
+#         # 第二个卷积：kernel 4, stride 2 → (23,31) → (10,14)
+#         self.conv2 = nn.Conv2d(32, 32, kernel_size=4, stride=2, padding=0)
+#         self.act2 = nn.ReLU(inplace=True)
+#         # Flatten + FC 映射到 desired 输出维度
+#         # 输出的 conv 特征图尺寸要算清楚
+#         # conv2 输出的 spatial dims: ((23-4)//2 +1 = 10, (31-4)//2 +1 = 14)
+#         # 所以 特征图是 32 × 10 × 14 = 4480 维
+#         self.flatten = nn.Flatten()
+#         self.fc = nn.Linear(32 * 10 * 14, output_dim)
+#         self.act3 = nn.ReLU(inplace=True)
 
-    def forward(self, x):
-        # x: (B, 3, 96, 128)
-        x = self.act1(self.conv1(x))
-        x = self.act2(self.conv2(x))
-        x = self.flatten(x)
-        x = self.act3(self.fc(x))
-        return x  # 返回 (B, output_dim)
+#     def forward(self, x):
+#         # x: (B, 3, 96, 128)
+#         x = self.act1(self.conv1(x))
+#         x = self.act2(self.conv2(x))
+#         x = self.flatten(x)
+#         x = self.act3(self.fc(x))
+#         return x  # 返回 (B, output_dim)
 
 
 class ActorCriticCNNRecurrent(ActorCritic):
