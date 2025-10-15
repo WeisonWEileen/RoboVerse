@@ -713,7 +713,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
             return
 
-        # 如果平均值大于0.5，则增加curriculum难度
+        # 如果平均值大于curriculum_avg_thres，则增加curriculum难度
         if see_flag_avg > self.cfg.curriculum_avg_thres:
             # 只有当范围还没到最大时才增长
             if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
@@ -731,5 +731,17 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.see_flag_history_ptr = 0
                 self.see_flag_history_full = False
                 self.see_flag_history.zero_()
-
-
+        # else increase a little bit
+        else:
+            if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
+                old_range = self.curriculum_object_yaw_range
+                self.curriculum_object_yaw_range = min(
+                    self.curriculum_object_yaw_range + 0.005,
+                    self.cfg.randomize_object_yaw_range,
+                )
+                log.info(
+                    f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
+                )
+                self.see_flag_history_ptr = 0
+                self.see_flag_history_full = False
+                self.see_flag_history.zero_()

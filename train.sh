@@ -16,7 +16,7 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs  64 \
+    --num_envs  128 \
     --task "active_vision" \
     --run_name "curriculum_vision_cube" \
     --device "cuda:0" \
