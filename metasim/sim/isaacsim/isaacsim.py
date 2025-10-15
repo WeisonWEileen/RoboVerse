@@ -241,7 +241,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.clone_environments(copy_from_source=False)
         # self._set_perspective_camera_look_at("/World/envs/env_0")
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
-        # self.filter_collisions(self.robots[0].name, "object")
+        self.filter_collisions(self.robots[0].name, "object")
 
         # self._setup_selective_collision()
         self.sim.reset()

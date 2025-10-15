@@ -494,12 +494,13 @@ class BaseTableHumanoidTaskCfg:
             self.randomize_object_yaw_range = 2.14
             self.curriculum_object_yaw = True
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
-            self.curriculum_avg_thres = 0.93
+            self.curriculum_avg_thres_higher = 0.93
+            self.curriculum_avg_thres_lower = 0.75
             self.curriculum_randomize_iteration_interval = 200
         self.see_flag_his_win_length = 1000
         self.time_range_increase_curriculum = 0.01
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
-        self.randomize_object_radius_range = 0.1
+        self.randomize_object_radius_range = 0.0
         # self.randomize_object_radius = 0.85  # max
         # self.randomize_object_radius = 0.55
         # self.randomize_object_radius -= 0.07
@@ -620,3 +621,6 @@ class BaseTableHumanoidTaskCfg:
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)
         self.single_num_privileged_obs: int = self.num_joints * 3
         self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
+
+
+        self.randomize_robot_yaw_range = 0.32

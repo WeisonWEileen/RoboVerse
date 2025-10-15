@@ -454,12 +454,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.env.sim.forward()
 
         # reset state buffer in the wrapper
-        self.actions[env_ids] = 0.0
-        self.last_actions[env_ids] = 0.0
-        self.last_last_actions[env_ids] = 0.0
+        self.actions[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids]
+        # self.last_actions[env_ids] = 0.0
+        # self.last_last_actions[env_ids] = 0.0
         self.last_dof_vel[env_ids] = 0.0
         self.episode_length_buf[env_ids] = 0
-        self.feet_air_time[env_ids] = 0.0
+        # self.feet_air_time[env_ids] = 0.0
         self.root_state[env_ids] = self.init_states.robots[self.robot.name].root_state[env_ids]
 
         #
@@ -468,13 +468,14 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         self._post_reset_hook(env_ids)
 
-        self.base_quat[env_ids] = (
-            torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device, dtype=torch.float32)
-            .unsqueeze(0)
-            .repeat(len(env_ids), 1)
-        )
-        self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
-        self.projected_gravity[env_ids] = quat_rotate_inverse(self.base_quat[env_ids], self.gravity_vec[env_ids])
+        if not self.cfg.task_name == "active_vision":
+            self.base_quat[env_ids] = (
+                torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device, dtype=torch.float32)
+                .unsqueeze(0)
+                .repeat(len(env_ids), 1)
+            )
+            self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
+            self.projected_gravity[env_ids] = quat_rotate_inverse(self.base_quat[env_ids], self.gravity_vec[env_ids])
 
         self.extra_buf["episode"] = {}
         for key in self.episode_sums.keys():

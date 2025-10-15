@@ -62,6 +62,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if obj.name == "object":
                 self.obj = obj
                 break
+        self.randomize_robot_yaw_range = self.cfg.randomize_robot_yaw_range * 0.1
+        robot_yaw_limit = self.robot.joint_limits["waist_yaw_joint"]
+        self.robot_yaw_limit = list(robot_yaw_limit)
+        self.robot_yaw_limit[0] = robot_yaw_limit[0] * 0.2
+        self.robot_yaw_limit[1] = robot_yaw_limit[1] * 0.2
+        self.robot_waist_yaw_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env, self.robot.name, ["waist_yaw_joint"], device=self.device
+        )
 
         self._reset(list(range(self.num_envs)))
 
@@ -119,6 +127,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         if self.cfg.randomize_obj_material:
             self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
+
 
         # find the objcfg with name "object"
         
@@ -426,6 +435,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             quat = quat_from_euler_xyz(torch.zeros(len(env_ids), device=self.device), torch.zeros(len(env_ids), device=self.device), yaw)
             self.init_states.objects["object"].root_state[env_ids, 3:7] = quat
 
+            robot_yaw =  torch.rand(len(env_ids), device=self.device) * self.randomize_robot_yaw_range
+            # clip to yaw limit 
+            robot_yaw = torch.clamp(robot_yaw, min=self.robot_yaw_limit[0], max=self.robot_yaw_limit[1])
+            self.init_states.robots[self.robot.name].joint_pos[env_ids, self.robot_waist_yaw_joint_indices] = robot_yaw
+
 
     def _post_reset_hook(self, env_ids):
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
@@ -447,36 +461,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.reset_buf = self.timeout_buf | terminate
         return self.reset_buf
 
-    # ==== reward functions ====
-    def _reward_upper_body_pos(
-        self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
-    ) -> torch.Tensor:
-        """Keep upper body joints close to default positions."""
-        upper_body_diff = states.robots[robot_name].joint_pos - self.default_joint_pd_target
-        upper_body_error = torch.mean(torch.abs(upper_body_diff), dim=1)
-        return torch.exp(-4 * upper_body_error), upper_body_error
-
-    def _reward_default_joint_pos(
-        self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
-    ) -> torch.Tensor:
-        """Keep joint positions close to defaults (penalize yaw/roll)."""
-        joint_diff = states.robots[robot_name].joint_pos - self.default_joint_pd_target
-        return -0.01 * torch.norm(joint_diff, dim=1)
-
-    def _reward_torques(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
-        """Penalize high torques."""
-        return torch.sum(torch.square(states.robots[robot_name].joint_effort_target), dim=1)
-
-    def _reward_dof_vel(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
-        """Penalize high dof velocities."""
-        return torch.sum(torch.square(states.robots[robot_name].joint_vel), dim=1)
-
-    def _reward_dof_acc(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
-        """Penalize high DOF accelerations."""
-        return torch.sum(
-            torch.square((self.last_dof_vel - self.dof_vel) / self.dt),
-            dim=1,
-        )
 
     def _reward_pixel_norm_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for gazing at the object."""
@@ -698,6 +682,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 检查是否已经收集了足够的see_flag历史数据
         if self.common_step_counter < self.cfg.warm_up_beforecurriculum:
             return
+        
+        self.see_flag_history_ptr = 0
+        self.see_flag_history_full = False
+        self.see_flag_history.zero_()
+
 
         # 计算过去2000个step的see_flag平均值
         if self.see_flag_history_full:
@@ -726,13 +715,22 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 log.info(
                     f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
                 )
+            if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
+                old_range = self.curriculum_robot_yaw_range
+                self.curriculum_robot_yaw_range = min(
+                    self.curriculum_robot_yaw_range + 0.005,
+                    self.cfg.randomize_robot_yaw_range,
+                )
+                log.info(
+                    f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
+                )
 
-                # 重置历史记录，准备下一次评估
-                self.see_flag_history_ptr = 0
-                self.see_flag_history_full = False
-                self.see_flag_history.zero_()
+                
         # else increase a little bit
+        elif see_flag_avg < self.cfg.curriculum_avg_thres_lower:
+            return
         else:
+            # gradually randomize
             if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
                 old_range = self.curriculum_object_yaw_range
                 self.curriculum_object_yaw_range = min(
@@ -742,6 +740,54 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 log.info(
                     f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
                 )
-                self.see_flag_history_ptr = 0
-                self.see_flag_history_full = False
-                self.see_flag_history.zero_()
+            if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
+                old_range = self.curriculum_robot_yaw_range
+                self.curriculum_robot_yaw_range = min(
+                    self.curriculum_robot_yaw_range + 0.005,
+                    self.cfg.randomize_robot_yaw_range,
+                )
+                log.info(
+                    f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
+                )
+
+
+
+
+
+
+
+
+
+
+
+
+    # ==== reward functions ====
+    def _reward_upper_body_pos(
+        self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
+    ) -> torch.Tensor:
+        """Keep upper body joints close to default positions."""
+        upper_body_diff = states.robots[robot_name].joint_pos - self.default_joint_pd_target
+        upper_body_error = torch.mean(torch.abs(upper_body_diff), dim=1)
+        return torch.exp(-4 * upper_body_error), upper_body_error
+
+    def _reward_default_joint_pos(
+        self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
+    ) -> torch.Tensor:
+        """Keep joint positions close to defaults (penalize yaw/roll)."""
+        joint_diff = states.robots[robot_name].joint_pos - self.default_joint_pd_target
+        return -0.01 * torch.norm(joint_diff, dim=1)
+
+    def _reward_torques(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
+        """Penalize high torques."""
+        return torch.sum(torch.square(states.robots[robot_name].joint_effort_target), dim=1)
+
+    def _reward_dof_vel(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
+        """Penalize high dof velocities."""
+        return torch.sum(torch.square(states.robots[robot_name].joint_vel), dim=1)
+
+    def _reward_dof_acc(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
+        """Penalize high DOF accelerations."""
+        return torch.sum(
+            torch.square((self.last_dof_vel - self.dof_vel) / self.dt),
+            dim=1,
+        )
