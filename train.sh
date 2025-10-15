@@ -16,9 +16,9 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs  128 \
+    --num_envs  64 \
     --task "active_vision" \
-    --run_name "curriculum_vision_cube_entropy_0.001" \
+    --run_name "curriculum_vision_cube_entropy_smaller" \
     --device "cuda:0" \
     --wandb \
     --enable_opencv_display \

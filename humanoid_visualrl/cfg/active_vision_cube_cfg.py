@@ -493,10 +493,11 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
             self.randomize_object_yaw_range = 2.14
+            self.randomize_object_yaw_range = 1.6
             self.curriculum_object_yaw = True
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
             self.curriculum_avg_thres_higher = 0.93
-            self.curriculum_avg_thres_lower = 0.75
+            self.curriculum_avg_thres_lower = 0.85
             self.curriculum_randomize_iteration_interval = 200
         self.see_flag_his_win_length = 1000
         self.time_range_increase_curriculum = 0.01
