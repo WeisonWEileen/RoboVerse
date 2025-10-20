@@ -112,10 +112,9 @@ class ActorCriticCNNRecurrent(ActorCritic):
             nn.ReLU(inplace=True),
             nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
             nn.ReLU(inplace=True),
-            # ↓↓↓ 新增 ↓↓↓
-            nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=64
-            nn.Flatten(),  # (B, 64)
-            nn.Linear(64, 512),  # 压缩 / 投影到 512 维
+            nn.AdaptiveAvgPool2d((1, 1)),  
+            nn.Flatten(),  
+            nn.Linear(64, 512),  
             nn.ReLU(inplace=True),
         )
 

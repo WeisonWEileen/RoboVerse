@@ -15,8 +15,7 @@ from metasim.types import TensorState
 from metasim.utils import configclass
 from loguru import logger as log
 
-from metasim.scenario.objects import RigidObjCfg
-
+from metasim.scenario.objects import RigidObjCfg, ArticulationObjCfg
 
 @configclass
 class LeggedRobotRunnerCfg:
@@ -290,6 +289,18 @@ class BaseTableHumanoidTaskCfg:
             default_position=(0.3, 0.1, 0.851),
             mass=0.2,  # 增加质量以确保更好的物理行为
         ),
+        # ArticulationObjCfg(
+        #     name="box_base",
+        #     fix_base_link=True,
+        #     usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
+        #     urdf_path="get_started/example_assets/box_base/urdf/box_base_unique.urdf",
+        #     mjcf_path="get_started/example_assets/box_base/mjcf/box_base_unique.mjcf",
+        #     # default_position=(0.3, 0.1, 0.951),
+        #     default_position=(0.4, 0.2, 0.951),
+        #     # rotate -90 degrees around y axis
+        #     default_orientation=(0.7071, 0.0, -0.7071, 0.0),
+        #     # default_orientation=(1.0, 0.0, 0.0, 0.0),
+        # ),
         # RigidObjCfg(
         #     name="object",
         #     # size=(0.09, 0.09, 0.09),

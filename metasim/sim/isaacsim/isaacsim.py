@@ -689,6 +689,10 @@ class IsaacsimHandler(BaseSimHandler):
                     prim_path=prim_path,
                     spawn=sim_utils.UsdFileCfg(usd_path=obj.usd_path, scale=obj.scale),
                     actuators={},
+                    init_state=ArticulationCfg.InitialStateCfg(
+                        pos=obj.default_position,
+                        rot=obj.default_orientation,
+                    ),
                 )
             )
             return
