@@ -74,7 +74,8 @@ class LeggedRobotRunnerCfg:
     """Policy class name."""
     algorithm_class_name = "PPO"
     """Algorithm class name."""
-    num_steps_per_env = 96  # *0.005*5*48 = 6 s
+    # num_steps_per_env = 96  # *0.005*5*48 = 6 s
+    num_steps_per_env = 64  # *0.005*5*48 = 6 s
     """per iteration"""
     max_iterations = 3000
     """max number of iterations"""
@@ -513,7 +514,8 @@ class BaseTableHumanoidTaskCfg:
         self.see_flag_his_win_length = 1000
         self.time_range_increase_curriculum = 0.01
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
-        self.randomize_object_radius_range = 0.1
+        self.randomize_object_radius_range = 0.0
+        self.randomize_object_radius_range = 0.01
         # self.randomize_object_radius = 0.85  # max
         # self.randomize_object_radius = 0.55
         # self.randomize_object_radius -= 0.07

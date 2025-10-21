@@ -16,7 +16,7 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs  96 \
+    --num_envs  156 \
     --task "active_vision" \
     --run_name "enhanced_foveate" \
     --device "cuda:0" \
