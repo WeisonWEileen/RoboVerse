@@ -16,9 +16,9 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs  64 \
+    --num_envs  96 \
     --task "active_vision" \
-    --run_name "curriculum_vision_cube_entropy_smaller" \
+    --run_name "enhanced_foveate" \
     --device "cuda:0" \
     --wandb \
     --enable_opencv_display \
