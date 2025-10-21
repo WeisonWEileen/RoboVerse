@@ -54,7 +54,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
         if self.cfg.curriculum_object_yaw:
-            self.curriculum_object_yaw_range = 0.3 * self.cfg.randomize_object_yaw_range
+            # self.curriculum_object_yaw_range = 0.3 * self.cfg.randomize_object_yaw_range
+            self.curriculum_object_yaw_range =  self.cfg.randomize_object_yaw_range
             # self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
         else:
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
@@ -74,7 +75,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.robot_waist_yaw_joint_indices = get_joint_reindexed_indices_from_substring(
             self.env, self.robot.name, ["waist_yaw_joint"], device=self.device
         )
-        self.curriculum_robot_yaw_range = 0.1 * self.cfg.randomize_robot_yaw_range
+        self.curriculum_robot_yaw_range = self.cfg.randomize_robot_yaw_range
 
         self._reset(list(range(self.num_envs)))
 
@@ -669,7 +670,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _update_curriculum(self):
         self._update_obj_material()
-        self._update_curriculum_object_yaw_range()
+        # self._update_curriculum_object_yaw_range()
 
     def _update_obj_material(self):
         if (
@@ -742,15 +743,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 log.info(
                     f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
                 )
-            if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
-                old_range = self.curriculum_robot_yaw_range
-                self.curriculum_robot_yaw_range = min(
-                    self.curriculum_robot_yaw_range + 0.005,
-                    self.cfg.randomize_robot_yaw_range,
-                )
-                log.info(
-                    f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
-                )
+            # if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
+            #     old_range = self.curriculum_robot_yaw_range
+            #     self.curriculum_robot_yaw_range = min(
+            #         self.curriculum_robot_yaw_range + 0.005,
+            #         self.cfg.randomize_robot_yaw_range,
+            #     )
+            #     log.info(
+            #         f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
+            #     )
 
     # ==== reward functions ====
     def _reward_upper_body_pos(

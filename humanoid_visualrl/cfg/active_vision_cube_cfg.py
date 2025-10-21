@@ -387,7 +387,7 @@ class BaseTableHumanoidTaskCfg:
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
-        "pixel_norm_at_object": 0.40,
+        "pixel_norm_at_object": 1.0,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
         # "wrist_close_to_object_and_grasp": 1.0,
@@ -458,10 +458,10 @@ class BaseTableHumanoidTaskCfg:
     finetune = False
 
     mask_joint_names = [
-        # "left_elbow_joint",
-        # "left_shoulder_pitch_joint",
-        # "left_shoulder_roll_joint",
-        # "left_shoulder_yaw_joint",
+        "left_elbow_joint",
+        "left_shoulder_pitch_joint",
+        "left_shoulder_roll_joint",
+        "left_shoulder_yaw_joint",
         # "left_wrist_pitch_joint",
         # "left_wrist_roll_joint",
         # "left_wrist_yaw_joint",
@@ -560,6 +560,10 @@ class BaseTableHumanoidTaskCfg:
                 "right_shoulder_pitch_joint",
                 "right_shoulder_roll_joint",
                 "right_shoulder_yaw_joint",
+                "left_elbow_joint",
+                "left_shoulder_pitch_joint",
+                "left_shoulder_roll_joint",
+                "left_shoulder_yaw_joint",
             ]
 
         if self.robot == "g1_static_dex1":
@@ -591,7 +595,7 @@ class BaseTableHumanoidTaskCfg:
             self.cameras[0].mount_to = "g1_static_dex1"
             self.cameras[0].mount_link = "d435_link"
             # self.num_joints = 17 - 7
-            self.num_joints = 7
+            self.num_joints = 11
 
         elif self.robot == "g1_static_inpire_left_fixed":
             self.init_states[0]["robots"] = {
@@ -641,4 +645,4 @@ class BaseTableHumanoidTaskCfg:
         self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
 
 
-        self.randomize_robot_yaw_range = 0.32
+        self.randomize_robot_yaw_range = 1.6
