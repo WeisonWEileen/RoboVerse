@@ -16,8 +16,12 @@ from metasim.types import TensorState
 from metasim.utils.math import quat_apply
 from loguru import logger as log
 from metasim.task.registry import register_task
-from humanoid_visualrl.utils.utils import get_joint_reindexed_indices_from_substring,get_body_reindexed_indices_from_substring
+from humanoid_visualrl.utils.utils import (
+    get_joint_reindexed_indices_from_substring,
+    get_body_reindexed_indices_from_substring,
+)
 from metasim.utils.math import quat_from_euler_xyz, quat_mul
+
 
 @register_task("active_vision")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
@@ -129,9 +133,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.cfg.randomize_obj_material:
             self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
 
-
         # find the objcfg with name "object"
-        
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -147,8 +149,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.env, self.robot.name, self.robot.right_hand_palm_links, device=self.device
             )
             self.right_index_intermediate_link_indices = get_body_reindexed_indices_from_substring(
-                self.env, self.robot.name, self.robot.right_index_intermediate_link, device=self.device)
-            
+                self.env, self.robot.name, self.robot.right_index_intermediate_link, device=self.device
+            )
 
     def _get_joint_masking_indices(self):
         mask_joint_names = self.cfg.mask_joint_names
@@ -433,14 +435,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # self.done_buf[env_ids] = False
             # randomize yaw
             yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
-            quat = quat_from_euler_xyz(torch.zeros(len(env_ids), device=self.device), torch.zeros(len(env_ids), device=self.device), yaw)
+            quat = quat_from_euler_xyz(
+                torch.zeros(len(env_ids), device=self.device), torch.zeros(len(env_ids), device=self.device), yaw
+            )
             self.init_states.objects["object"].root_state[env_ids, 3:7] = quat
 
-            robot_yaw =  torch.rand(len(env_ids), device=self.device) * self.randomize_robot_yaw_range
-            # clip to yaw limit 
-            robot_yaw = torch.clamp(robot_yaw, min=self.robot_yaw_limit[0], max=self.robot_yaw_limit[1])
-            self.init_states.robots[self.robot.name].joint_pos[env_ids, self.robot_waist_yaw_joint_indices] = robot_yaw
-
+            # robot_yaw = torch.rand(len(env_ids), device=self.device) * self.randomize_robot_yaw_range
+            # # clip to yaw limit
+            # robot_yaw = torch.clamp(robot_yaw, min=self.robot_yaw_limit[0], max=self.robot_yaw_limit[1])
+            # self.init_states.robots[self.robot.name].joint_pos[env_ids, self.robot_waist_yaw_joint_indices] = robot_yaw
 
     def _post_reset_hook(self, env_ids):
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
@@ -454,14 +457,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # FIXME: this is a hack to reset the object_showup
         self.see_flag_float[env_ids] = 0.0
 
-
     def _check_reset(self):
         # move 0.05 to config
         terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.5
         # self.reset_buf = self.timeout_buf
         self.reset_buf = self.timeout_buf | terminate
         return self.reset_buf
-
 
     def _reward_pixel_norm_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for gazing at the object."""
@@ -482,7 +483,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # since now we have no pitch dof for waist, we only consider x pixel distance
             # distance = torch.abs(center_x - self.image_center_x)
 
-            self.pixel_rewards_buf[self.see_flag] = torch.exp(-distance / self.cfg.reward_pixel_norm_at_object_exp_sharpness) - self.pixel_reward_offset
+            self.pixel_rewards_buf[self.see_flag] = (
+                torch.exp(-distance / self.cfg.reward_pixel_norm_at_object_exp_sharpness) - self.pixel_reward_offset
+            )
         return self.pixel_rewards_buf
 
     def _reward_look_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
@@ -542,9 +545,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _reward_hand_to_object_dist(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         hand_pos = tensor_state.robots[robot_name].body_state[:, self.right_hand_palm_indices, :3]
-        hand_to_object_pos_error = (
-            torch.norm(hand_pos - self.object_pose_buf[:, None, :3], dim=-1).max(dim=-1).values
-        )
+        hand_to_object_pos_error = torch.norm(hand_pos - self.object_pose_buf[:, None, :3], dim=-1).max(dim=-1).values
         return self.see_flag_float * torch.exp(
             -self.cfg.reward_hand_object_dist_exp_sharpness * hand_to_object_pos_error
         )
@@ -567,22 +568,23 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     # reward funsion. when close to the object, the reward of wrist_close_to_object go up
     # r = r1 + r1 * r2reference: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10806624
-    def _reward_fuse_wrist_close_to_object_and_grasp(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    def _reward_fuse_wrist_close_to_object_and_grasp(
+        self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
+    ):
         right_wrist_pos = tensor_state.robots[robot_name].body_state[:, self.right_index_intermediate_link_indices, :7]
         # self._update_marker_viz(right_wrist_pos[:,0, :3], right_wrist_pos[:,0, 3:7], right_wrist_pos[:,0, :3] - self.object_pose_buf[:, :3])
-        dist = torch.norm(right_wrist_pos[:, 0,:3] - self.object_pose_buf[:, :3], dim=1)
-        wrist_close_to_object_reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
+        dist = torch.norm(right_wrist_pos[:, 0, :3] - self.object_pose_buf[:, :3], dim=1)
+        wrist_close_to_object_reward = self.see_flag_float * torch.exp(
+            -self.cfg.reward_wrist_close_to_object_exp_sharpness * dist
+        )
         dist_squared = self.see_flag_float * torch.norm(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
 
         # when the right wrist is close to the object, the reward of wrist_close_to_object_and_grasp go up
-       
+
         reward = wrist_close_to_object_reward + wrist_close_to_object_reward * torch.exp(
             -self.cfg.reward_lift_object_exp_shapeness * dist_squared
         )
         return reward
-
-
-
 
     def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         # TODO: define curl pose
@@ -666,13 +668,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)
 
     def _update_curriculum(self):
-        
         self._update_obj_material()
         self._update_curriculum_object_yaw_range()
 
-
     def _update_obj_material(self):
-        if self.cfg.randomize_obj_material and self.common_step_counter % self.cfg.update_obj_material_step_interval == 0:
+        if (
+            self.cfg.randomize_obj_material
+            and self.common_step_counter % self.cfg.update_obj_material_step_interval == 0
+        ):
             self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
             log.info("Updated object material")
 
@@ -683,9 +686,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # 检查是否已经收集了足够的see_flag历史数据
         if self.common_step_counter < self.cfg.warm_up_beforecurriculum:
             return
-        
-
-
 
         # 计算过去2000个step的see_flag平均值
         if self.see_flag_history_full:
@@ -704,7 +704,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.see_flag_history_ptr = 0
         self.see_flag_history_full = False
         self.see_flag_history.zero_()
-        
+
         # 如果平均值大于curriculum_avg_thres，则增加curriculum难度
         if see_flag_avg > self.cfg.curriculum_avg_thres_higher:
             # 只有当范围还没到最大时才增长
@@ -728,7 +728,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
                 )
 
-                
         # else increase a little bit
         elif see_flag_avg < self.cfg.curriculum_avg_thres_lower:
             return
@@ -752,17 +751,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 log.info(
                     f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
                 )
-
-
-
-
-
-
-
-
-
-
-
 
     # ==== reward functions ====
     def _reward_upper_body_pos(

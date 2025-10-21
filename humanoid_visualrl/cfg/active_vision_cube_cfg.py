@@ -524,7 +524,8 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_object_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
         self.curriculum_object_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
-        self.actor_critic_class = "use_rnn"
+        self.actor_critic_class = "use_rnn_foveated"
+        # self.actor_critic_class = "use_rnn"
 
         if self.actor_critic_class == "use_vision":
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"
@@ -532,6 +533,8 @@ class BaseTableHumanoidTaskCfg:
             self.ppo_cfg.policy.class_name = "ActorCriticResnet"
         if self.actor_critic_class == "use_rnn":
             self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrent"
+        if self.actor_critic_class == "use_rnn_foveated":
+            self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrentFoveated"
 
         log.info("================================================")
         log.info(f"USING {self.actor_critic_class} ACTOR CRITIC CLASS")
