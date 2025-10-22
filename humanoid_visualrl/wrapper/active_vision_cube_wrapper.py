@@ -799,7 +799,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
                         self.last_curriculum_update_step = self.common_step_counter
                         log.info(
-                            f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f}"
+                            f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f}"
                         )
 
     # ==== reward functions ====
