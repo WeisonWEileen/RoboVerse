@@ -449,7 +449,7 @@ class BaseTableHumanoidTaskCfg:
             mount_link="torso_link/d435_link",
             mount_pos=(0.0, 0.0, 0.0),
             mount_quat=(0.5, -0.5, 0.5, -0.5),
-            focal_length=7.6,
+            focal_length=15.0,
             horizontal_aperture=20.0,
         )
     ]
@@ -526,8 +526,8 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_object_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
         self.curriculum_object_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
-        self.actor_critic_class = "use_rnn_foveated"
-        # self.actor_critic_class = "use_rnn"
+        # self.actor_critic_class = "use_rnn_foveated"
+        self.actor_critic_class = "use_rnn"
 
         if self.actor_critic_class == "use_vision":
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"
