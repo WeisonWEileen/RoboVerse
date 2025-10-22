@@ -75,7 +75,7 @@ class LeggedRobotRunnerCfg:
     algorithm_class_name = "PPO"
     """Algorithm class name."""
     # num_steps_per_env = 96  # *0.005*5*48 = 6 s
-    num_steps_per_env = 64  # *0.005*5*48 = 6 s
+    num_steps_per_env = 96  # *0.005*5*48 = 6 s
     """per iteration"""
     max_iterations = 3000
     """max number of iterations"""
