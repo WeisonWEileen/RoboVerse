@@ -768,8 +768,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # return
 
         self.see_flag_history_ptr = 0
-        self.see_flag_history_full = False
-        self.see_flag_history.zero_()
+        # self.see_flag_history_full = False
+        # self.see_flag_history.zero_()
 
 
         if self.cfg.curriculum_object_yaw:
