@@ -32,7 +32,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.env.filter_collisions(self.robot.name, "object")
+        # self.env.filter_collisions(self.robot.name, "object")
         # print(self.env.scene.physics_context.get_filtered_pairs())
 
         self.image_center_x = self.cfg.cameras[0].width / 2
@@ -72,6 +72,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.robot_yaw_limit = list(robot_yaw_limit)
         self.robot_yaw_limit[0] = robot_yaw_limit[0] * 0.2
         self.robot_yaw_limit[1] = robot_yaw_limit[1] * 0.2
+
+        # Get joint indices BEFORE filter_collisions
         self.robot_waist_yaw_joint_indices = get_joint_reindexed_indices_from_substring(
             self.env, self.robot.name, ["waist_yaw_joint"], device=self.device
         )
@@ -743,15 +745,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     #             log.info(
     #                 f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
     #             )
-            # if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
-            #     old_range = self.curriculum_robot_yaw_range
-            #     self.curriculum_robot_yaw_range = min(
-            #         self.curriculum_robot_yaw_range + 0.005,
-            #         self.cfg.randomize_robot_yaw_range,
-            #     )
-            #     log.info(
-            #         f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
-            #     )
+    # if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
+    #     old_range = self.curriculum_robot_yaw_range
+    #     self.curriculum_robot_yaw_range = min(
+    #         self.curriculum_robot_yaw_range + 0.005,
+    #         self.cfg.randomize_robot_yaw_range,
+    #     )
+    #     log.info(
+    #         f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
+    #     )
 
     def _update_curriculum_object_yaw_range(self):
         if self.see_flag_history_full:
@@ -767,7 +769,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.see_flag_avg = 0.0
             self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
 
-
         if self.cfg.curriculum_object_yaw:
             # update curriculum_cube_yaw_range
             # Check curriculum update every 100 iterations (not steps) to prevent too frequent updates
@@ -776,7 +777,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # Only check and log once per 100 iterations, and only at the exact iteration boundary
             if current_iteration % 100 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
                 # if average reward added by 0.1
-                reward = self.episode_sums["pixel_norm_at_object"].mean() 
+                reward = self.episode_sums["pixel_norm_at_object"].mean()
 
                 # Always update last_reward to track current performance
                 reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)

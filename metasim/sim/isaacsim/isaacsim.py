@@ -35,7 +35,6 @@ import weakref
 from isaaclab.app import AppLauncher
 
 
-
 class IsaacsimHandler(BaseSimHandler):
     """
     Handler for Isaac Lab simulation environment.
@@ -72,14 +71,14 @@ class IsaacsimHandler(BaseSimHandler):
             os.path.join("roboverse_data/materials/object_textures", "**", "*.png"), recursive=True
         )
         self.rand_attributes = [
-                "diffuse_texture",
-                "project_uvw",
-                "texture_scale",
-                "diffuse_tint",
-                "reflection_roughness_constant",
-                "metallic_constant",
-                "specular_level",
-            ]
+            "diffuse_texture",
+            "project_uvw",
+            "texture_scale",
+            "diffuse_tint",
+            "reflection_roughness_constant",
+            "metallic_constant",
+            "specular_level",
+        ]
         # TODO  randomize this
 
     def _init_keyboard(self) -> None:
@@ -218,12 +217,27 @@ class IsaacsimHandler(BaseSimHandler):
 
         stage = omni.usd.get_context().get_stage()
 
+
+        def traverse_all_prims(prim):
+            """递归遍历所有子节点"""
+            yield prim
+            for child in prim.GetChildren():
+                yield from traverse_all_prims(child)
+
         for env_id in range(self.num_envs):
-            robot_path = f"/World/envs/env_{env_id}/{robot_name}"
-            object_path = f"/World/envs/env_{env_id}/{obj_name}"
-            robot_prim = stage.GetPrimAtPath(robot_path)
-            filteredPairsAPIBox0 = UsdPhysics.FilteredPairsAPI.Apply(robot_prim)
-            filteredPairsAPIBox0.CreateFilteredPairsRel().AddTarget(object_path)
+            if env_id == 0:
+                robot_path = f"/World/envs/env_{env_id}/{robot_name}"
+                cube_path = f"/World/envs/env_{env_id}/{obj_name}"
+
+                cube_prim = stage.GetPrimAtPath(cube_path)  # 目标只需要一个
+                robot_prim = stage.GetPrimAtPath(robot_path)
+
+                # 递归遍历所有子节点（包括嵌套的）
+                for prim in traverse_all_prims(robot_prim):
+                    # 只挑那些真的参与碰撞的 Prim
+                    if prim.HasAPI(UsdPhysics.CollisionAPI):
+                        api = UsdPhysics.FilteredPairsAPI.Apply(prim)
+                        api.CreateFilteredPairsRel().AddTarget(cube_prim.GetPath())
 
     def launch(self) -> None:
         self._init_scene()
@@ -233,6 +247,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_terrain()
         self._load_objects()
         self._load_lights()
+        self.filter_collisions(self.robots[0].name, "object")
         # if "active" in self.scenario_cfg.task.task_name:
         #     pass
         #     self.init_marker_viz()
@@ -837,13 +852,10 @@ class IsaacsimHandler(BaseSimHandler):
                     value=False,
                 )
             return
-        
-      
 
         raise ValueError(f"Unsupported object type: {type(obj)}")
-    
-    def randomize_obj_material(self, env_ids, obj: BaseObjCfg):
 
+    def randomize_obj_material(self, env_ids, obj: BaseObjCfg):
         for i in range(len(env_ids)):
             # get stage
             import omni.usd
@@ -887,7 +899,6 @@ class IsaacsimHandler(BaseSimHandler):
                     shader = UsdShade.Shader(omni.usd.get_shader_from_material(material_prim.GetParent(), True))
                     shader.CreateInput(attribute_name, attribute_type)
                 material_prim.GetAttribute(disp_name).Set(value)
-
 
             # for i in range(self.scene.cfg.num_envs):
             #     prim_path_i = f"/World/envs/env_{i}/{obj.name}"
