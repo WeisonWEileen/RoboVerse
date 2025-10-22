@@ -441,8 +441,8 @@ class BaseTableHumanoidTaskCfg:
         PinholeCameraCfg(
             name="camera_first_person",
             data_types=["rgb", "semantic_seg"],
-            width=160,
-            height=120,
+            width=128,
+            height=96,
             pos=(1.5, -1.5, 1.5),
             look_at=(0.0, 0.0, 0.0),
             mount_to="g1_static_dex1",
