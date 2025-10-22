@@ -16,9 +16,9 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 84 \
+    --num_envs 64 \
     --task "active_vision" \
-    --run_name "enhanced_foveate_test_reward_scale_small" \
+    --run_name "dex-rgb_cnn_current_infra_test" \
     --device "cuda:0" \
     --wandb \
     --enable_opencv_display \

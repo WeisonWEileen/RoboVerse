@@ -504,8 +504,8 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 2.3
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
-            self.randomize_object_yaw_range = 2.14
-            self.randomize_object_yaw_range = 1.6
+            # self.randomize_object_yaw_range = 2.14
+            self.randomize_object_yaw_range = 1.3
             self.curriculum_object_yaw = True
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
             self.curriculum_avg_thres_higher = 0.93
@@ -545,7 +545,7 @@ class BaseTableHumanoidTaskCfg:
         # training runtime highly relevant
         self.robot = "g1_static_dex1"
         # self.robot = "g1_static_inpire_left_fixed"
-        self.num_envs = 64
+        self.num_envs = 96
         self.enable_opencv_display = True
         self.use_vision = True
         self.use_fixed_gazing = True

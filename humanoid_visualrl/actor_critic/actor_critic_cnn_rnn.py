@@ -42,6 +42,7 @@ from torch import nn
 #         x = self.act3(self.fc(x))
 #         return x  # 返回 (B, output_dim)
 
+
 def conv_output_size(h_w, kernel_size=1, stride=1, pad=0, dilation=1):
     """
     Utility function to compute the output size of a convolution layer.
@@ -70,6 +71,7 @@ def conv_output_size(h_w, kernel_size=1, stride=1, pad=0, dilation=1):
     h = (h_w[0] + 2 * pad_h - dilation * (kernel_h - 1) - 1) // stride_h + 1
     w = (h_w[1] + 2 * pad_w - dilation * (kernel_w - 1) - 1) // stride_w + 1
     return h, w
+
 
 class ActorCriticCNNRecurrent(ActorCritic):
     is_recurrent = True
@@ -122,30 +124,30 @@ class ActorCriticCNNRecurrent(ActorCritic):
         h, w = 96, 128
         filter_sizes = [16, 32, 64, 128]
         kernel_sizes = [8, 4, 3, 3]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[0], stride=4, padding=0)
+        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[0], stride=4, pad=0)
         layer1_norm_shape = [filter_sizes[0], h, w]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[1], stride=2, padding=0)
+        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[1], stride=2, pad=0)
         layer2_norm_shape = [filter_sizes[1], h, w]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[2], stride=1, padding=0)
+        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[2], stride=1, pad=0)
         layer3_norm_shape = [filter_sizes[2], h, w]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[3], stride=1, padding=0)
+        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[3], stride=1, pad=0)
         layer4_norm_shape = [filter_sizes[3], h, w]
-
 
         #  hisotry version 128 × 96
         self.vision_encoder = nn.Sequential(
-            nn.Conv2d(3, filter_sizes[0], kernel_size=kernel_sizes[0], stride=4, padding=0),  
+            nn.Conv2d(3, filter_sizes[0], kernel_size=kernel_sizes[0], stride=4, padding=0),
             nn.ReLU(inplace=True),
             nn.LayerNorm(layer1_norm_shape),
-            nn.Conv2d(filter_sizes[0], filter_sizes[1], kernel_size=kernel_sizes[1], stride=2, padding=0),  
+            nn.Conv2d(filter_sizes[0], filter_sizes[1], kernel_size=kernel_sizes[1], stride=2, padding=0),
             nn.ReLU(inplace=True),
-            nn.Conv2d(filter_sizes[1], filter_sizes[2], kernel_size=kernel_sizes[2], stride=1, padding=0),  
             nn.LayerNorm(layer2_norm_shape),
-            nn.Conv2d(filter_sizes[2], filter_sizes[3], kernel_size=kernel_sizes[3], stride=1, padding=0),  
+            nn.Conv2d(filter_sizes[1], filter_sizes[2], kernel_size=kernel_sizes[2], stride=1, padding=0),
             nn.LayerNorm(layer3_norm_shape),
+            nn.Conv2d(filter_sizes[2], filter_sizes[3], kernel_size=kernel_sizes[3], stride=1, padding=0),
+            nn.LayerNorm(layer4_norm_shape),
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=filter_sizes[3]
-            # nn.Flatten(),  `# (B, filter_sizes[3])
+            nn.Flatten(),  # (B, filter_sizes[3])
             nn.Linear(filter_sizes[3], 32),  # 压缩 / 投影到 32 维
             nn.ReLU(inplace=True),
         )
@@ -156,9 +158,9 @@ class ActorCriticCNNRecurrent(ActorCritic):
         #     nn.ReLU(inplace=True),
         #     nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
         #     nn.ReLU(inplace=True),
-        #     nn.AdaptiveAvgPool2d((1, 1)),  
-        #     nn.Flatten(),  
-        #     nn.Linear(64, 512),  
+        #     nn.AdaptiveAvgPool2d((1, 1)),
+        #     nn.Flatten(),
+        #     nn.Linear(64, 512),
         #     nn.ReLU(inplace=True),
         # )
 

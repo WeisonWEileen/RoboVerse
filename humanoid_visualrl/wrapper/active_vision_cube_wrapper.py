@@ -54,8 +54,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
         if self.cfg.curriculum_object_yaw:
-            # self.curriculum_object_yaw_range = 0.3 * self.cfg.randomize_object_yaw_range
-            self.curriculum_object_yaw_range =  self.cfg.randomize_object_yaw_range
+            self.curriculum_object_yaw_range = 0.5 * self.cfg.randomize_object_yaw_range
+            # self.curriculum_object_yaw_range =  self.cfg.randomize_object_yaw_range
             # self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
         else:
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
@@ -670,7 +670,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _update_curriculum(self):
         self._update_obj_material()
-        # self._update_curriculum_object_yaw_range()
+        self._update_curriculum_object_yaw_range()
 
     def _update_obj_material(self):
         if (
@@ -680,15 +680,80 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
             log.info("Updated object material")
 
+    # def _update_curriculum_object_yaw_range(self):
+    #     if not self.cfg.curriculum_object_yaw:
+    #         return
+
+    #     # 检查是否已经收集了足够的see_flag历史数据
+    #     if self.common_step_counter < self.cfg.warm_up_beforecurriculum:
+    #         return
+
+    #     # 计算过去2000个step的see_flag平均值
+    #     if self.see_flag_history_full:
+    #         # 使用完整的2000个step
+    #         see_flag_avg = self.see_flag_history.float().mean()
+    #         self.see_flag_avg = see_flag_avg.item()
+    #         self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
+
+    #     else:
+    #         # 使用当前收集到的step数
+    #         self.see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean()
+    #         self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
+
+    #         return
+
+    #     self.see_flag_history_ptr = 0
+    #     self.see_flag_history_full = False
+    #     self.see_flag_history.zero_()
+
+    #     # 如果平均值大于curriculum_avg_thres，则增加curriculum难度
+    #     if see_flag_avg > self.cfg.curriculum_avg_thres_higher:
+    #         # 只有当范围还没到最大时才增长
+    #         if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
+    #             old_range = self.curriculum_object_yaw_range
+    #             self.curriculum_object_yaw_range = min(
+    #                 self.curriculum_object_yaw_range
+    #                 + self.cfg.randomize_object_yaw_range * self.cfg.randomize_add_scale,
+    #                 self.cfg.randomize_object_yaw_range,
+    #             )
+    #             log.info(
+    #                 f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
+    #             )
+    #         if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
+    #             old_range = self.curriculum_robot_yaw_range
+    #             self.curriculum_robot_yaw_range = min(
+    #                 self.curriculum_robot_yaw_range + 0.005,
+    #                 self.cfg.randomize_robot_yaw_range,
+    #             )
+    #             log.info(
+    #                 f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
+    #             )
+
+    #     # else increase a little bit
+    #     elif see_flag_avg < self.cfg.curriculum_avg_thres_lower:
+    #         return
+    #     else:
+    #         # gradually randomize
+    #         if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
+    #             old_range = self.curriculum_object_yaw_range
+    #             self.curriculum_object_yaw_range = min(
+    #                 self.curriculum_object_yaw_range + 0.005,
+    #                 self.cfg.randomize_object_yaw_range,
+    #             )
+    #             log.info(
+    #                 f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
+    #             )
+            # if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
+            #     old_range = self.curriculum_robot_yaw_range
+            #     self.curriculum_robot_yaw_range = min(
+            #         self.curriculum_robot_yaw_range + 0.005,
+            #         self.cfg.randomize_robot_yaw_range,
+            #     )
+            #     log.info(
+            #         f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
+            #     )
+
     def _update_curriculum_object_yaw_range(self):
-        if not self.cfg.curriculum_object_yaw:
-            return
-
-        # 检查是否已经收集了足够的see_flag历史数据
-        if self.common_step_counter < self.cfg.warm_up_beforecurriculum:
-            return
-
-        # 计算过去2000个step的see_flag平均值
         if self.see_flag_history_full:
             # 使用完整的2000个step
             see_flag_avg = self.see_flag_history.float().mean()
@@ -700,58 +765,42 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean()
             self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
 
-            return
+            # return
 
         self.see_flag_history_ptr = 0
         self.see_flag_history_full = False
         self.see_flag_history.zero_()
 
-        # 如果平均值大于curriculum_avg_thres，则增加curriculum难度
-        if see_flag_avg > self.cfg.curriculum_avg_thres_higher:
-            # 只有当范围还没到最大时才增长
-            if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
-                old_range = self.curriculum_object_yaw_range
-                self.curriculum_object_yaw_range = min(
-                    self.curriculum_object_yaw_range
-                    + self.cfg.randomize_object_yaw_range * self.cfg.randomize_add_scale,
-                    self.cfg.randomize_object_yaw_range,
-                )
-                log.info(
-                    f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
-                )
-            if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
-                old_range = self.curriculum_robot_yaw_range
-                self.curriculum_robot_yaw_range = min(
-                    self.curriculum_robot_yaw_range + 0.005,
-                    self.cfg.randomize_robot_yaw_range,
-                )
-                log.info(
-                    f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
-                )
 
-        # else increase a little bit
-        elif see_flag_avg < self.cfg.curriculum_avg_thres_lower:
-            return
-        else:
-            # gradually randomize
-            if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
-                old_range = self.curriculum_object_yaw_range
-                self.curriculum_object_yaw_range = min(
-                    self.curriculum_object_yaw_range + 0.005,
-                    self.cfg.randomize_object_yaw_range,
+        if self.cfg.curriculum_object_yaw:
+            # update curriculum_cube_yaw_range
+            # Check curriculum update every 100 iterations (not steps) to prevent too frequent updates
+            current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
+
+            # Only check and log once per 100 iterations, and only at the exact iteration boundary
+            if current_iteration % 100 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
+                # if average reward added by 0.1
+                reward = self.episode_sums["pixel_norm_at_object"].mean() 
+
+                # Always update last_reward to track current performance
+                reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)
+                self.last_reward = reward
+
+                # Only increase range if there's significant improvement (threshold: 0.01)
+                # and we haven't increased range too recently (minimum 400 iterations between updates)
+                iterations_since_last_update = current_iteration - (
+                    self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
                 )
                 log.info(
-                    f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
+                    f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f}"
                 )
-            # if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
-            #     old_range = self.curriculum_robot_yaw_range
-            #     self.curriculum_robot_yaw_range = min(
-            #         self.curriculum_robot_yaw_range + 0.005,
-            #         self.cfg.randomize_robot_yaw_range,
-            #     )
-            #     log.info(
-            #         f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
-            #     )
+                if reward_improvement_ratio > 0.025 or iterations_since_last_update >= 400:
+                    if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
+                        self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
+                        self.last_curriculum_update_step = self.common_step_counter
+                        log.info(
+                            f"curriculum_cube_yaw_range: {self.curriculum_cube_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f}"
+                        )
 
     # ==== reward functions ====
     def _reward_upper_body_pos(
