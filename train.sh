@@ -18,7 +18,7 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "dex-rgb_cnn_current_infra_test" \
+    --run_name "original_test" \
     --device "cuda:0" \
     --wandb \
     --enable_opencv_display \

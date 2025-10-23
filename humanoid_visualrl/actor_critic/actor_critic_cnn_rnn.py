@@ -134,35 +134,35 @@ class ActorCriticCNNRecurrent(ActorCritic):
         layer4_norm_shape = [filter_sizes[3], h, w]
 
         #  hisotry version 128 × 96
-        self.vision_encoder = nn.Sequential(
-            nn.Conv2d(3, filter_sizes[0], kernel_size=kernel_sizes[0], stride=4, padding=0),
-            nn.ReLU(inplace=True),
-            nn.LayerNorm(layer1_norm_shape),
-            nn.Conv2d(filter_sizes[0], filter_sizes[1], kernel_size=kernel_sizes[1], stride=2, padding=0),
-            nn.ReLU(inplace=True),
-            nn.LayerNorm(layer2_norm_shape),
-            nn.Conv2d(filter_sizes[1], filter_sizes[2], kernel_size=kernel_sizes[2], stride=1, padding=0),
-            nn.LayerNorm(layer3_norm_shape),
-            nn.Conv2d(filter_sizes[2], filter_sizes[3], kernel_size=kernel_sizes[3], stride=1, padding=0),
-            nn.LayerNorm(layer4_norm_shape),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=filter_sizes[3]
-            nn.Flatten(),  # (B, filter_sizes[3])
-            nn.Linear(filter_sizes[3], 32),  # 压缩 / 投影到 32 维
-            nn.ReLU(inplace=True),
-        )
         # self.vision_encoder = nn.Sequential(
-        #     nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
+        #     nn.Conv2d(3, filter_sizes[0], kernel_size=kernel_sizes[0], stride=4, padding=0),
         #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
+        #     nn.LayerNorm(layer1_norm_shape),
+        #     nn.Conv2d(filter_sizes[0], filter_sizes[1], kernel_size=kernel_sizes[1], stride=2, padding=0),
         #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
+        #     nn.LayerNorm(layer2_norm_shape),
+        #     nn.Conv2d(filter_sizes[1], filter_sizes[2], kernel_size=kernel_sizes[2], stride=1, padding=0),
+        #     nn.LayerNorm(layer3_norm_shape),
+        #     nn.Conv2d(filter_sizes[2], filter_sizes[3], kernel_size=kernel_sizes[3], stride=1, padding=0),
+        #     nn.LayerNorm(layer4_norm_shape),
         #     nn.ReLU(inplace=True),
-        #     nn.AdaptiveAvgPool2d((1, 1)),
-        #     nn.Flatten(),
-        #     nn.Linear(64, 512),
+        #     nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=filter_sizes[3]
+        #     nn.Flatten(),  # (B, filter_sizes[3])
+        #     nn.Linear(filter_sizes[3], 32),  # 压缩 / 投影到 32 维
         #     nn.ReLU(inplace=True),
         # )
+        self.vision_encoder = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(64, 32),
+            nn.ReLU(inplace=True),
+        )
 
         # self.vision_encoder = VisionBackbonePDC(vision_height, vision_width, output_dim=64)
 
