@@ -160,7 +160,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
-            nn.Linear(64, 32),
+            nn.Linear(64, 512),
             nn.ReLU(inplace=True),
         )
 
