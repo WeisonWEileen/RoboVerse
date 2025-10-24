@@ -1,6 +1,6 @@
 # train with walking
-
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7,8
+export WANDB_API_KEY=70b35cc989ebf8652e52516c433f9faa444d21d2
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5
 # /home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
 USER_NAME=$(whoami)
 
@@ -18,10 +18,11 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "ori_original_test" \
+    --run_name "ori_origina_slow_domain_rand_test" \
     --device "cuda:0" \
     --wandb \
-    --enable_opencv_display \
+    --headless \
+    # --enable_opencv_display \
     # --headless 
     # --headless
     # --debug

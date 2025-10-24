@@ -782,6 +782,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # update curriculum_cube_yaw_range
             # Check curriculum update every 100 iterations (not steps) to prevent too frequent updates
             current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
+            if current_iteration < 400:
+                return
 
             # Only check and log once per 100 iterations, and only at the exact iteration boundary
             if current_iteration % 100 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
