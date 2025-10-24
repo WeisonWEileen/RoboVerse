@@ -58,6 +58,13 @@ if __name__ == "__main__":
     scenario.env_spacing = task_cfg.env_spacing
     scenario.device = args.device
 
+    if args.debug:
+        # do not log, faster reset
+        log_dir = None
+        task_cfg.num_steps_per_env = 48
+        scenario.env_spacing = 5.0
+
+
     log.info(f"Using simulator: {args.sim}")
     env_cls = get_task_class(args.task)
 
@@ -70,14 +77,11 @@ if __name__ == "__main__":
     device = torch.device(args.device)
     log_dir, now = get_log_dir(args, scenario)
 
-    if args.debug:
-        # do not log, faster reset
-        log_dir = None
-        task_cfg.num_steps_per_env = 48
-    else:
+
+    if not args.debug:
         dump_instance_file(task_cfg, os.path.join(log_dir, "cfg.py"))
         dump_instance_file(env, os.path.join(log_dir, "env.py"))
-
+        
     if args.wandb and not args.debug:
         env.train_cfg["logger"] = "wandb"
 
