@@ -527,7 +527,7 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_object_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
         # self.actor_critic_class = "use_rnn_foveated"
-        self.actor_critic_class = "use_rnn"
+        self.actor_critic_class = "use_rnn_foveated"
 
         if self.actor_critic_class == "use_vision":
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"

@@ -227,6 +227,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
         # 检查输入维度，如果有时间维度需要特殊处理
         if state.dim() == 3:  # [time, batch, features] - 来自 recurrent_mini_batch_generator
             time_steps, batch_size = state.shape[:2]
+            
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
             vision_fea_flat = self.vision_encoder(vision_flat)

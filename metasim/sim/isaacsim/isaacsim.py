@@ -217,7 +217,6 @@ class IsaacsimHandler(BaseSimHandler):
 
         stage = omni.usd.get_context().get_stage()
 
-
         def traverse_all_prims(prim):
             """递归遍历所有子节点"""
             yield prim

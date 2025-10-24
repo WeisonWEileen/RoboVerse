@@ -1,26 +1,32 @@
+from __future__ import annotations
 # Copyright (c) 2021-2025, ETH Zurich and NVIDIA CORPORATION
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from __future__ import annotations
 
 import warnings
 
 import torch
-# from rsl_rl.modules import ActorCritic
 
 # from humanoid_visualrl.actor_critic.actor_critic_cnn import ActorCriticCNN
 from rsl_rl.networks import Memory
 from rsl_rl.utils import resolve_nn_activation
 from torch import nn
-import torch.nn.functional as F
 
+
+# Copyright (c) 2021-2025, ETH Zurich and NVIDIA CORPORATION
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+# from __future__ import annotations
+
+# import torch
+# import torch.nn as nn
 from torch.distributions import Normal
 
-# we directly see the location as action
-
-from rsl_rl.utils import resolve_nn_activation
+# from rsl_rl.utils import resolve_nn_activation
 
 
 class ActorCritic(nn.Module):
@@ -47,7 +53,6 @@ class ActorCritic(nn.Module):
             )
         super().__init__()
         activation = resolve_nn_activation(activation)
-        # foveated_action_dim = 2
 
         mlp_input_dim_a = num_actor_obs
         mlp_input_dim_c = num_critic_obs
@@ -171,6 +176,36 @@ class ActorCritic(nn.Module):
         return True
 
 
+def conv_output_size(h_w, kernel_size=1, stride=1, pad=0, dilation=1):
+    """
+    Utility function to compute the output size of a convolution layer.
+
+    h_w: Tuple[int, int] - height and width of the input
+    kernel_size: int or Tuple[int, int] - size of the convolution kernel
+    stride: int or Tuple[int, int] - stride of the convolution
+    pad: int or Tuple[int, int] - padding
+    dilation: int or Tuple[int, int] - dilation rate
+    """
+    if isinstance(kernel_size, tuple):
+        kernel_h, kernel_w = kernel_size
+    else:
+        kernel_h, kernel_w = kernel_size, kernel_size
+
+    if isinstance(stride, tuple):
+        stride_h, stride_w = stride
+    else:
+        stride_h, stride_w = stride, stride
+
+    if isinstance(pad, tuple):
+        pad_h, pad_w = pad
+    else:
+        pad_h, pad_w = pad, pad
+
+    h = (h_w[0] + 2 * pad_h - dilation * (kernel_h - 1) - 1) // stride_h + 1
+    w = (h_w[1] + 2 * pad_w - dilation * (kernel_w - 1) - 1) // stride_w + 1
+    return h, w
+
+
 class ActorCriticCNNRecurrentFoveated(ActorCritic):
     is_recurrent = True
 
@@ -219,25 +254,18 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
 
         activation = resolve_nn_activation(activation)
 
-        # modified to be more foveated
+
+
         self.vision_encoder = nn.Sequential(
-            # ───── 1 ───── 160×120 → 26×20  （感受野 12）
-            nn.Conv2d(3, 64, kernel_size=12, stride=6, padding=3),
+            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
             nn.ReLU(inplace=True),
-
-            # ───── 2 ───── 26×20 → 8×6     （感受野 12 + (6·6)=48 → 60）
-            nn.Conv2d(64, 128, kernel_size=6, stride=3, padding=1),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
             nn.ReLU(inplace=True),
-
-            # ───── 3 ───── 8×6 → 4×3        （感受野 60 + (3·4)=12 → 72）
-            nn.Conv2d(128, 128, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
             nn.ReLU(inplace=True),
-
-            # ───── Global Pool ───── 4×3 → 1×1
-            nn.AdaptiveAvgPool2d(1),   # 128 × 1 × 1
-
-            nn.Flatten(),              # 128
-            nn.Linear(128, 32),
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(64, 32),
             nn.ReLU(inplace=True),
         )
 
@@ -256,9 +284,49 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
         print(f"Actor RNN: {self.memory_a}")
         print(f"Critic RNN: {self.memory_c}")
 
+        # gaze module, which predict anisotropic Gaussian distribution. which output \mu_x, \mu_y, \sigma_x, \sigma_y, \sigma_{xy}
+        # image_dim = [3, 96, 128]
+        flat_size = 3 * vision_height * vision_width
+        self.gaze_module = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(flat_size, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 4),
+        )
+        print(f"Gaze Module: {self.gaze_module}")
+
     def reset(self, dones=None):
         self.memory_a.reset(dones)
         self.memory_c.reset(dones)
+
+    def compute_gaussian_weights(self, vision: torch.Tensor) -> torch.Tensor:
+        """
+        Compute anisotropic Gaussian weighting map over the image buffer.
+        vision: [B, C, H, W]
+        returns weight: [B, 1, H, W]
+        """
+        B, C, H, W = vision.shape
+        params = self.gaze_module(vision)  # -> [B,4]
+        mu_x, mu_y, sigma_x, sigma_y = torch.chunk(params, 4, dim=1)
+        # geometric grid
+        xs = torch.arange(W, device=vision.device).view(1, 1, 1, W)
+        ys = torch.arange(H, device=vision.device).view(1, 1, H, 1)
+        # reshape params for broadcast
+        mu_x = mu_x.view(B, 1, 1, 1)
+        mu_y = mu_y.view(B, 1, 1, 1)
+        sigma_x = sigma_x.view(B, 1, 1, 1).clamp(min=1e-6)
+        sigma_y = sigma_y.view(B, 1, 1, 1).clamp(min=1e-6)
+        # anisotropic Gaussian
+        weight = torch.exp(-(((xs - mu_x) ** 2) / (2 * sigma_x**2) + ((ys - mu_y) ** 2) / (2 * sigma_y**2)))
+        return weight
+
+    def forward_vision(self, vision: torch.Tensor) -> torch.Tensor:
+        # apply gaze weighting, then encode
+        weight = self.compute_gaussian_weights(vision)
+        vision_weighted = vision * weight
+        return self.vision_encoder(vision_weighted)
 
     def act(self, observations, masks=None, hidden_states=None, **kwargs):
         state, vision = observations
@@ -269,7 +337,7 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
             with torch.no_grad():
-                vision_fea_flat = self.vision_encoder(vision_flat)
+                vision_fea_flat = self.forward_vision(vision_flat)
             # 重新组织成 [time, batch, features]
             vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
@@ -279,7 +347,7 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
             self.update_distribution(inputs)
         else:  # [batch, features] - 来自推理时
             with torch.no_grad():
-                vision_fea = self.vision_encoder(vision)
+                vision_fea = self.forward_vision(vision)
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             inputs = self.memory_a(concat_inputs, masks, hidden_states)
             self.update_distribution(inputs.squeeze(0))
@@ -292,7 +360,7 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
     def act_inference(self, observations):
         state, vision = observations
         with torch.no_grad():
-            vision_fea = self.vision_encoder(vision)
+            vision_fea = self.forward_vision(vision)
         concat_inputs = torch.cat([state, vision_fea], dim=-1)
         inputs = self.memory_a(concat_inputs)
         self.update_distribution(inputs.squeeze(0))
@@ -304,9 +372,15 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
         # 检查输入维度，如果有时间维度需要特殊处理
         if state.dim() == 3:  # [time, batch, features] - 来自 recurrent_mini_batch_generator
             time_steps, batch_size = state.shape[:2]
+            gaze_params = self.gaze_module(vision)
+            gaze_params = gaze_params.reshape(time_steps, batch_size, -1)
+            # get gaussian distribution from gaze params
+
+            # at center is 1
+
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
-            vision_fea_flat = self.vision_encoder(vision_flat)
+            vision_fea_flat = self.forward_vision(vision_flat)
             # 重新组织成 [time, batch, features]
             vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
@@ -315,7 +389,7 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
             # input_c 已经是展平的，所以不需要 squeeze(0)
             value = self.critic(input_c)
         else:  # [batch, features] - 来自推理时
-            vision_fea = self.vision_encoder(vision)
+            vision_fea = self.forward_vision(vision)
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             input_c = self.memory_c(concat_inputs, masks, hidden_states)
             value = self.critic(input_c.squeeze(0))
