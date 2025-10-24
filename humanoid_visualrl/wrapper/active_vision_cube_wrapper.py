@@ -208,6 +208,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # vision_rgb -= 0.5
 
         mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
+
+        if mean_tensor[0][0][0][0] < 0.1:
+            a = 1
+            breakpoint()
+
         vision_rgb -= mean_tensor
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
 
@@ -312,7 +317,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.env._render_viewport and self.enable_opencv_display:
             env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
             # 确保图像是uint8格式
-            rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
+            rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.3
+            # ensure the image is in the range of [0, 1]
+            rgb_image = torch.clamp(rgb_image, 0, 1)
             rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
             if env_idx.any():
                 env_pos = torch.where(env_idx)[0][0]
