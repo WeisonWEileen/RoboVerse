@@ -387,7 +387,7 @@ class BaseTableHumanoidTaskCfg:
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
-        "pixel_norm_at_object": 1.0,
+        "pixel_norm_at_object": 0.4,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
         # "wrist_close_to_object_and_grasp": 1.0,
@@ -479,7 +479,7 @@ class BaseTableHumanoidTaskCfg:
     reward_lift_object_exp_shapeness = 4.0
     reward_object2goal_exp_shapeness = 15
     reward_wrist_close_to_object_exp_sharpness = 4.0
-    reward_pixel_norm_at_object_exp_sharpness = 25.0
+    reward_pixel_norm_at_object_exp_sharpness = 50.0
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
@@ -492,7 +492,7 @@ class BaseTableHumanoidTaskCfg:
             # self.update_curriculum_iteration = 100
             # self.randomize_object_yaw_range = 1.8
             # self.randomize_object_yaw_range = 1.8
-            self.randomize_object_yaw_range = 1.8
+            self.randomize_object_yaw_range = 2.3
             self.curriculum_object_yaw = False
 
             # self.reward_weights = {
@@ -505,7 +505,7 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
             # self.randomize_object_yaw_range = 2.14
-            self.randomize_object_yaw_range = 1.3
+            self.randomize_object_yaw_range = 2.3
             self.curriculum_object_yaw = True
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
             self.curriculum_avg_thres_higher = 0.93
