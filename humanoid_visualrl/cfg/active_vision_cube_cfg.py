@@ -37,8 +37,8 @@ class LeggedRobotRunnerCfg:
         critic_hidden_dims = [768, 256, 128]
         """Hidden dimensions for critic network."""
         rnn_hidden_dim = 256
-        vision_height = 240
-        vision_width = 320
+        # vision_height = 240
+        # vision_width = 320
         masking_all = True
         # action_masking = False
         # masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]

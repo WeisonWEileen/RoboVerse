@@ -288,9 +288,9 @@ class OnPolicyRunner:
                         lenbuffer.extend(cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
 
                         # for metric logging, not a individual reward
-                        if "episode_metrics" in infos:
-                            if "see_flag_avg" in infos["episode_metrics"]:
-                                see_flag_avg = infos["episode_metrics"]["see_flag_avg"]
+                        # if "episode_metrics" in infos:
+                        #     if "see_flag_avg" in infos["episode_metrics"]:
+                        #         see_flag_avg = infos["episode_metrics"]["see_flag_avg"]
                         cur_reward_sum[new_ids] = 0
                         cur_episode_length[new_ids] = 0
                         # -- intrinsic and extrinsic rewards

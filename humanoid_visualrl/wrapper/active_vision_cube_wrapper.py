@@ -758,18 +758,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     #     )
 
     def _update_curriculum_object_yaw_range(self):
-        if self.see_flag_history_full:
-            # 使用完整窗口的数据统计（最近 win_length 步的滑动平均）
-            see_flag_avg = self.see_flag_history.float().mean()
-            self.see_flag_avg = see_flag_avg.item()
-            self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
-        else:
-            # 使用当前收集到的step数（还未填满窗口）
-            if self.see_flag_history_ptr > 0:
-                self.see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean().item()
-            else:
-                self.see_flag_avg = 0.0
-            self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
+        # if self.see_flag_history_full:
+        #     # 使用完整窗口的数据统计（最近 win_length 步的滑动平均）
+        #     see_flag_avg = self.see_flag_history.float().mean()
+        #     self.see_flag_avg = see_flag_avg.item()
+        #     self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
+        # else:
+        #     # 使用当前收集到的step数（还未填满窗口）
+        #     if self.see_flag_history_ptr > 0:
+        #         self.see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean().item()
+        #     else:
+        #         self.see_flag_avg = 0.0
+        #     self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
 
         if self.cfg.curriculum_object_yaw:
             # update curriculum_cube_yaw_range
