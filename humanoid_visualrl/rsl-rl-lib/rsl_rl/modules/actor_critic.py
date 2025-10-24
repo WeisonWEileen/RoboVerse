@@ -121,10 +121,15 @@ class ActorCritic(nn.Module):
         else:
             raise ValueError(f"Unknown standard deviation type: {self.noise_std_type}. Should be 'scalar' or 'log'")
 
+        mean[..., 0:14] *= 0.0
+        # create distribution
+        self.distribution = Normal(mean, std)
+
         # Apply action masking to the mean
-        masked_mean = mean * self.mask
-        # create distribution with masked mean
-        self.distribution = Normal(masked_mean, std)
+
+        # masked_mean = mean * self.mask
+        # # create distribution with masked mean
+        # self.distribution = Normal(masked_mean, std)
 
     def act(self, observations, **kwargs):
         self.update_distribution(observations)

@@ -204,9 +204,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # Convert from uint8 to float and normalize to [0, 1]
         vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb / 255.0
         # TODO: normalize it to get better results?
-        # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
-        vision_rgb -= 0.5
+        # # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
+        # vision_rgb -= 0.5
 
+        mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
+        vision_rgb -= mean_tensor
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
 
         # save a png if count_step is 20
