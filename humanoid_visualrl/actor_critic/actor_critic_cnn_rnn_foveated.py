@@ -372,19 +372,26 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
         # 检查输入维度，如果有时间维度需要特殊处理
         if state.dim() == 3:  # [time, batch, features] - 来自 recurrent_mini_batch_generator
             time_steps, batch_size = state.shape[:2]
-            gaze_params = self.gaze_module(vision)
-            gaze_params = gaze_params.reshape(time_steps, batch_size, -1)
-            # get gaussian distribution from gaze params
-
-            # at center is 1
-
-            # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
-            vision_fea_flat = self.forward_vision(vision_flat)
-            # 重新组织成 [time, batch, features]
-            vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
-            concat_inputs = torch.cat([state, vision_fea], dim=-1)
+            # with torch.no_grad():
+            #     vision_fea_flat = self.vision_encoder(vision_flat)
+
+            # vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
+
+            # gaze_params_flat = self.gaze_module(vision_flat)
+            # gaze_img = 
+
+            # vision_gazed = vision_flat * gaze_params_flat
+
+            # vision_gazed_fea_flat = self.vision_encoder(vision_gazed)
+            # vision_gazed_fea = vision_gazed_fea_flat.reshape(time_steps, batch_size, -1)
+            vision_gazed_fea_flat = self.forward_vision(vision_flat)
+            vision_gazed_fea = vision_gazed_fea_flat.reshape(time_steps, batch_size, -1)
+
+
+
+            concat_inputs = torch.cat([state, vision_gazed_fea], dim=-1)
             input_c = self.memory_c(concat_inputs, masks, hidden_states)
             # input_c 已经是展平的，所以不需要 squeeze(0)
             value = self.critic(input_c)

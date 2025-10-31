@@ -785,8 +785,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if current_iteration < 400:
                 return
 
+            if current_iteration < 250:
+                 return
+
             # Only check and log once per 100 iterations, and only at the exact iteration boundary
-            if current_iteration % 100 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
+            if current_iteration % 200 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
                 # if average reward added by 0.1
                 reward = self.episode_sums["pixel_norm_at_object"].mean()
 
