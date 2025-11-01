@@ -77,7 +77,7 @@ class LeggedRobotRunnerCfg:
     # num_steps_per_env = 96  # *0.005*5*48 = 6 s
     num_steps_per_env = 96  # *0.005*5*48 = 6 s
     """per iteration"""
-    max_iterations = 3000
+    max_iterations = 4000
     """max number of iterations"""
 
     # logging
@@ -480,6 +480,7 @@ class BaseTableHumanoidTaskCfg:
     reward_object2goal_exp_shapeness = 15
     reward_wrist_close_to_object_exp_sharpness = 4.0
     reward_pixel_norm_at_object_exp_sharpness = 50.0
+    reward_improvement_ratio_threshold = 0.15
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15

@@ -18,7 +18,7 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "ori_origina_slow_domain_rand_test" \
+    --run_name "reward_ratio_0.15_no_wall" \
     --device "cuda:0" \
     --wandb \
     --headless \
