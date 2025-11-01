@@ -809,7 +809,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 log.info(
                     f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f}"
                 )
-                if reward_improvement_ratio > 0.05 or iterations_since_last_update >= 400:
+                if reward_improvement_ratio > 0.2:
                     if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
                         self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
                         self.last_curriculum_update_step = self.common_step_counter
