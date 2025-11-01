@@ -226,7 +226,7 @@ class BaseTableHumanoidTaskCfg:
     """Number of privileged observations. If not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned """
     num_actions: int = 12
     """Number of actions."""
-    env_spacing: float = 200
+    env_spacing: float = 10
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
@@ -266,20 +266,20 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        # RigidObjCfg(
-        #     name="wall",
-        #     # make sure mask each other in ego centric view
-        #     scale=(3.0, 3.0, 1.0),
-        #     physics=PhysicStateType.GEOM,
-        #     usd_path="roboverse_data/wall.usd",
-        #     fix_base_link=True,
-        #     default_position=(0.0, 0.0, 0.6),
-        #     # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
-        #     collision_enabled=False,
-        #     enable_gyroscopic_forces=False,
-        #     # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-        #     # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
-        # ),
+        RigidObjCfg(
+            name="wall",
+            # make sure mask each other in ego centric view
+            scale=(3.0, 3.0, 1.0),
+            physics=PhysicStateType.GEOM,
+            usd_path="roboverse_data/wall.usd",
+            fix_base_link=True,
+            default_position=(0.0, 0.0, 0.6),
+            # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
+            collision_enabled=False,
+            enable_gyroscopic_forces=False,
+            # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+            # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        ),
         PrimitiveCubeCfg(
             name="object",
             size=(0.09, 0.09, 0.09),
