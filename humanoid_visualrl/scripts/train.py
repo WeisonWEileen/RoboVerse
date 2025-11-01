@@ -28,6 +28,9 @@ if __name__ == "__main__":
     
 
     task_cfg = task_cfg_cls(finetune=args.resume)
+    if not args.debug:
+        assert args.num_envs == 64 
+
 
     assert task_cfg.env_spacing > 4.9, "env_spacing must be greater than 5"
     if args.resume:

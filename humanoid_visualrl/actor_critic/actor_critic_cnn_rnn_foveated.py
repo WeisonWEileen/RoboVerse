@@ -331,7 +331,7 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
     def act(self, observations, masks=None, hidden_states=None, **kwargs):
         state, vision = observations
 
-        # 检查输入维度，如果有时间维度需要特殊处理
+        # check if time dimension exists. state.dim = [time, mini_batch, features] or [mini_batch, features]
         if state.dim() == 3:  # [time, batch, features] - 来自 recurrent_mini_batch_generator
             time_steps, batch_size = state.shape[:2]
             # 展平时间和批次维度进行vision编码

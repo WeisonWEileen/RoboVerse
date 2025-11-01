@@ -57,7 +57,7 @@ class LeggedRobotRunnerCfg:
         """Entropy coefficient."""
         num_learning_epochs = 5
         """Number of learning epochs."""
-        num_mini_batches = 4
+        num_mini_batches = 2 #batch size = 128 // 4 = 32  batch size = 64 // 2 = 32 
         """mini batch size = num_envs*n_steps / num_mini_batches"""
         learning_rate = 1.0e-3
         schedule = "adaptive"

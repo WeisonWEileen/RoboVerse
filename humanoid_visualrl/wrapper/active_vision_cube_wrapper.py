@@ -209,10 +209,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
 
-        if mean_tensor[0][0][0][0] < 0.1:
-            a = 1
-            breakpoint()
-
         vision_rgb -= mean_tensor
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
 
