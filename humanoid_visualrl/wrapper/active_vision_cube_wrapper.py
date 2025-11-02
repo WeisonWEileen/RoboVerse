@@ -735,15 +735,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
                         self.last_curriculum_update_step = self.common_step_counter
                         log.info(
-                            f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f}"
+                            f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
                         )
                     else:
                         log.info(
-                            f"FULL RANGE! NOT UPDATE ema_reward:{self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE!"
+                            f"FULL RANGE! NOT UPDATE ema_reward:{self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE! ema_reward_threshold: {self.cfg.ema_reward_threshold}"
                         )
                 else:
                     log.info(
-                        f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f}"
+                        f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
                     )
 
     # def _update_curriculum_object_yaw_range(self): 22
