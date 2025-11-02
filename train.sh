@@ -16,7 +16,7 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 128 \
+    --num_envs 64 \
     --task "active_vision" \
     --run_name "revert_fixed_lr_reward_ratio_1.4" \
     --device "cuda:0" \
