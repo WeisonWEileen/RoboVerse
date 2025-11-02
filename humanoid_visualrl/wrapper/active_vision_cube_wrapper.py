@@ -573,7 +573,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # euclidean distance
         dist = torch.norm(wrist_pos_diff, dim=1)
         wrist_pos_error[self.see_flag] = dist[self.see_flag]
-        return torch.exp(-4 * wrist_pos_error)
+        reward = torch.exp(-4 * wrist_pos_error)
+        return reward
 
     def _reward_hand_to_object_dist(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         hand_pos = tensor_state.robots[robot_name].body_state[:, self.right_hand_palm_indices, :3]
