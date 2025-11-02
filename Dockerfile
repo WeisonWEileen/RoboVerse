@@ -79,14 +79,31 @@ WORKDIR ${HOME}/RoboVerse
 ########################################################
 ## Install isaaclab, mujoco, sapien3, pybullet
 ########################################################
-RUN sudo apt install -y zsh git curl vim
-chsh -s $(which zsh)
-## Create conda environment
-RUN uv venv --python 3.11 metasim_isaacsim
+RUN mamba create -n metasim python=3.11 -y \
+    && mamba clean -a -y
 RUN echo "mamba activate metasim" >> ${HOME}/.bashrc
-RUN pip install torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
-RUN pip install "isaacsim[all,extscache]==5.0.0" --extra-index-url https://pypi.nvidia.com  
-RUN cd thirdparty/IsaacLab && RUN ./isaaclab.sh -i      
+
+## Pip install
+RUN cd ${HOME}/RoboVerse \
+    && eval "$(mamba shell hook --shell bash)" \
+    && mamba activate metasim \
+    && uv pip install -e ".[isaacsim,mujoco,sapien3,pybullet]" \
+    && uv cache clean
+
+# Test proxy connection
+# RUN wget --method=HEAD --output-document - https://www.google.com/
+
+## Install IsaacLab v2.2.0
+RUN mkdir -p ${HOME}/packages \
+    && cd ${HOME}/packages \
+    && eval "$(mamba shell hook --shell bash)" \
+    && mamba activate metasim \
+    && git clone --depth 1 --branch v2.2.0 https://github.com/isaac-sim/IsaacLab.git IsaacLab220 \
+    && cd IsaacLab220 \
+    && sed -i '/^EXTRAS_REQUIRE = {/,/^}$/c\EXTRAS_REQUIRE = {\n    "sb3": [],\n    "skrl": [],\n    "rl-games": [],\n    "rsl-rl": [],\n}' source/isaaclab_rl/setup.py \
+    && sed -i 's/if platform\.system() == "Linux":/if False:/' source/isaaclab_mimic/setup.py \
+    && ./isaaclab.sh -i \
+    && pip cache purge
 
 ## Pip install
 # RUN cd ${HOME}/RoboVerse \
@@ -166,4 +183,4 @@ RUN echo 'echo "Remember to run: xhost +local:docker on the host to enable GUI a
 
 RUN echo 'source zsh' >> ${HOME}/.bashrc
 
-RUN export DISPLAY=:1
+RUN export DISPLAY=:1%                                                                                                                                                                     

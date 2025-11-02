@@ -8,30 +8,23 @@ dependencies = [
     "imageio[ffmpeg]",
     "loguru",
     "opencv-python",
+    "pytest",
     "rich",
     "rootutils",
-    "torch",
+    "torch==2.7.0",
     "torchvision",
     "tqdm",
     "tyro",
+    "portalocker",
+    "GitPython",
+    "wandb",
 ]
 
 [project.optional-dependencies]
-isaaclab = [
-    "protobuf<5",
-    "pyglet<2",
-    "warp-lang<1.8",  # warp==1.8.0 has bug with IsaacLab v1.4.1
-    "torch==2.4.0+cu118",
-    "torchvision==0.19.0+cu118",
-    "isaacsim==4.2.0.2",
-    "isaacsim-extscache-physics==4.2.0.2",
-    "isaacsim-extscache-kit==4.2.0.2",
-    "isaacsim-extscache-kit-sdk==4.2.0.2",
-]
-isaaclab2 = [
-    "torch==2.5.1+cu118",
-    "torchvision==0.20.1+cu118",
-    "isaacsim[all,extscache]==4.5.0",
+isaacsim = [
+    "torch==2.7.0+cu128",
+    "torchvision==0.22.0+cu128",
+    "isaacsim[all,extscache]==5.0.0",
 ]
 isaacgym = [
     "numpy<2",
@@ -46,15 +39,22 @@ genesis = [
     "genesis-world",
     "libigl==2.5.1",  # for genesis 0.2.1, see https://github.com/Genesis-Embodied-AI/Genesis/issues/1156#issuecomment-3069006079
     "open3d",
+
+]
+robosplatter = [
+   "robo-splatter @ git+https://github.com/HorizonRobotics/RoboSplatter.git",
+   "pyquaternion",
+   "setuptools==59.5.0"
+
 ]
 
 [tool.uv]
 index-strategy = "unsafe-best-match"
 
 [tool.uv.pip]
+index-url = "https://download.pytorch.org/whl/cu128"
 extra-index-url = [
     "https://pypi.org/simple",
-    "https://download.pytorch.org/whl/cu118",
     "https://pypi.nvidia.com",
 ]
 
@@ -101,6 +101,8 @@ lint.ignore = [
     "RUF005",  # allow using `+` to concatenate collections
     "RUF009",  # allow function calls in dataclass default values
     "RUF012",  # allow mutable class attributes
+    "RUF059",  # allow unused variable
+    "PLE0604", # allow __all__ to be nested but still all elements are strings
 ]
 extend-exclude = [
     "roboverse_learn",
@@ -112,9 +114,8 @@ extend-exclude = [
     "docker"
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["metasim*"]
+[tool.setuptools]
+packages = ["metasim"]
 
 [tool.ruff.lint.per-file-ignores]
 "metasim/sim/isaaclab/**.py" = ["D", "FA"]  # since isaaclab only supports Python 3.10; FIXME: Feishi remove D
@@ -162,8 +163,11 @@ include = ["metasim*"]
 "metasim/utils/teleop_utils.py" = ["D"]  # FIXME: Chaoyi add docstring and remove this
 
 [tool.ruff.lint.isort]
-known-first-party = ["metasim"]
+known-first-party = ["metasim", "scripts"]
 known-third-party = ["wandb", "isaacsim"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+testpaths = ["metasim/test"]
