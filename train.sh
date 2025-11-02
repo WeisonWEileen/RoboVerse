@@ -16,12 +16,13 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 64 \
+    --num_envs 128 \
     --task "active_vision" \
-    --run_name "revert_fixed_lr_reward_ratio_1.4" \
+    --run_name "revert_fixedlr_reward_ratio_1.4_new_curri_1e-4_lr_bound" \
     --device "cuda:0" \
     --wandb \
-    --enable_opencv_display
+    --headless 
+    # --enable_opencv_display
     # --wandb \
     # --headless 
     # --debug
