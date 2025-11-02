@@ -151,9 +151,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # self.right_hand_palm_indices = get_body_reindexed_indices_from_substring(
             #     self.env, self.robot.name, self.robot.right_hand_palm_links, device=self.device
             # )
-            # self.right_index_intermediate_link_indices = get_body_reindexed_indices_from_substring(
-            #     self.env, self.robot.name, self.robot.right_index_intermediate_link, device=self.device)
-            self.right_hand_palm_indices = self.wrist_indices
+            self.left_index_intermediate_link_indices = get_body_reindexed_indices_from_substring(
+                self.env, self.robot.name, ["left_hand_Link1_1"], device=self.device)
+            # self.right_hand_palm_indices = self.wrist_indices
         elif self.robot.name == "g1_static_inpire_left_fixed":
             self.right_hand_palm_indices = get_body_reindexed_indices_from_substring(
                 self.env, self.robot.name, self.robot.right_hand_palm_links, device=self.device
@@ -560,21 +560,21 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         """Reward for being in the pixel range of the object."""
         return self.see_flag_float
 
-    def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for right hand being close to the object."""
+    # def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    #     """Reward for right hand being close to the object."""
 
-        # for envs that can see the object
-        wrist_pos_error = torch.zeros(self.num_envs, device=self.device)
-        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
-        wrist_pos_diff = (
-            wrist_pos[:, 0, :3] - self.object_pose_buf[:, :3]
-        )  # [num_envs, 2, 3], two hands, position only
-        wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
-        # euclidean distance
-        dist = torch.norm(wrist_pos_diff, dim=1)
-        wrist_pos_error[self.see_flag] = dist[self.see_flag]
-        reward = torch.exp(-4 * wrist_pos_error)
-        return reward
+    #     # for envs that can see the object
+    #     wrist_pos_error = torch.zeros(self.num_envs, device=self.device)
+    #     wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
+    #     wrist_pos_diff = (
+    #         wrist_pos[:, 0, :3] - self.object_pose_buf[:, :3]
+    #     )  # [num_envs, 2, 3], two hands, position only
+    #     wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
+    #     # euclidean distance
+    #     dist = torch.norm(wrist_pos_diff, dim=1)
+    #     wrist_pos_error[self.see_flag] = dist[self.see_flag]
+    #     reward = torch.exp(-4 * wrist_pos_error)
+    #     return reward
 
     def _reward_hand_to_object_dist(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         hand_pos = tensor_state.robots[robot_name].body_state[:, self.right_hand_palm_indices, :3]
@@ -583,12 +583,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             -self.cfg.reward_hand_object_dist_exp_sharpness * hand_to_object_pos_error
         )
 
-    # def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-    #     right_wrist_pos = tensor_state.robots[robot_name].body_state[:, self.right_index_intermediate_link_indices, :7]
-    #     # self._update_marker_viz(right_wrist_pos[:,0, :3], right_wrist_pos[:,0, 3:7], right_wrist_pos[:,0, :3] - self.object_pose_buf[:, :3])
-    #     dist = torch.norm(right_wrist_pos[:, 0,:3] - self.object_pose_buf[:, :3], dim=1)
-    #     reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
-    #     return reward
+    def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :7]
+        # self._update_marker_viz(right_wrist_pos[:,0, :3], right_wrist_pos[:,0, 3:7], right_wrist_pos[:,0, :3] - self.object_pose_buf[:, :3])
+        dist = torch.norm(wrist_pos[:, 0,:3] - self.object_pose_buf[:, :3], dim=1)
+        reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
+        return reward
 
     def _reward_goal_object_dist(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         # TODO: implement this
