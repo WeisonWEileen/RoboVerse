@@ -60,7 +60,7 @@ class LeggedRobotRunnerCfg:
         num_mini_batches = 4 #batch size = 128 // 4 = 32  batch size = 64 // 2 = 32 
         """mini batch size = num_envs*n_steps / num_mini_batches"""
         learning_rate = 1.0e-3
-        schedule = "fixed"
+        schedule = "adaptive"
         gamma = 0.99
         lam = 0.95
         desired_kl = 0.01
