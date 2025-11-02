@@ -560,20 +560,20 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         """Reward for being in the pixel range of the object."""
         return self.see_flag_float
 
-    # def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-    #     """Reward for right hand being close to the object."""
+    def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for right hand being close to the object."""
 
-    #     # for envs that can see the object
-    #     wrist_pos_error = torch.zeros(self.num_envs, device=self.device)
-    #     wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
-    #     wrist_pos_diff = (
-    #         wrist_pos[:, 0, :3] - self.object_pose_buf[:, :3]
-    #     )  # [num_envs, 2, 3], two hands, position only
-    #     wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
-    #     # euclidean distance
-    #     dist = torch.norm(wrist_pos_diff, dim=1)
-    #     wrist_pos_error[self.see_flag] = dist[self.see_flag]
-    #     return torch.exp(-4 * wrist_pos_error)
+        # for envs that can see the object
+        wrist_pos_error = torch.zeros(self.num_envs, device=self.device)
+        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.wrist_indices, :7]  # [num_envs, 2, 7], two hands
+        wrist_pos_diff = (
+            wrist_pos[:, 0, :3] - self.object_pose_buf[:, :3]
+        )  # [num_envs, 2, 3], two hands, position only
+        wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)  # [num_envs, 6]
+        # euclidean distance
+        dist = torch.norm(wrist_pos_diff, dim=1)
+        wrist_pos_error[self.see_flag] = dist[self.see_flag]
+        return torch.exp(-4 * wrist_pos_error)
 
     def _reward_hand_to_object_dist(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         hand_pos = tensor_state.robots[robot_name].body_state[:, self.right_hand_palm_indices, :3]

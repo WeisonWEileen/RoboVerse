@@ -500,10 +500,10 @@ class BaseTableHumanoidTaskCfg:
             self.randomize_object_yaw_range = 2.3
             self.curriculum_object_yaw = False
 
-            # self.reward_weights = {
-            #     "see_object": 0.5,
-            #     "wrist_close_to_object": 1.0,
-            # }
+            self.reward_weights = {
+                "pixel_norm_at_object": 1.4,
+                "wrist_close_to_object": 0.5,
+            }
         else:
             # self.update_curriculum_iteration = 400
             # self.randomize_object_yaw_range = 2.3
@@ -557,7 +557,12 @@ class BaseTableHumanoidTaskCfg:
         # breakpoint()
         if "wrist_close_to_object" in self.reward_weights:
             self.ppo_cfg.policy.masking_all = False
-            self.mask_joint_names = []
+            self.mask_joint_names = [
+                "right_elbow_joint",
+                "right_shoulder_pitch_joint",
+                "right_shoulder_roll_joint",
+                "right_shoulder_yaw_joint",
+            ]
         else:
             self.ppo_cfg.policy.masking_all = True
             self.mask_joint_names = [

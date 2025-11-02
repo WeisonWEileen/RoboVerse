@@ -299,11 +299,11 @@ class PPO:
 
                     # TODO: Is this needed? If KL-divergence is the "same" across all GPUs,
                     #       then the learning rate should be the same across all GPUs.
-                    # if self.gpu_global_rank == 0:
-                    #     if kl_mean > self.desired_kl * 2.0:
-                    #         self.learning_rate = max(1e-4, self.learning_rate / 1.5)
-                    #     elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
-                    #         self.learning_rate = min(1e-2, self.learning_rate * 1.5)
+                    if self.gpu_global_rank == 0:
+                        if kl_mean > self.desired_kl * 2.0:
+                            self.learning_rate = max(1e-5, self.learning_rate / 1.5)
+                        elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
+                            self.learning_rate = min(1e-2, self.learning_rate * 1.5)
 
                     # Update the learning rate for all GPUs
                     if self.is_multi_gpu:

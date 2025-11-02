@@ -16,12 +16,17 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 128 \
+    --num_envs 64 \
     --task "active_vision" \
-    --run_name "revert_fixedfixedlr_reward_ratio_1.4_new_curri_1e-4_lr_bound" \
+    --run_name "reaching_ckpt_2025_1102_120613" \
     --device "cuda:0" \
+    --enable_opencv_display \
     --wandb \
-    --enable_opencv_display
+    --load_run "2025_1102_120613" \
+    --resume \
+    --checkpoint 400 \
+    # --debug
+    # --wandb \
     # --headless 
     # --wandb \
     # --headless 
