@@ -137,7 +137,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
 
         # find the objcfg with name "object"
-
+        # find the objcfg with name "object"
+        # randomize episode length buffer
+        self.episode_length_buf = torch.randint_like(
+            self.episode_length_buf, high=int(self.cfg.max_episode_length_s / self.dt)
+        )
+        
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
         if self.robot.name == "g1_static_dex1":
@@ -778,18 +783,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # update curriculum_cube_yaw_range
             # Check curriculum update every 100 iterations (not steps) to prevent too frequent updates
             current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
-            if current_iteration < 400:
-                return
+            # if current_iteration < 400:
+            #     return
 
-            if current_iteration < 250:
-                 return
+            # if current_iteration < 250:
+            #      return
 
-            if current_iteration < 250:
+            if current_iteration < 25:
                  return
 
 
             # Only check and log once per 100 iterations, and only at the exact iteration boundary
-            if current_iteration % 200 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
+            if current_iteration % 150 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
                 # if average reward added by 0.1
                 reward = self.episode_sums["pixel_norm_at_object"].mean()
 
@@ -807,7 +812,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 )
                 if reward_improvement_ratio > self.cfg.reward_improvement_ratio_threshold:
                     if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
-                        self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
+                        self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.025
                         self.last_curriculum_update_step = self.common_step_counter
                         log.info(
                             f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f}"

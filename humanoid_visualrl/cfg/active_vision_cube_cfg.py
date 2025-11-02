@@ -57,10 +57,10 @@ class LeggedRobotRunnerCfg:
         """Entropy coefficient."""
         num_learning_epochs = 5
         """Number of learning epochs."""
-        num_mini_batches = 2 #batch size = 128 // 4 = 32  batch size = 64 // 2 = 32 
+        num_mini_batches = 4 #batch size = 128 // 4 = 32  batch size = 64 // 2 = 32 
         """mini batch size = num_envs*n_steps / num_mini_batches"""
         learning_rate = 1.0e-3
-        schedule = "adaptive"
+        schedule = "fixed"
         gamma = 0.99
         lam = 0.95
         desired_kl = 0.01
@@ -387,7 +387,7 @@ class BaseTableHumanoidTaskCfg:
     torque_limit_scale = 1.0
 
     reward_weights: dict[str, float] = {
-        "pixel_norm_at_object": 0.4,
+        "pixel_norm_at_object": 1.4,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
         # "wrist_close_to_object_and_grasp": 1.0,
@@ -528,7 +528,7 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_object_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
         # self.actor_critic_class = "use_rnn_foveated"
-        self.actor_critic_class = "use_rnn_foveated"
+        self.actor_critic_class = "use_rnn"
 
         if self.actor_critic_class == "use_vision":
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"
