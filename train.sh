@@ -16,7 +16,7 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 64 \
+    --num_envs 96 \
     --task "active_vision" \
     --run_name "reaching_ckpt_2025_1102_120613" \
     --device "cuda:0" \

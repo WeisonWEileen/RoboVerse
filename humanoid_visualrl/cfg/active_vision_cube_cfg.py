@@ -502,7 +502,7 @@ class BaseTableHumanoidTaskCfg:
 
             self.reward_weights = {
                 "pixel_norm_at_object": 1.4,
-                "wrist_close_to_object": 0.5,
+                "wrist_close_to_object": 1.0,
             }
         else:
             # self.update_curriculum_iteration = 400
