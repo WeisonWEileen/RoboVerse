@@ -137,6 +137,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
 
         # find the objcfg with name "object"
+        # find the objcfg with name "object"
+        # randomize episode length buffer
+        self.episode_length_buf = torch.randint_like(
+            self.episode_length_buf, high=int(self.cfg.max_episode_length_s / self.dt)
+        )
+
+        self._ema_reward = 0
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -208,10 +215,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # vision_rgb -= 0.5
 
         mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
-
-        if mean_tensor[0][0][0][0] < 0.1:
-            a = 1
-            breakpoint()
 
         vision_rgb -= mean_tensor
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
@@ -349,8 +352,19 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 if rgb_image.dtype != np.uint8:
                     rgb_image = (rgb_image * 255).astype(np.uint8)
 
+                cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
+
                 # 绘制计算出的中心点（红色圆圈）
-                cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心圆
+                # cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心圆
+
+                # 绘制中空绿色圆圈（半径15像素）
+                cv2.circle(
+                    rgb_image,
+                    (int(self.image_center_x), int(self.image_center_y)),
+                    self.cfg.thres_radius,
+                    (0, 255, 0),
+                    2,
+                )
 
                 # 绘制图像中心点（绿色圆圈）
                 cv2.circle(
@@ -498,6 +512,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.pixel_rewards_buf[self.see_flag] = (
                 torch.exp(-distance / self.cfg.reward_pixel_norm_at_object_exp_sharpness) - self.pixel_reward_offset
             )
+        # ema calculate the average reward
+        
+        self._ema_reward = (
+            self.cfg.ema_alpha * self.pixel_rewards_buf.mean() + (1 - self.cfg.ema_alpha) * self._ema_reward
+        )
+        # print(f"ema_reward: {self._ema_reward}")
         return self.pixel_rewards_buf
 
     def _reward_look_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
@@ -691,112 +711,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
             log.info("Updated object material")
 
-    # def _update_curriculum_object_yaw_range(self):
-    #     if not self.cfg.curriculum_object_yaw:
-    #         return
-
-    #     # 检查是否已经收集了足够的see_flag历史数据
-    #     if self.common_step_counter < self.cfg.warm_up_beforecurriculum:
-    #         return
-
-    #     # 计算过去2000个step的see_flag平均值
-    #     if self.see_flag_history_full:
-    #         # 使用完整的2000个step
-    #         see_flag_avg = self.see_flag_history.float().mean()
-    #         self.see_flag_avg = see_flag_avg.item()
-    #         self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
-
-    #     else:
-    #         # 使用当前收集到的step数
-    #         self.see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean()
-    #         self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
-
-    #         return
-
-    #     self.see_flag_history_ptr = 0
-    #     self.see_flag_history_full = False
-    #     self.see_flag_history.zero_()
-
-    #     # 如果平均值大于curriculum_avg_thres，则增加curriculum难度
-    #     if see_flag_avg > self.cfg.curriculum_avg_thres_higher:
-    #         # 只有当范围还没到最大时才增长
-    #         if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
-    #             old_range = self.curriculum_object_yaw_range
-    #             self.curriculum_object_yaw_range = min(
-    #                 self.curriculum_object_yaw_range
-    #                 + self.cfg.randomize_object_yaw_range * self.cfg.randomize_add_scale,
-    #                 self.cfg.randomize_object_yaw_range,
-    #             )
-    #             log.info(
-    #                 f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
-    #             )
-    #         if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
-    #             old_range = self.curriculum_robot_yaw_range
-    #             self.curriculum_robot_yaw_range = min(
-    #                 self.curriculum_robot_yaw_range + 0.005,
-    #                 self.cfg.randomize_robot_yaw_range,
-    #             )
-    #             log.info(
-    #                 f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
-    #             )
-
-    #     # else increase a little bit
-    #     elif see_flag_avg < self.cfg.curriculum_avg_thres_lower:
-    #         return
-    #     else:
-    #         # gradually randomize
-    #         if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
-    #             old_range = self.curriculum_object_yaw_range
-    #             self.curriculum_object_yaw_range = min(
-    #                 self.curriculum_object_yaw_range + 0.005,
-    #                 self.cfg.randomize_object_yaw_range,
-    #             )
-    #             log.info(
-    #                 f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, yaw_range: {old_range:.4f} -> {self.curriculum_object_yaw_range:.4f}"
-    #             )
-    # if self.curriculum_robot_yaw_range < self.cfg.randomize_robot_yaw_range:
-    #     old_range = self.curriculum_robot_yaw_range
-    #     self.curriculum_robot_yaw_range = min(
-    #         self.curriculum_robot_yaw_range + 0.005,
-    #         self.cfg.randomize_robot_yaw_range,
-    #     )
-    #     log.info(
-    #         f"[curriculum] see_flag_avg: {see_flag_avg:.4f}, robot_yaw_range: {old_range:.4f} -> {self.curriculum_robot_yaw_range:.4f}"
-    #     )
-
     def _update_curriculum_object_yaw_range(self):
-        # if self.see_flag_history_full:
-        #     # 使用完整窗口的数据统计（最近 win_length 步的滑动平均）
-        #     see_flag_avg = self.see_flag_history.float().mean()
-        #     self.see_flag_avg = see_flag_avg.item()
-        #     self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
-        # else:
-        #     # 使用当前收集到的step数（还未填满窗口）
-        #     if self.see_flag_history_ptr > 0:
-        #         self.see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean().item()
-        #     else:
-        #         self.see_flag_avg = 0.0
-        #     self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
-
         if self.cfg.curriculum_object_yaw:
-            # update curriculum_cube_yaw_range
-            # Check curriculum update every 100 iterations (not steps) to prevent too frequent updates
             current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
-            # if current_iteration < 400:
-            #     return
-
-            # if current_iteration < 250:
-            #      return
-
-            if current_iteration < 400:
-                 return
-
 
             # Only check and log once per 100 iterations, and only at the exact iteration boundary
-            if current_iteration % 200 == 0 and (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
-                # if average reward added by 0.1
+            if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
                 reward = self.episode_sums["pixel_norm_at_object"].mean()
-
                 # Always update last_reward to track current performance
                 reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)
                 self.last_reward = reward
@@ -806,44 +727,75 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 iterations_since_last_update = current_iteration - (
                     self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
                 )
-                log.info(
-                    f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f}"
-                )
-                if reward_improvement_ratio > self.cfg.reward_improvement_ratio_threshold:
+
+                if self._ema_reward > self.cfg.ema_reward_threshold:
                     if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
+                        self._ema_reward = 0
+                        log.info(f"RESET ema_reward: {self._ema_reward}")
                         self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
                         self.last_curriculum_update_step = self.common_step_counter
                         log.info(
-                            f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f}"
+                            f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
                         )
+                    else:
+                        log.info(
+                            f"FULL RANGE! NOT UPDATE ema_reward: {self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE! ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                        )
+                else:
+                    log.info(
+                        f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                    )
 
-    # ==== reward functions ====
-    def _reward_upper_body_pos(
-        self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
-    ) -> torch.Tensor:
-        """Keep upper body joints close to default positions."""
-        upper_body_diff = states.robots[robot_name].joint_pos - self.default_joint_pd_target
-        upper_body_error = torch.mean(torch.abs(upper_body_diff), dim=1)
-        return torch.exp(-4 * upper_body_error), upper_body_error
+    # def _update_curriculum_object_yaw_range(self): 22
+    #     # if self.see_flag_history_full:
+    #     #     # 使用完整窗口的数据统计（最近 win_length 步的滑动平均）
+    #     #     see_flag_avg = self.see_flag_history.float().mean()
+    #     #     self.see_flag_avg = see_flag_avg.item()
+    #     #     self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
+    #     # else:
+    #     #     # 使用当前收集到的step数（还未填满窗口）
+    #     #     if self.see_flag_history_ptr > 0:
+    #     #         self.see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean().item()
+    #     #     else:
+    #     #         self.see_flag_avg = 0.0
+    #     #     self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
 
-    def _reward_default_joint_pos(
-        self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
-    ) -> torch.Tensor:
-        """Keep joint positions close to defaults (penalize yaw/roll)."""
-        joint_diff = states.robots[robot_name].joint_pos - self.default_joint_pd_target
-        return -0.01 * torch.norm(joint_diff, dim=1)
+    #     if self.cfg.curriculum_object_yaw:
+    #         # update curriculum_cube_yaw_range
+    #         # Check curriculum update every 100 iterations (not steps) to prevent too frequent updates
+    #         current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
+    #         # if current_iteration < 400:
+    #         #     return
 
-    def _reward_torques(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
-        """Penalize high torques."""
-        return torch.sum(torch.square(states.robots[robot_name].joint_effort_target), dim=1)
+    #         # if current_iteration < 250:
+    #         #      return
 
-    def _reward_dof_vel(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
-        """Penalize high dof velocities."""
-        return torch.sum(torch.square(states.robots[robot_name].joint_vel), dim=1)
+    #         # if current_iteration < 25:
+    #         #      return
 
-    def _reward_dof_acc(self, states: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg) -> torch.Tensor:
-        """Penalize high DOF accelerations."""
-        return torch.sum(
-            torch.square((self.last_dof_vel - self.dof_vel) / self.dt),
-            dim=1,
-        )
+    #         # Only check and log once per 100 iterations, and only at the exact iteration boundary
+    #         if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
+    #             # if average reward added by 0.1
+    #             print(self.episode_sums["pixel_norm_at_object"].mean())
+
+    #             reward = self.episode_sums["pixel_norm_at_object"].mean()
+
+    #             # Always update last_reward to track current performance
+    #             reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)
+    #             self.last_reward = reward
+
+    #             # Only increase range if there's significant improvement (threshold: 0.01)
+    #             # and we haven't increased range too recently (minimum 400 iterations between updates)
+    #             iterations_since_last_update = current_iteration - (
+    #                 self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
+    #             )
+    #             log.info(
+    #                 f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f}"
+    #             )
+    #             if reward_improvement_ratio > self.cfg.reward_improvement_ratio_threshold:
+    #                 if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
+    #                     self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.025
+    #                     self.last_curriculum_update_step = self.common_step_counter
+    #                     log.info(
+    #                         f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f}"
+    #                     )

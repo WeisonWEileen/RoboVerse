@@ -352,7 +352,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         #     dim=1,
         # )
         # self.reset_buf = torch.logical_or(self.timeout_buf, reset_buf)
-        self.reset_buf = self.timeout_buf
+        self.reset_buf = self.timeout_bufepisode_sums
 
     def _post_physics_step(self):
         """After physics step, compute reward, get obs and privileged_obs, resample command."""
