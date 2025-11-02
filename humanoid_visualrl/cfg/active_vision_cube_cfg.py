@@ -230,8 +230,6 @@ class BaseTableHumanoidTaskCfg:
     """Environment spacing."""
     send_timeouts: bool = True
     """Whether to send time out information to the algorithm"""
-    episode_length_s: float = 20.0
-    """episode length in seconds"""
     feet_indices: torch.Tensor = MISSING
     """feet indices"""
     penalised_contact_indices: torch.Tensor = MISSING
@@ -323,7 +321,7 @@ class BaseTableHumanoidTaskCfg:
     """path to the trajectory file"""
     # TODO read form max_episode_length_s and divide s
     # max_episode_length_s: int = 6
-    max_episode_length_s: int = 4
+    max_episode_length_s: int = 20
     """maximum episode length in seconds"""
     episode_length: int = 2400
     """episode length in steps"""
@@ -336,6 +334,10 @@ class BaseTableHumanoidTaskCfg:
     max_episode_length: int = 2400
     randomize_obj_material: bool = False
     update_obj_material_step_interval: int = 96 * 100
+
+
+    
+
 
     @configclass
     class HumanoidExtraCfg:
@@ -481,6 +483,8 @@ class BaseTableHumanoidTaskCfg:
     reward_wrist_close_to_object_exp_sharpness = 4.0
     reward_pixel_norm_at_object_exp_sharpness = 50.0
     reward_improvement_ratio_threshold = 0.15
+
+
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
@@ -647,3 +651,16 @@ class BaseTableHumanoidTaskCfg:
 
 
         self.randomize_robot_yaw_range = 1.6
+
+
+        self.ema_alpha = 0.05
+        self.thres_radius = 23
+        self.pixel_reward_offset = torch.exp(
+            -torch.sqrt(
+                torch.tensor([self.cameras[0].width ** 2 + self.cameras[0].height ** 2])
+            )
+            / 2.0
+            / self.reward_pixel_norm_at_object_exp_sharpness
+        )
+        self.ema_reward_threshold = (torch.exp(torch.tensor([- self.thres_radius / self.reward_pixel_norm_at_object_exp_sharpness])) - self.pixel_reward_offset).item()
+        log.info(f"reward_threshold: {self.ema_reward_threshold}")
