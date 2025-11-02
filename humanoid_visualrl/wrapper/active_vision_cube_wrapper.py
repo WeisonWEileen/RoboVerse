@@ -739,7 +739,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         )
                     else:
                         log.info(
-                            f"FULL RANGE! NOT UPDATE ema_reward:{self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE! ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                            f"FULL RANGE! NOT UPDATE ema_reward: {self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE! ema_reward_threshold: {self.cfg.ema_reward_threshold}"
                         )
                 else:
                     log.info(
