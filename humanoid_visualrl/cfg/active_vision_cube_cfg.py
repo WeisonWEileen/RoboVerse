@@ -321,7 +321,7 @@ class BaseTableHumanoidTaskCfg:
     """path to the trajectory file"""
     # TODO read form max_episode_length_s and divide s
     # max_episode_length_s: int = 6
-    max_episode_length_s: int = 20
+    max_episode_length_s: int = 10
     """maximum episode length in seconds"""
     episode_length: int = 2400
     """episode length in steps"""
@@ -653,7 +653,7 @@ class BaseTableHumanoidTaskCfg:
         self.randomize_robot_yaw_range = 1.6
 
 
-        self.ema_alpha = 0.05
+        self.ema_alpha = 0.03
         self.thres_radius = 23
         self.pixel_reward_offset = torch.exp(
             -torch.sqrt(

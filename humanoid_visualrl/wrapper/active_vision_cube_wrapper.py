@@ -145,7 +145,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self._ema_reward = 0
 
-
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
         if self.robot.name == "g1_static_dex1":
@@ -353,13 +352,19 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 if rgb_image.dtype != np.uint8:
                     rgb_image = (rgb_image * 255).astype(np.uint8)
 
-                cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心 
+                cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
 
                 # 绘制计算出的中心点（红色圆圈）
                 # cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心圆
 
                 # 绘制中空绿色圆圈（半径15像素）
-                cv2.circle(rgb_image, (int(self.image_center_x), int(self.image_center_y)), self.cfg.thres_radius, (0, 255, 0), 2)
+                cv2.circle(
+                    rgb_image,
+                    (int(self.image_center_x), int(self.image_center_y)),
+                    self.cfg.thres_radius,
+                    (0, 255, 0),
+                    2,
+                )
 
                 # 绘制图像中心点（绿色圆圈）
                 cv2.circle(
@@ -507,8 +512,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.pixel_rewards_buf[self.see_flag] = (
                 torch.exp(-distance / self.cfg.reward_pixel_norm_at_object_exp_sharpness) - self.pixel_reward_offset
             )
-        # print(self.pixel_rewards_buf.mean())
-        self._ema_reward = self.cfg.ema_alpha * self._ema_reward + (1 - self.cfg.ema_alpha) * self.pixel_rewards_buf.mean()
+        # ema calculate the average reward
+        
+        self._ema_reward = (
+            self.cfg.ema_alpha * self.pixel_rewards_buf.mean() + (1 - self.cfg.ema_alpha) * self._ema_reward
+        )
+        # print(f"ema_reward: {self._ema_reward}")
         return self.pixel_rewards_buf
 
     def _reward_look_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
@@ -692,7 +701,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _update_curriculum(self):
         self._update_obj_material()
-        # self._update_curriculum_object_yaw_range()
+        self._update_curriculum_object_yaw_range()
 
     def _update_obj_material(self):
         if (
@@ -703,19 +712,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             log.info("Updated object material")
 
     def _update_curriculum_object_yaw_range(self):
-        # if self.see_flag_history_full:
-        #     # 使用完整窗口的数据统计（最近 win_length 步的滑动平均）
-        #     see_flag_avg = self.see_flag_history.float().mean()
-        #     self.see_flag_avg = see_flag_avg.item()
-        #     self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
-        # else:
-        #     # 使用当前收集到的step数（还未填满窗口）
-        #     if self.see_flag_history_ptr > 0:
-        #         self.see_flag_avg = self.see_flag_history[: self.see_flag_history_ptr].float().mean().item()
-        #     else:
-        #         self.see_flag_avg = 0.0
-        #     self.extra_buf["episode_metrics"]["see_flag_avg"] = self.see_flag_avg
-
         if self.cfg.curriculum_object_yaw:
             current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
 
@@ -734,17 +730,23 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
                 if self._ema_reward > self.cfg.ema_reward_threshold:
                     if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
-                        self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.03
+                        self._ema_reward = 0
+                        log.info(f"RESET ema_reward: {self._ema_reward}")
+                        self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
                         self.last_curriculum_update_step = self.common_step_counter
                         log.info(
-                            f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f}"
+                            f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f}"
+                        )
+                    else:
+                        log.info(
+                            f"FULL RANGE! NOT UPDATE ema_reward:{self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE!"
                         )
                 else:
                     log.info(
-                        f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f}"
+                        f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f}"
                     )
 
-    # def _update_curriculum_object_yaw_range(self):
+    # def _update_curriculum_object_yaw_range(self): 22
     #     # if self.see_flag_history_full:
     #     #     # 使用完整窗口的数据统计（最近 win_length 步的滑动平均）
     #     #     see_flag_avg = self.see_flag_history.float().mean()
