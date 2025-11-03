@@ -16,9 +16,9 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 96 \
+    --num_envs 128 \
     --task "active_vision" \
-    --run_name "reaching_ckpt_2025_1102_120613" \
+    --run_name "reaching_ckpt_2025_1102_120613_scale_look1.4_reach0.4" \
     --device "cuda:0" \
     --enable_opencv_display \
     --wandb \
