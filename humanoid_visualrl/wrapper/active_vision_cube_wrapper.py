@@ -88,7 +88,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # TODO hard code for now
         self.target_id = 2
         self.last_reward = 0.0
-        self.last_curriculum_update_step = 0  # Track when curriculum was last updated
+        self.last_curriculum_updatpixel_norm_at_objecte_step = 0  # Track when curriculum was last updated
 
         # Curriculum tracking based on see_flag
         self.see_flag_history = torch.zeros(

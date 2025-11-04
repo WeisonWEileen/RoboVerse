@@ -357,8 +357,10 @@ class ActorCriticCNNRecurrent(ActorCritic):
             vision_fea = self.vision_encoder(vision)
         concat_inputs = torch.cat([state, vision_fea], dim=-1)
         inputs = self.memory_a(concat_inputs)
-        self.update_distribution(inputs.squeeze(0))
-        return self.distribution.sample()
+        # self.update_distribution(inputs.squeeze(0))
+        # self.update_distribution(inputs.squeeze(0))
+        mean = self.actor(inputs.squeeze(0))
+        return mean
 
     def evaluate(self, critic_observations, masks=None, hidden_states=None):
         state, vision = critic_observations

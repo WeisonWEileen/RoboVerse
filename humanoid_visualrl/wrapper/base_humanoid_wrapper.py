@@ -376,6 +376,22 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._compute_observations()
         self._update_history(tensor_state)
 
+    def _post_physics_step_evaluate(self):
+        """After physics step, compute reward, get obs and privileged_obs, resample command."""
+        self.common_step_counter += 1
+        self.episode_length_buf += 1
+        # self.timeout_buf = self.episode_length_buf >= self.cfg.max_episode_length_s / self.dt
+        # self._post_physics_step_callback()
+        tensor_state = self.env.get_states()
+
+        self._refreshed_tensors(tensor_state)
+        # self._check_reset()
+
+
+        # compute obs for actor,  privileged_obs for critic network
+        self._compute_observations()
+        self._update_history(tensor_state)
+
     def update_command_curriculum(self, env_ids):
         """Implements a curriculum of increasing commands."""
         # If the tracking reward is above 80% of the maximum, increase the range of commands
@@ -428,6 +444,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._post_physics_step()
         # end_step = time.time()
         # print(f"Step time: {end_step - start_step}")
+        return self.obs_buf, self.rew_buf, self.reset_buf, self.extra_buf
+    
+    def step_evaluate(self, actions):
+        action = self._pre_physics_step(actions)
+        self._physics_step(action)
+        self._post_physics_step_evaluate()
         return self.obs_buf, self.rew_buf, self.reset_buf, self.extra_buf
 
     def _pre_reset_hook(self, env_ids):

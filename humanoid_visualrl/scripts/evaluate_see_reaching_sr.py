@@ -1,3 +1,4 @@
+# TODO solve action masking issue
 """This script is used to evaluate the see_flag metric.
 Randomly set the object position in range of randomize_object_yaw_range, and evaluate the see_flag metric.
 
@@ -66,6 +67,14 @@ def play(args):
     task_cfg.ppo_cfg.resume = True
     task_cfg.ppo_cfg.finetune = True
     task_cfg.ppo_cfg.policy.finetune = True
+    task_cfg.use_reaching = True
+    # FIXME
+    task_cfg.mask_joint_names = [
+                "right_elbow_joint",
+                "right_shoulder_pitch_joint",
+                "right_shoulder_roll_joint",
+                "right_shoulder_yaw_joint",
+            ]
     # add objects
     scenario.objects = task_cfg.objects
 
@@ -135,8 +144,8 @@ def play(args):
 
     
 
-
-    total_step_count = int (2 / 0.025) # 7s
+    success_list  = []
+    total_step_count = int (5 / 0.025) # 7s
     for i in range(evaluation_round):
         # reset and generate new object position
         # if i % reset_interval == 0:
@@ -144,7 +153,7 @@ def play(args):
 
         yaw = torch.tensor(yaw, device=env_wrapper.device)
         radius = task_cfg.randomize_object_radius
-        radius_bias = 2 * (random.random() - 0.5) * 0.1
+        radius_bias = 2 * (random.random() - 0.5) * 0.01
         # radius_bias = 0.0
         env_wrapper._reset(list(range(env_wrapper.num_envs)))
         # reset policy
@@ -173,7 +182,9 @@ def play(args):
 
 
         success_flag_acc = 0
-        success_list  = []
+
+        # there are 5 frames to see and reach the object in total that is successful
+        # success_reach_acc = 0
 
         for step in range(total_step_count):
             if task_cfg.use_vision:
@@ -188,7 +199,18 @@ def play(args):
             # if reward > env_wrapper.cfg.ema_reward_threshold:
             #     success_flag_acc += 1
                 # break
-            if env_wrapper.see_flag[0]:
+            # get if are closer than 0.2 m
+            wrist_pos = state.robots[env_wrapper.robot.name].body_state[
+                :, env_wrapper.left_index_intermediate_link_indices, :7
+            ]
+            # self._update_marker_viz(right_wrist_pos[:,0, :3], right_wrist_pos[:,0, 3:7], right_wrist_pos[:,0, :3] - self.object_pose_buf[:, :3])
+            dist = torch.norm(wrist_pos[:, 0, :3] - env_wrapper.object_pose_buf[:, :3], dim=1)
+
+            if dist < 0.3:
+                success_reach = True
+            else:
+                success_reach = False
+            if env_wrapper.see_flag[0] and success_reach:
                 success_flag_acc += 1
 
             camera_pos = env_wrapper.camera_pos_w[:, :3]
@@ -200,14 +222,16 @@ def play(args):
                 camera_quat,
                 camera_direction,
             )
-        success_flag_average = success_flag_acc / total_step_count
+        # success_flag_average = success_flag_acc / total_step_count
         # if 75 percentage of frames the cube are withn 25 pixel distance from the center of the fov in 7 seconds, the evaluation is successful.
-        if success_flag_average > 0.8:
+        if success_flag_acc > 10:
             success_flag = True
         else:
             success_flag = False
         # if success_flag:
-        log.info(f"success_flag: {success_flag} for round {i}, object_yaw: {yaw.item()}, success_flag_average: {success_flag_average}")
+        log.info(
+            f"success_flag: {success_flag} for round {i}, object_yaw: {yaw.item()}, success_flag_average: {success_flag_acc}"
+        )
         success_list.append(success_flag)
 
     # compute average success rate
