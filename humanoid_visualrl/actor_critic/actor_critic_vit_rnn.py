@@ -14,6 +14,49 @@ from torch import nn
 from torch.distributions import Normal
 
 
+class PatchEmbed(nn.Module):
+    """Image to Patch Embedding"""
+
+    def __init__(self, img_size=(96, 128), patch_size=8, in_chans=3, embed_dim=256):
+        super().__init__()
+        self.img_size = img_size
+        self.patch_size = patch_size
+        self.grid_size = (img_size[0] // patch_size, img_size[1] // patch_size)
+        self.num_patches = self.grid_size[0] * self.grid_size[1]
+        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+
+    def forward(self, x):
+        # x: [B, 3, H, W]
+        x = self.proj(x)  # -> [B, embed_dim, H/ps, W/ps]
+        x = x.flatten(2).transpose(1, 2)  # -> [B, num_patches, embed_dim]
+        return x
+
+
+class SimpleViTEncoder(nn.Module):
+    """Minimal ViT backbone"""
+
+    def __init__(self, img_size=(96, 128), patch_size=16, embed_dim=256, depth=4, num_heads=8):
+        super().__init__()
+        self.patch_embed = PatchEmbed(img_size, patch_size, 3, embed_dim)
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        self.pos_embed = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
+        self.blocks = nn.ModuleList([
+            nn.TransformerEncoderLayer(d_model=embed_dim, nhead=num_heads, batch_first=True) for _ in range(depth)
+        ])
+        self.norm = nn.LayerNorm(embed_dim)
+
+    def forward(self, x):
+        B = x.size(0)
+        x = self.patch_embed(x)  # [B, N, D]
+        cls_token = self.cls_token.expand(B, -1, -1)
+        x = torch.cat((cls_token, x), dim=1)
+        x = x + self.pos_embed
+        for blk in self.blocks:
+            x = blk(x)
+        x = self.norm(x)
+        return x[:, 0]  # 取 cls token 作为全局特征
+
+
 class ActorCritic(nn.Module):
     is_recurrent = False
 
@@ -209,7 +252,7 @@ def conv_output_size(h_w, kernel_size=1, stride=1, pad=0, dilation=1):
     return h, w
 
 
-class ActorCriticCNNRecurrent(ActorCritic):
+class ActorCriticViTRecurrent(ActorCritic):
     is_recurrent = True
 
     def __init__(
@@ -288,22 +331,17 @@ class ActorCriticCNNRecurrent(ActorCritic):
         #     nn.ReLU(inplace=True),
         # )
 
-        self.vision_encoder = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten(),
-            nn.Linear(64, 512),
-            nn.ReLU(inplace=True),
+        self.vision_encoder = SimpleViTEncoder(
+            img_size=(vision_height, vision_width),
+            patch_size=16,
+            embed_dim=256,
+            depth=4,
+            num_heads=8,
         )
         # self.vision_encoder = VisionBackbonePDC(vision_height, vision_width, output_dim=64)
 
         # FIXME hard code here
-        vision_fea_dim = self.vision_encoder(torch.zeros(1, 3, 96, 128)).shape[1]
+        vision_fea_dim = 256 
 
         self.memory_a = Memory(
             num_actor_obs + vision_fea_dim, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_dim
@@ -365,7 +403,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
         # 检查输入维度，如果有时间维度需要特殊处理
         if state.dim() == 3:  # [time, batch, features] - 来自 recurrent_mini_batch_generator
             time_steps, batch_size = state.shape[:2]
-            
+
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
             vision_fea_flat = self.vision_encoder(vision_flat)

@@ -18,18 +18,21 @@ from humanoid_visualrl.utils.utils import get_log_dir, get_args, get_load_path, 
 
 import os
 from metasim.task.registry import get_task_class, get_task_cfg_class
+import shutil
 
 if __name__ == "__main__":
     args = get_args()
     assert args.opencv_render_env_idx < args.num_envs, "opencv_render_env_idx must be less than num_envs"
     
+    assert args.actor_critic_class in ["use_vision", "use_rnn", "use_resnet", "use_rnn_foveated", "use_vit_rnn"], "Invalid actor critic class"
     # task_cfg, cfg_file_path = get_cfg_cls(args)
     task_cfg_cls = get_task_cfg_class(args.task)
     
 
-    task_cfg = task_cfg_cls(finetune=args.resume)
+    task_cfg = task_cfg_cls(finetune=args.resume, actor_critic_class=args.actor_critic_class)
     # if not args.debug:
     #  assert args.num_envs == 64 
+
 
 
     assert task_cfg.env_spacing > 4.9, "env_spacing must be greater than 5"
@@ -84,6 +87,8 @@ if __name__ == "__main__":
     if not args.debug:
         dump_instance_file(task_cfg, os.path.join(log_dir, "cfg.py"))
         dump_instance_file(env, os.path.join(log_dir, "env.py"))
+        shutil.copy('train.sh', os.path.join(log_dir, "train.sh"))
+
         
     if args.wandb and not args.debug:
         env.train_cfg["logger"] = "wandb"

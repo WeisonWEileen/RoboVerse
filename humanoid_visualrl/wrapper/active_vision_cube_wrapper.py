@@ -143,7 +143,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.episode_length_buf, high=int(self.cfg.max_episode_length_s / self.dt)
         )
 
-        self._ema_reward = 0
+        self._ema_reward = 0.05
+        self.last_curriculum_update_step = 0
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -334,28 +335,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     dim=(1, 2)
                 )  # (num_valid_envs,)
 
-                # 归一化
-                # center_y = weighted_y / self.pixel_counts[self.see_flag]
-                # center_x = weighted_x / self.pixel_counts[self.see_flag]
-
                 # 获取env idx的中心点坐标
                 center_x = int(self.center_x[env_pos].item())
                 center_y = int(self.center_y[env_pos].item())
-
-                # 获取env idx的RGB图像并转换为numpy格式用于绘制
-
-                # if self.env._render_viewport:
-                # # 确保图像是uint8格式
-                # rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
-                # rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
 
                 if rgb_image.dtype != np.uint8:
                     rgb_image = (rgb_image * 255).astype(np.uint8)
 
                 cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
 
-                # 绘制计算出的中心点（红色圆圈）
-                # cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心圆
 
                 # 绘制中空绿色圆圈（半径15像素）
                 cv2.circle(
@@ -379,6 +367,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     (255, 255, 0),
                     1,
                 )
+
+                # rect_size = 8
+                # half_size = rect_size // 2
+                # top_left = (16, 16)
+                # bottom_right = (16 + 8, 16 + 8)
+                # cv2.rectangle(rgb_image, top_left, bottom_right, (255, 0, 0), 2)
+                
             window_open = self.opencv_renderer.display(rgb_image)
 
             if not window_open:

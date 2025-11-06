@@ -1,32 +1,17 @@
-from __future__ import annotations
 # Copyright (c) 2021-2025, ETH Zurich and NVIDIA CORPORATION
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+from __future__ import annotations
 
 import warnings
 
 import torch
-
-# from humanoid_visualrl.actor_critic.actor_critic_cnn import ActorCriticCNN
 from rsl_rl.networks import Memory
 from rsl_rl.utils import resolve_nn_activation
 from torch import nn
-
-
-# Copyright (c) 2021-2025, ETH Zurich and NVIDIA CORPORATION
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
-# from __future__ import annotations
-
-# import torch
-# import torch.nn as nn
 from torch.distributions import Normal
-
-# from rsl_rl.utils import resolve_nn_activation
 
 
 class ActorCritic(nn.Module):
@@ -126,7 +111,8 @@ class ActorCritic(nn.Module):
 
     @property
     def entropy(self):
-        return self.distribution.entropy().sum(dim=-1)
+        entropy = self.distribution.entropy()
+        return (entropy * self.mask).sum(dim=-1)
 
     def update_distribution(self, observations):
         # compute mean
@@ -138,18 +124,26 @@ class ActorCritic(nn.Module):
             std = torch.exp(self.log_std).expand_as(mean)
         else:
             raise ValueError(f"Unknown standard deviation type: {self.noise_std_type}. Should be 'scalar' or 'log'")
+        # way masking 1
+        # mean[..., 0:8] *= 0.0
+        # create distribution
+        masked_mean = mean * self.mask  # self.mask shape [num_actions], 1 for active, 0 for masked
+        masked_std = std * self.mask + (1.0 - self.mask) * 1e-6  # 防止 std 为 0 出 nan
+        # self.distribution = Normal(mean, std)
 
+        self.distribution = Normal(masked_mean.detach() + (mean - mean.detach()) * self.mask, masked_std)
+
+        # way masking 2
         # Apply action masking to the mean
-        masked_mean = mean * self.mask
-        # create distribution with masked mean
-        self.distribution = Normal(masked_mean, std)
+        # masked_mean = mean * self.mask
+        # # create distribution with masked mean
 
     def act(self, observations, **kwargs):
         self.update_distribution(observations)
         return self.distribution.sample()
 
     def get_actions_log_prob(self, actions):
-        return self.distribution.log_prob(actions).sum(dim=-1)
+        return self.distribution.log_prob(actions * self.mask).sum(dim=-1)
 
     def act_inference(self, observations):
         actions_mean = self.actor(observations)
@@ -174,6 +168,15 @@ class ActorCritic(nn.Module):
 
         super().load_state_dict(state_dict, strict=strict)
         return True
+
+
+#     def forward(self, x):
+#         # x: (B, 3, 96, 128)
+#         x = self.act1(self.conv1(x))
+#         x = self.act2(self.conv2(x))
+#         x = self.flatten(x)
+#         x = self.act3(self.fc(x))
+#         return x  # 返回 (B, output_dim)
 
 
 def conv_output_size(h_w, kernel_size=1, stride=1, pad=0, dilation=1):
@@ -254,7 +257,36 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
 
         activation = resolve_nn_activation(activation)
 
+        h, w = 96, 128
+        filter_sizes = [16, 32, 64, 128]
+        kernel_sizes = [8, 4, 3, 3]
+        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[0], stride=4, pad=0)
+        layer1_norm_shape = [filter_sizes[0], h, w]
+        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[1], stride=2, pad=0)
+        layer2_norm_shape = [filter_sizes[1], h, w]
+        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[2], stride=1, pad=0)
+        layer3_norm_shape = [filter_sizes[2], h, w]
+        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[3], stride=1, pad=0)
+        layer4_norm_shape = [filter_sizes[3], h, w]
 
+        #  hisotry version 128 × 96
+        # self.vision_encoder = nn.Sequential(
+        #     nn.Conv2d(3, filter_sizes[0], kernel_size=kernel_sizes[0], stride=4, padding=0),
+        #     nn.ReLU(inplace=True),
+        #     nn.LayerNorm(layer1_norm_shape),
+        #     nn.Conv2d(filter_sizes[0], filter_sizes[1], kernel_size=kernel_sizes[1], stride=2, padding=0),
+        #     nn.ReLU(inplace=True),
+        #     nn.LayerNorm(layer2_norm_shape),
+        #     nn.Conv2d(filter_sizes[1], filter_sizes[2], kernel_size=kernel_sizes[2], stride=1, padding=0),
+        #     nn.LayerNorm(layer3_norm_shape),
+        #     nn.Conv2d(filter_sizes[2], filter_sizes[3], kernel_size=kernel_sizes[3], stride=1, padding=0),
+        #     nn.LayerNorm(layer4_norm_shape),
+        #     nn.ReLU(inplace=True),
+        #     nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=filter_sizes[3]
+        #     nn.Flatten(),  # (B, filter_sizes[3])
+        #     nn.Linear(filter_sizes[3], 32),  # 压缩 / 投影到 32 维
+        #     nn.ReLU(inplace=True),
+        # )
 
         self.vision_encoder = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
@@ -265,10 +297,9 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
-            nn.Linear(64, 32),
+            nn.Linear(64, 512),
             nn.ReLU(inplace=True),
         )
-
         # self.vision_encoder = VisionBackbonePDC(vision_height, vision_width, output_dim=64)
 
         # FIXME hard code here
@@ -284,60 +315,20 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
         print(f"Actor RNN: {self.memory_a}")
         print(f"Critic RNN: {self.memory_c}")
 
-        # gaze module, which predict anisotropic Gaussian distribution. which output \mu_x, \mu_y, \sigma_x, \sigma_y, \sigma_{xy}
-        # image_dim = [3, 96, 128]
-        flat_size = 3 * vision_height * vision_width
-        self.gaze_module = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(flat_size, 64),
-            nn.ReLU(inplace=True),
-            nn.Linear(64, 64),
-            nn.ReLU(inplace=True),
-            nn.Linear(64, 4),
-        )
-        print(f"Gaze Module: {self.gaze_module}")
-
     def reset(self, dones=None):
         self.memory_a.reset(dones)
         self.memory_c.reset(dones)
 
-    def compute_gaussian_weights(self, vision: torch.Tensor) -> torch.Tensor:
-        """
-        Compute anisotropic Gaussian weighting map over the image buffer.
-        vision: [B, C, H, W]
-        returns weight: [B, 1, H, W]
-        """
-        B, C, H, W = vision.shape
-        params = self.gaze_module(vision)  # -> [B,4]
-        mu_x, mu_y, sigma_x, sigma_y = torch.chunk(params, 4, dim=1)
-        # geometric grid
-        xs = torch.arange(W, device=vision.device).view(1, 1, 1, W)
-        ys = torch.arange(H, device=vision.device).view(1, 1, H, 1)
-        # reshape params for broadcast
-        mu_x = mu_x.view(B, 1, 1, 1)
-        mu_y = mu_y.view(B, 1, 1, 1)
-        sigma_x = sigma_x.view(B, 1, 1, 1).clamp(min=1e-6)
-        sigma_y = sigma_y.view(B, 1, 1, 1).clamp(min=1e-6)
-        # anisotropic Gaussian
-        weight = torch.exp(-(((xs - mu_x) ** 2) / (2 * sigma_x**2) + ((ys - mu_y) ** 2) / (2 * sigma_y**2)))
-        return weight
-
-    def forward_vision(self, vision: torch.Tensor) -> torch.Tensor:
-        # apply gaze weighting, then encode
-        weight = self.compute_gaussian_weights(vision)
-        vision_weighted = vision * weight
-        return self.vision_encoder(vision_weighted)
-
     def act(self, observations, masks=None, hidden_states=None, **kwargs):
         state, vision = observations
 
-        # check if time dimension exists. state.dim = [time, mini_batch, features] or [mini_batch, features]
+        # 检查输入维度，如果有时间维度需要特殊处理
         if state.dim() == 3:  # [time, batch, features] - 来自 recurrent_mini_batch_generator
             time_steps, batch_size = state.shape[:2]
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
             with torch.no_grad():
-                vision_fea_flat = self.forward_vision(vision_flat)
+                vision_fea_flat = self.vision_encoder(vision_flat)
             # 重新组织成 [time, batch, features]
             vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
@@ -347,7 +338,7 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
             self.update_distribution(inputs)
         else:  # [batch, features] - 来自推理时
             with torch.no_grad():
-                vision_fea = self.forward_vision(vision)
+                vision_fea = self.vision_encoder(vision)
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             inputs = self.memory_a(concat_inputs, masks, hidden_states)
             self.update_distribution(inputs.squeeze(0))
@@ -360,11 +351,13 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
     def act_inference(self, observations):
         state, vision = observations
         with torch.no_grad():
-            vision_fea = self.forward_vision(vision)
+            vision_fea = self.vision_encoder(vision)
         concat_inputs = torch.cat([state, vision_fea], dim=-1)
         inputs = self.memory_a(concat_inputs)
-        self.update_distribution(inputs.squeeze(0))
-        return self.distribution.sample()
+        # self.update_distribution(inputs.squeeze(0))
+        # self.update_distribution(inputs.squeeze(0))
+        mean = self.actor(inputs.squeeze(0))
+        return mean
 
     def evaluate(self, critic_observations, masks=None, hidden_states=None):
         state, vision = critic_observations
@@ -372,31 +365,19 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
         # 检查输入维度，如果有时间维度需要特殊处理
         if state.dim() == 3:  # [time, batch, features] - 来自 recurrent_mini_batch_generator
             time_steps, batch_size = state.shape[:2]
+
+            # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
+            vision_fea_flat = self.vision_encoder(vision_flat)
+            # 重新组织成 [time, batch, features]
+            vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
-            # with torch.no_grad():
-            #     vision_fea_flat = self.vision_encoder(vision_flat)
-
-            # vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
-
-            # gaze_params_flat = self.gaze_module(vision_flat)
-            # gaze_img = 
-
-            # vision_gazed = vision_flat * gaze_params_flat
-
-            # vision_gazed_fea_flat = self.vision_encoder(vision_gazed)
-            # vision_gazed_fea = vision_gazed_fea_flat.reshape(time_steps, batch_size, -1)
-            vision_gazed_fea_flat = self.forward_vision(vision_flat)
-            vision_gazed_fea = vision_gazed_fea_flat.reshape(time_steps, batch_size, -1)
-
-
-
-            concat_inputs = torch.cat([state, vision_gazed_fea], dim=-1)
+            concat_inputs = torch.cat([state, vision_fea], dim=-1)
             input_c = self.memory_c(concat_inputs, masks, hidden_states)
             # input_c 已经是展平的，所以不需要 squeeze(0)
             value = self.critic(input_c)
         else:  # [batch, features] - 来自推理时
-            vision_fea = self.forward_vision(vision)
+            vision_fea = self.vision_encoder(vision)
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             input_c = self.memory_c(concat_inputs, masks, hidden_states)
             value = self.critic(input_c.squeeze(0))

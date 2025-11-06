@@ -365,21 +365,6 @@ class BaseTableHumanoidTaskCfg:
                 },
             },
             "robots": {
-                # "g1_static": {
-                #     "pos": torch.tensor([0.0, 0.0, 0.78]),
-                #     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                #     "dof_pos": {
-                #         "waist_yaw_joint": 0.0,
-                #         "left_shoulder_pitch_joint": 0.0,
-                #         "left_shoulder_roll_joint": 0.0,
-                #         "left_shoulder_yaw_joint": 0.0,
-                #         "left_elbow_joint": 1.45,
-                #         "right_shoulder_pitch_joint": 0.0,
-                #         "right_shoulder_roll_joint": 0.0,
-                #         "right_shoulder_yaw_joint": 0.0,
-                #         "right_elbow_joint": 1.45,
-                #     },
-                # },
             },
         }
     ]
@@ -532,7 +517,7 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_object_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
         # self.actor_critic_class = "use_rnn_foveated"
-        self.actor_critic_class = "use_rnn"
+        # self.actor_critic_class = "use_rnn_foveated"
 
         if self.actor_critic_class == "use_vision":
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"
@@ -542,6 +527,8 @@ class BaseTableHumanoidTaskCfg:
             self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrent"
         if self.actor_critic_class == "use_rnn_foveated":
             self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrentFoveated"
+        if self.actor_critic_class == "use_vit_rnn":
+            self.ppo_cfg.policy.class_name = "ActorCriticViTRecurrent"
 
         log.info("================================================")
         log.info(f"USING {self.actor_critic_class} ACTOR CRITIC CLASS")
