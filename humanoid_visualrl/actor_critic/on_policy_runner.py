@@ -245,7 +245,7 @@ class OnPolicyRunner:
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             record_video = False
-            if (it+1) % 20 == 0:
+            if (it+1) % 100 == 0:
                 record_video = True      
                 images = []    
             start = time.time()
@@ -318,7 +318,7 @@ class OnPolicyRunner:
                         # images.append(rgb_frame)
                         # horizontal concat the egocentric frame and the rgb frame
                         images.append(np.concatenate([egocentric_frame, rgb_frame], axis=1))
-                        print(f"Recording video at frame {len(images)}")
+                        # print(f"Recording video at frame {len(images)}")
 
                     # self.env.render()
                 if record_video:
