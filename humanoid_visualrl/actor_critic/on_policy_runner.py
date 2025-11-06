@@ -23,6 +23,8 @@ from rsl_rl.modules import (
     StudentTeacher,
     StudentTeacherRecurrent,
 )
+import numpy as np
+
 from humanoid_visualrl.actor_critic.actor_critic_cnn import ActorCriticCNN
 from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn import ActorCriticCNNRecurrent
 from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn_booster import ActorCriticCNNRecurrentBooster
@@ -31,7 +33,8 @@ from humanoid_visualrl.actor_critic.actor_critic_vit_rnn import ActorCriticViTRe
 # from humanoid_visualrl.actor_critic.actor_critic_resnet_rnn import ActorCriticResnetRecurrent
 from rsl_rl.utils import store_code_state
 
-
+import imageio.v2 as iio
+import cv2
 class OnPolicyRunner:
     """On-policy runner for training and evaluation."""
 
@@ -241,6 +244,10 @@ class OnPolicyRunner:
         start_iter = self.current_learning_iteration
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
+            record_video = False
+            if (it+1) % 20 == 0:
+                record_video = True      
+                images = []    
             start = time.time()
             # Rollout
             with torch.inference_mode():
@@ -300,7 +307,22 @@ class OnPolicyRunner:
                             irewbuffer.extend(cur_ireward_sum[new_ids][:, 0].cpu().numpy().tolist())
                             cur_ereward_sum[new_ids] = 0
                             cur_ireward_sum[new_ids] = 0
+                    if record_video:
+                        rgb_frame = self.env.env._get_offscreen_viewport_render() 
+                        egocentric_frame = self.env.env.scene.sensors["camera_first_person"].data.output["rgb"][0]
+                        egocentric_frame = egocentric_frame.cpu().numpy()
+                        # change dimension from \
+                        # egocentric_frame = egocentric_frame.transpose(1, 2, 0)
+                        # resize egocentric frame to 374x374
+                        egocentric_frame = cv2.resize(egocentric_frame, (374, 374))
+                        # images.append(rgb_frame)
+                        # horizontal concat the egocentric frame and the rgb frame
+                        images.append(np.concatenate([egocentric_frame, rgb_frame], axis=1))
+                        print(f"Recording video at frame {len(images)}")
 
+                    # self.env.render()
+                if record_video:
+                    iio.mimsave(os.path.join(self.log_dir, f"video_{it}.mp4"), images, fps=30)
                 stop = time.time()
                 collection_time = stop - start
                 start = stop

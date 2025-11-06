@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import os
 from copy import deepcopy
+import numpy as np
 
 import torch
 from loguru import logger as log
@@ -27,8 +28,6 @@ from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-
-
 import omni
 import weakref
 
@@ -79,6 +78,12 @@ class IsaacsimHandler(BaseSimHandler):
             "metallic_constant",
             "specular_level",
         ]
+
+
+
+
+        
+
         # TODO  randomize this
 
     def _init_keyboard(self) -> None:
@@ -127,6 +132,16 @@ class IsaacsimHandler(BaseSimHandler):
         import omni.kit.viewport.utility as kit_viewport
 
         kit_viewport.frame_viewport_prims("/World/envs/env_0/g1_static_dex1/torso_link/d435_link/camera_first_person")
+
+    def _load_offscreen_render(self) -> None:
+        """see https://github.com/isaac-sim/IsaacLab/blob/46dff135f44683f031edf346e544fcfd8456b2bb/source/isaaclab/isaaclab/envs/direct_rl_env.py#L465C20-L465C64 for more details."""
+        import omni.replicator.core as rep
+
+        # create render product
+        self._render_product = rep.create.render_product('/OmniverseKit_Persp', (374, 374))
+        # create rgb annotator -- used to read data from the render product
+        self._rgb_annotator = rep.AnnotatorRegistry.get_annotator("rgb", device="cpu")
+        self._rgb_annotator.attach([self._render_product])
 
     def _init_scene(self) -> None:
         """
@@ -194,6 +209,7 @@ class IsaacsimHandler(BaseSimHandler):
                 self._add_pinhole_camera(camera)
             else:
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
+        self._load_offscreen_render()
 
     def _update_camera_pose(self) -> None:
         for camera in self.cameras:
@@ -306,18 +322,38 @@ class IsaacsimHandler(BaseSimHandler):
         self._keyboard_sub = None
 
     def _set_perspective_camera_pose(self) -> None:
+        # if self.headless:
+        #     return
+        from pxr import Usd, UsdGeom, Gf
+
+        def get_world_transform_xform(prim: Usd.Prim) -> typing.Tuple[Gf.Vec3d, Gf.Rotation, Gf.Vec3d]:
+            """copy from https://docs.omniverse.nvidia.com/dev-guide/latest/programmer_ref/usd/transforms/get-world-transforms.html#:~:text=def%20get_world_transform_xform(prim%3A%20Usd.Prim)%20%2D%3E%20typing.Tuple%5BGf.Vec3d"""
+            xform = UsdGeom.Xformable(prim)
+            time = Usd.TimeCode.Default() # The time at which we compute the bounding box
+            world_transform: Gf.Matrix4d = xform.ComputeLocalToWorldTransform(time)
+            translation: Gf.Vec3d = world_transform.ExtractTranslation()
+            rotation: Gf.Rotation = world_transform.ExtractRotation()
+            scale: Gf.Vec3d = Gf.Vec3d(*(v.GetLength() for v in world_transform.ExtractRotationMatrix()))
+            return translation, rotation, scale
+        # get /world/envs/env_10 prim pose
+        env_prim = omni.usd.get_context().get_stage().GetPrimAtPath(f"/World/envs/env_0")
+        transform = get_world_transform_xform(env_prim)
+        # env_10_pose = env_10_prim.GetAttribute("xformOp:transform").Get()
+        # print(env_10_pose)
 
         # from isaacsim.core.utils import set_camera_view
         from isaacsim.core.utils.viewports import set_camera_view
-        # GroundPlane(prim_path="/World/groundPlane", size=10, color=np.array([0.5, 0.5, 0.5]))
+        # see https://docs.python.org/3/library/functions.html#float 
         import numpy as np
+        prim = omni.usd.get_context().get_stage().GetPrimAtPath('/OmniverseKit_Persp')
         set_camera_view(
             eye=np.array([
-                self.scenario.env_spacing / 2 + 1.5,
-                self.scenario.env_spacing / 2 + 1.5,
-                1.53+1,
+                transform[0][0] + 1.5,
+                transform[0][1] + 1.5,
+                1.53 + 1,
             ]),
-            target=np.array([self.scenario.env_spacing / 2, self.scenario.env_spacing / 2, 1.03]),
+            target=np.array([transform[0][0], transform[0][1], 1.03]),
+            camera_prim_path='/OmniverseKit_Persp',
         )
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
@@ -519,7 +555,21 @@ class IsaacsimHandler(BaseSimHandler):
                 # intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
         extras = self.get_extra()
+        
+
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
+
+    def _get_offscreen_viewport_render(self) -> np.ndarray:
+        rgb_data = self._rgb_annotator.get_data()
+        # convert to numpy array
+        rgb_data = np.frombuffer(rgb_data, dtype=np.uint8).reshape(*rgb_data.shape)
+        # return the rgb data
+        # note: initially the renerer is warming up and returns empty data
+        # if rgb_data.size == 0:
+        #     return np.zeros((self.cfg.viewer.resolution[1], self.cfg.viewer.resolution[0], 3), dtype=np.uint8)
+        # else:
+        return rgb_data[:, :, :3]
+
 
     def set_dof_targets(self, actions: torch.Tensor) -> None:
         # TODO: support set torque
@@ -949,6 +999,7 @@ class IsaacsimHandler(BaseSimHandler):
             update_period=self.physics_dt,
             track_air_time=False,
             track_pose=True,
+             
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)
         self.scene.sensors["contact_sensor"] = self.contact_sensor
@@ -1355,6 +1406,8 @@ class IsaacsimHandler(BaseSimHandler):
         )
         self.scene.sensors[camera.name] = camera_inst
         log.debug(f"Added camera {camera.name} to scene with prim_path: {prim_path}")
+    
+    
 
     def refresh_render(self) -> None:
         for sensor in self.scene.sensors.values():
