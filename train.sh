@@ -20,7 +20,7 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --task "active_vision" \
     --run_name "reaching_ckpt_2025_1102_120613_scale_look1.4_reach0.4" \
     --device "cuda:0" \
-    --enable_opencv_display \
+    # --enable_opencv_display \
     --actor_critic_class "use_vit_rnn" \
     --headless
     # --wandb \

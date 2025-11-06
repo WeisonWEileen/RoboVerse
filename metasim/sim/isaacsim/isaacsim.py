@@ -253,7 +253,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         # self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
-        # self._set_perspective_camera_look_at("/World/envs/env_0")
+        self._set_perspective_camera_pose()
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         # self.filter_collisions(self.robots[0].name, "object")
 
@@ -305,39 +305,20 @@ class IsaacsimHandler(BaseSimHandler):
         self._input.unsubscribe_from_keyboard_events(self._keyboard, self._keyboard_sub)
         self._keyboard_sub = None
 
-    def _set_perspective_camera_look_at(self, target_prim: str) -> None:
-        # TODO it was not successful, it do not update in the schema
-        from pxr import UsdGeom, Gf
-        import omni.usd
-        from omni.kit.viewport.utility import get_active_viewport
+    def _set_perspective_camera_pose(self) -> None:
 
-        target_prim = omni.usd.get_context().get_stage().GetPrimAtPath(target_prim)
-
-        target_prim_xform_mat = UsdGeom.Xformable(target_prim).GetLocalTransformation()
-
-        # The target location (target_loc) is for this particular prim,
-        # but could also be any arbitrary location
-        target_loc = target_prim_xform_mat.ExtractTranslation()
-
-        viewport = get_active_viewport()
-        active_camera_path = viewport.camera_path.pathString
-        # camera_pos = self.camera_target_pos
-        camera_pos = Gf.Vec3d(2, 2, 2)
-
-        # get camera prim
-        camera_prim = omni.usd.get_context().get_stage().GetPrimAtPath(active_camera_path)
-
-        new_cam_mat = Gf.Matrix4d(1.0)
-        new_cam_mat.SetLookAt(camera_pos, target_loc, Gf.Vec3d(1, 1, 0))
-        # destXformAttr = camera_prim.GetAttribute("xformOp:transform")
-        # destXformAttr.Set(new_cam_mat.GetInverse())
-
-        xform_api = UsdGeom.Xformable(camera_prim)
-        xform_api.ClearXformOpOrder()
-        # xform_api.AddTransformOp(new_cam_mat.GetInverse())
-
-        xform_op = xform_api.AddTransformOp(UsdGeom.XformOp.PrecisionDouble)
-        xform_op.Set(new_cam_mat.GetInverse())
+        # from isaacsim.core.utils import set_camera_view
+        from isaacsim.core.utils.viewports import set_camera_view
+        # GroundPlane(prim_path="/World/groundPlane", size=10, color=np.array([0.5, 0.5, 0.5]))
+        import numpy as np
+        set_camera_view(
+            eye=np.array([
+                self.scenario.env_spacing / 2 + 1.5,
+                self.scenario.env_spacing / 2 + 1.5,
+                1.53+1,
+            ]),
+            target=np.array([self.scenario.env_spacing / 2, self.scenario.env_spacing / 2, 1.03]),
+        )
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
         # if states is list[DictEnvState], iterate over it and set state
