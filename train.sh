@@ -16,17 +16,19 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 64 \
+    --num_envs 128 \
     --task "active_vision" \
-    --run_name "reaching_ckpt_2025_1102_120613_scale_look1.4_reach0.4" \
+    --run_name "layernorm_critic_with_pretrained_1000_searching" \
     --device "cuda:0" \
+    --actor_critic_class "use_rnn" \
+    --headless \
+    --wandb \
+    --load_run "2025_1106_234709" \
+    --resume \
+    --checkpoint 1000 \
+    # --run_name "layernorm_critic_with_pretrained_400_searching" \
     # --enable_opencv_display \
-    --actor_critic_class "use_vit_rnn" \
-    --headless
     # --wandb \
-    # --load_run "2025_1102_120613" \
-    # --resume \
-    # --checkpoint 400 \
     # --debug
     # --wandb \
     # --headless 

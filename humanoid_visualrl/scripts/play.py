@@ -22,7 +22,8 @@ from humanoid_visualrl.utils.utils import (
 from metasim.scenario.lights import DomeLightCfg
 from metasim.scenario.scenario import ScenarioCfg
 
-
+import cv2
+import numpy as np
 IN_DISTRIBUTION_RAW_RANGE = 1.8
 OUT_DISTRIBUTION_RAW_RANGE = 2.8
 
@@ -124,6 +125,7 @@ def play(args):
     # set fixed command
     yaw = (random.random() - 0.5) * 2 * 3.14
     yaw = torch.tensor(yaw, device=env_wrapper.device)
+    images = []
 
     for i in range(10000):
         if i % reset_interval == 0:
@@ -160,6 +162,7 @@ def play(args):
             actions = policy(obs)
         else:
             actions = policy(obs.detach())
+
         obs, _, _, infos = env_wrapper.step(actions.detach())
         state = env_wrapper.env.get_states()
         env_wrapper._refreshed_tensors(state)
@@ -183,6 +186,19 @@ def play(args):
             camera_quat,
             camera_direction,
         )
+
+
+        if i < 3*reset_interval:
+            rgb_frame = env_wrapper.env._get_offscreen_viewport_render() 
+            egocentric_frame = env_wrapper.env.scene.sensors["camera_first_person"].data.output["rgb"][0]
+            egocentric_frame = egocentric_frame.cpu().numpy()
+            # change dimension from \
+            # egocentric_frame = egocentric_frame.transpose(1, 2, 0)
+            # resize egocentric frame to 374x374
+            egocentric_frame = cv2.resize(egocentric_frame, (374, 374))
+            # images.append(rgb_frame)
+            # horizontal concat the egocentric frame and the rgb frame
+            images.append(np.concatenate([egocentric_frame, rgb_frame], axis=1))
 
     # Close evaluator and save results
     evaluator.close()

@@ -245,7 +245,7 @@ class OnPolicyRunner:
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             record_video = False
-            if (it+1) % 100 == 0:
+            if it % 100 == 0:
                 record_video = True      
                 images = []    
             start = time.time()

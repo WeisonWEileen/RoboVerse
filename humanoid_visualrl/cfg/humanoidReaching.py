@@ -10,10 +10,6 @@ class HumanoidReachingCfg(BaseTableHumanoidTaskCfg):
         lin_vel_x=[-0, 0], lin_vel_y=[-0, 0], ang_vel_yaw=[-0, 0], heading=[-0, 0]
     )
     task_name = "reaching"
-
-
-    
-
     reward_weights = {
         "wrist_pos": 5,
         "feet_distance": 0.5,

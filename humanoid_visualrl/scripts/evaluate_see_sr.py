@@ -11,7 +11,8 @@ rootutils.setup_root(__file__, pythonpath=True)
 
 import os
 import random
-
+import cv2
+import numpy as np
 import torch
 from loguru import logger as log
 
@@ -27,7 +28,7 @@ from humanoid_visualrl.utils.utils import (
 )
 from metasim.scenario.lights import DomeLightCfg
 from metasim.scenario.scenario import ScenarioCfg
-
+from humanoid_visualrl.utils.video_saver import VideoSaver
 
 IN_DISTRIBUTION_RAW_RANGE = 1.8
 OUT_DISTRIBUTION_RAW_RANGE = 2.8
@@ -134,7 +135,7 @@ def play(args):
     evaluation_round = 50
 
     
-
+    video_saver = VideoSaver(os.path.join(evalation_save_dir, "see_video.mp4"))
 
     total_step_count = int (2 / 0.025) # 7s
     for i in range(evaluation_round):
@@ -210,10 +211,14 @@ def play(args):
         log.info(f"success_flag: {success_flag} for round {i}, object_yaw: {yaw.item()}, success_flag_average: {success_flag_average}")
         success_list.append(success_flag)
 
+        if i < 3*reset_interval:
+            video_saver.add(env_wrapper)
+        
+
     # compute average success rate
     average_success_rate = sum(success_list) / len(success_list)
     log.info(f"average success rate in {evaluation_round} rounds: {average_success_rate}")
-
+    video_saver.save()
 
         # add episode reward for logging
         # if env_wrapper.reset_buf[0] > 0:
