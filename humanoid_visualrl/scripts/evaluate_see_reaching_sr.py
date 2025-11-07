@@ -9,6 +9,7 @@ import rootutils
 
 rootutils.setup_root(__file__, pythonpath=True)
 
+from humanoid_visualrl.utils.video_saver import VideoSaver
 
 import os
 import random
@@ -45,7 +46,8 @@ def play(args):
 
     # get task cfg from cfg.py in load_path
     # breakpoint()
-    task_cfg = load_task_cfg(args)
+    task_cfg_cls = load_task_cfg(args)
+    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class)
     scenario = ScenarioCfg(
         robots=[task_cfg.robot],
         num_envs=args.num_envs,
@@ -116,7 +118,7 @@ def play(args):
     # breakpoint()
     # env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
-    env_wrapper.enable_opencv_display = True
+    # env_wrapper.enable_opencv_display = True
     env_wrapper.env._render_viewport = True
     env_wrapper.env.init_marker_viz()
     env_wrapper._update_camera_pose = True
@@ -186,6 +188,8 @@ def play(args):
         # there are 5 frames to see and reach the object in total that is successful
         # success_reach_acc = 0
 
+        video_saver = VideoSaver(os.path.join(load_path, "see_reaching_video.mp4"))
+
         for step in range(total_step_count):
             if task_cfg.use_vision:
                 actions = policy(obs)
@@ -222,6 +226,8 @@ def play(args):
                 camera_quat,
                 camera_direction,
             )
+            if i < 2 :
+                video_saver.add(env_wrapper)
         # success_flag_average = success_flag_acc / total_step_count
         # if 75 percentage of frames the cube are withn 25 pixel distance from the center of the fov in 7 seconds, the evaluation is successful.
         if success_flag_acc > 10:
@@ -233,6 +239,11 @@ def play(args):
             f"success_flag: {success_flag} for round {i}, object_yaw: {yaw.item()}, success_flag_average: {success_flag_acc}"
         )
         success_list.append(success_flag)
+
+        if i == 2:
+            video_saver.save()
+            log.info(f"Saved {i} round video at: {video_saver.video_path}")
+
 
     # compute average success rate
     average_success_rate = sum(success_list) / len(success_list)

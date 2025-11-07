@@ -24,10 +24,12 @@ else
     echo "Using default python path"
 fi
 
-$PYTHON_PATH  ./humanoid_visualrl/scripts/play.py \
+# $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_reaching_sr.py \
+$PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_sr.py \
     --task "active_vision" \
     --resume \
-    --load_run "2025_1015_060102" \
-    --checkpoint 600 \
+    --load_run "2025_1107_084907" \
+    --checkpoint 1000 \
     --enable_opencv_display 
+    # --headless \
     # --wandb \

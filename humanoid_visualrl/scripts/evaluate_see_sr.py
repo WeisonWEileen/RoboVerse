@@ -45,7 +45,8 @@ def play(args):
 
     # get task cfg from cfg.py in load_path
     # breakpoint()
-    task_cfg = load_task_cfg(args)
+    task_cfg_cls = load_task_cfg(args)
+    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class)
     scenario = ScenarioCfg(
         robots=[task_cfg.robot],
         num_envs=args.num_envs,
@@ -108,7 +109,7 @@ def play(args):
     # breakpoint()
     # env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
-    env_wrapper.enable_opencv_display = True
+    # env_wrapper.enable_opencv_display = True
     env_wrapper.env._render_viewport = True
     env_wrapper.env.init_marker_viz()
     env_wrapper._update_camera_pose = True
@@ -136,6 +137,7 @@ def play(args):
 
     
     video_saver = VideoSaver(os.path.join(evalation_save_dir, "see_video.mp4"))
+    success_list  = []
 
     total_step_count = int (2 / 0.025) # 7s
     for i in range(evaluation_round):
@@ -174,7 +176,6 @@ def play(args):
 
 
         success_flag_acc = 0
-        success_list  = []
 
         for step in range(total_step_count):
             if task_cfg.use_vision:
@@ -201,6 +202,10 @@ def play(args):
                 camera_quat,
                 camera_direction,
             )
+
+            if i < 2 :
+                video_saver.add(env_wrapper)
+
         success_flag_average = success_flag_acc / total_step_count
         # if 75 percentage of frames the cube are withn 25 pixel distance from the center of the fov in 7 seconds, the evaluation is successful.
         if success_flag_average > 0.8:
@@ -211,14 +216,17 @@ def play(args):
         log.info(f"success_flag: {success_flag} for round {i}, object_yaw: {yaw.item()}, success_flag_average: {success_flag_average}")
         success_list.append(success_flag)
 
-        if i < 3*reset_interval:
-            video_saver.add(env_wrapper)
+        if i == 2 :
+            video_saver.save()
+            log.info(f"Saved {i} round video at: {video_saver.video_path}")
+
+
         
 
     # compute average success rate
     average_success_rate = sum(success_list) / len(success_list)
     log.info(f"average success rate in {evaluation_round} rounds: {average_success_rate}")
-    video_saver.save()
+    
 
         # add episode reward for logging
         # if env_wrapper.reset_buf[0] > 0:
