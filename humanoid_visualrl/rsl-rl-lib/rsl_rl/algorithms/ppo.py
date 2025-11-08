@@ -215,6 +215,7 @@ class PPO:
         else:
             generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
 
+        idx_batch = 0
         # iterate over batches
         for (
             obs_batch,
@@ -230,6 +231,7 @@ class PPO:
             masks_batch,
             rnd_state_batch,
         ) in generator:
+            idx_batch += 1
             # number of augmentations per sample
             # we start with 1 and increase it if we use symmetry augmentation
             num_aug = 1
@@ -388,8 +390,18 @@ class PPO:
             # Compute the gradients
             # -- For PPO
             self.optimizer.zero_grad()
-            if mean_kl < 1.1:
-                loss.backward()
+            if mean_kl > 0.6:
+                #  abort this iteration and return the losses. reference: https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/ppo/ppo.py
+                self.storage.clear()
+                return_dict = {
+                    "value_function": (mean_value_loss + value_loss.item()) / idx_batch,
+                    "surrogate": (mean_surrogate_loss + surrogate_loss.item()) / idx_batch,
+                    "entropy": (mean_entropy + entropy_batch.mean().item()) / idx_batch,
+                    "kl": kl_mean / idx_batch,
+                }
+                return return_dict
+
+            loss.backward()
             # -- For RND
             if self.rnd:
                 self.rnd_optimizer.zero_grad()  # type: ignore
