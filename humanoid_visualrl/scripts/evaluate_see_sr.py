@@ -40,7 +40,7 @@ def play(args):
     Args:
         args: Command line arguments containing configuration
     """
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = args.device
     load_path = get_load_path(args)
 
     # get task cfg from cfg.py in load_path

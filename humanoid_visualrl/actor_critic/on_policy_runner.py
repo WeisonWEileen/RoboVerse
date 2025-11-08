@@ -243,10 +243,10 @@ class OnPolicyRunner:
         # Start training
         start_iter = self.current_learning_iteration
         tot_iter = start_iter + num_learning_iterations
+        record_video = False
         for it in range(start_iter, tot_iter):
-            record_video = False
             if it % 100 == 0:
-                record_video = True      
+                record_video = True 
                 images = []    
             start = time.time()
             # Rollout
@@ -317,12 +317,18 @@ class OnPolicyRunner:
                         egocentric_frame = cv2.resize(egocentric_frame, (374, 374))
                         # images.append(rgb_frame)
                         # horizontal concat the egocentric frame and the rgb frame
+                        # if record_video:
                         images.append(np.concatenate([egocentric_frame, rgb_frame], axis=1))
                         # print(f"Recording video at frame {len(images)}")
 
                     # self.env.render()
-                if record_video:
-                    iio.mimsave(os.path.join(self.log_dir, f"video_{it}.mp4"), images, fps=30)
+
+                # totally record 6 iterations of video
+                if it % 100 == 5:
+                    record_video = False 
+                    iio.mimsave(os.path.join(self.log_dir, f"video_{it-5}_to_{it}.mp4"), images, fps=30)
+                    images = [] #reset images buffer
+                
                 stop = time.time()
                 collection_time = stop - start
                 start = stop
