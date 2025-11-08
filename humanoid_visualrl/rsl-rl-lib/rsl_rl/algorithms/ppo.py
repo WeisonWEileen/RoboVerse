@@ -279,27 +279,28 @@ class PPO:
             entropy_batch = self.policy.entropy[:original_batch_size]
 
             # KL
-            if self.desired_kl is not None and self.schedule == "adaptive":
-                with torch.inference_mode():
-                    kl = torch.sum(
-                        torch.log(sigma_batch / old_sigma_batch + 1.0e-5)
-                        + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch))
-                        / (2.0 * torch.square(sigma_batch))
-                        - 0.5,
-                        axis=-1,
-                    )
-                    kl_mean = torch.mean(kl)
+            
+            with torch.inference_mode():
+                kl = torch.sum(
+                    torch.log(sigma_batch / old_sigma_batch + 1.0e-5)
+                    + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch))
+                    / (2.0 * torch.square(sigma_batch))
+                    - 0.5,
+                    axis=-1,
+                )
+                kl_mean = torch.mean(kl)
 
-                    # Reduce the KL divergence across all GPUs
-                    if self.is_multi_gpu:
-                        torch.distributed.all_reduce(kl_mean, op=torch.distributed.ReduceOp.SUM)
-                        kl_mean /= self.gpu_world_size
+                # Reduce the KL divergence across all GPUs
+                if self.is_multi_gpu:
+                    torch.distributed.all_reduce(kl_mean, op=torch.distributed.ReduceOp.SUM)
+                    kl_mean /= self.gpu_world_size
 
-                    # Update the learning rate
-                    # Perform this adaptation only on the main process
+                # Update the learning rate
+                # Perform this adaptation only on the main process
 
-                    # TODO: Is this needed? If KL-divergence is the "same" across all GPUs,
-                    #       then the learning rate should be the same across all GPUs.
+                # TODO: Is this needed? If KL-divergence is the "same" across all GPUs,
+                #       then the learning rate should be the same across all GPUs.
+                if self.desired_kl is not None and self.schedule == "adaptive":
                     if self.gpu_global_rank == 0:
                         if kl_mean > self.desired_kl * 2.0:
                             self.learning_rate = max(1e-4, self.learning_rate / 1.5)

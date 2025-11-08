@@ -16,9 +16,9 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 128 \
+    --num_envs 256 \
     --task "active_vision" \
-    --run_name "layernorm_critic_with_pretrained_1000_searching" \
+    --run_name "layernorm_critic_with_pretrained_1000_reaching_num_env_24_kl_logging" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --headless \
