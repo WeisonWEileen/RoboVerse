@@ -265,20 +265,20 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        RigidObjCfg(
-            name="wall",
-            # make sure mask each other in ego centric view
-            scale=(3.0, 3.0, 1.0),
-            physics=PhysicStateType.GEOM,
-            usd_path="roboverse_data/wall.usd",
-            fix_base_link=True,
-            default_position=(0.0, 0.0, 0.6),
-            # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
-            collision_enabled=False,
-            enable_gyroscopic_forces=False,
-            # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-            # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
-        ),
+        # RigidObjCfg(
+        #     name="wall",
+        #     # make sure mask each other in ego centric view
+        #     scale=(3.0, 3.0, 1.0),
+        #     physics=PhysicStateType.GEOM,
+        #     usd_path="roboverse_data/wall.usd",
+        #     fix_base_link=True,
+        #     default_position=(0.0, 0.0, 0.6),
+        #     # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
+        #     collision_enabled=False,
+        #     enable_gyroscopic_forces=False,
+        #     # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+        #     # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        # ),
         PrimitiveCubeCfg(
             name="object",
             size=(0.09, 0.09, 0.09),
@@ -289,6 +289,7 @@ class BaseTableHumanoidTaskCfg:
             default_position=(0.3, 0.1, 0.851),
             mass=0.2,  # 增加质量以确保更好的物理行为
         ),
+
         # ArticulationObjCfg(
         #     name="box_base",
         #     fix_base_link=True,
@@ -470,7 +471,17 @@ class BaseTableHumanoidTaskCfg:
     reward_pixel_norm_at_object_exp_sharpness = 50.0
     reward_improvement_ratio_threshold = 0.15
 
-
+    randomization_cfg = {
+            "enable_floor": True,
+            "enable_walls": True,
+            "enable_ceiling": False,
+            "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
+            "material_cfg": {
+                "table": {
+                    "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
+                },
+            }
+        }
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
@@ -517,6 +528,7 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_object_yaw_stages = [0.2, 0.5, 1.0]  # Multipliers for randomize_object_yaw_range
         self.curriculum_object_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
         self.curriculum_object_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
+
 
         # self.actor_critic_class = "use_rnn_foveated"
         # self.actor_critic_class = "use_rnn_foveated"
@@ -658,3 +670,6 @@ class BaseTableHumanoidTaskCfg:
         )
         self.ema_reward_threshold = (torch.exp(torch.tensor([- self.thres_radius / self.reward_pixel_norm_at_object_exp_sharpness])) - self.pixel_reward_offset).item()
         log.info(f"reward_threshold: {self.ema_reward_threshold}")
+
+
+        self.seed = self.ppo_cfg.seed

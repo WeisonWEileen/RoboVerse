@@ -10,7 +10,7 @@
 #     # --wandb \
 
 
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5
+export CUDA_VISIBLE_DEVICES=0
 
 USER_NAME=$(whoami)
 
@@ -30,9 +30,9 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_sr.py \
     --task "active_vision" \
     --resume \
     --load_run "2025_1108_043702" \
-    --checkpoint 600 \
-    --headless \
-    --device "cuda:3" \
-    # --enable_opencv_display 
+    --checkpoint 400 \
+    --enable_opencv_display 
+    # --device "cuda:0" \
+    # --headless \
     # --headless \
     # --wandb \

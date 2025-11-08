@@ -92,10 +92,10 @@ def play(args):
         env=env_wrapper,
         train_cfg=env_wrapper.train_cfg,
         device=device,
-        # log_dir=log_dir,
+        # log_dir=log_dir,  
         use_vision=task_cfg.use_vision,
     )
-    ppo_runner.load(load_path)
+    ppo_runner.load(load_path, device=device)
     policy = ppo_runner.get_inference_policy(device=env_wrapper.device)
 
     # export policy as a jit module (used to run it from C++)
@@ -139,12 +139,12 @@ def play(args):
     video_saver = VideoSaver(os.path.join(evalation_save_dir, "see_video.mp4"))
     success_list  = []
 
-    total_step_count = int (2 / 0.025) # 7s
+    total_step_count = int (10 / 0.025) # 7s
     for i in range(evaluation_round):
         # reset and generate new object position
         # if i % reset_interval == 0:
         yaw = (random.random() - 0.5) * 2 * task_cfg.randomize_object_yaw_range
-
+        yaw = 2.3 * 0.5
         yaw = torch.tensor(yaw, device=env_wrapper.device)
         radius = task_cfg.randomize_object_radius
         radius_bias = 2 * (random.random() - 0.5) * 0.1
@@ -177,11 +177,16 @@ def play(args):
 
         success_flag_acc = 0
 
+        obs, _ = env_wrapper.get_observations()
         for step in range(total_step_count):
+
             if task_cfg.use_vision:
                 actions = policy(obs)
+                actions *= 0.0
+
             else:
                 actions = policy(obs.detach())
+                actions *= 0.0
             obs, _, _, infos = env_wrapper.step_evaluate(actions.detach())
             state = env_wrapper.env.get_states()
             env_wrapper._refreshed_tensors(state)

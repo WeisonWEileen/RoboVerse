@@ -21,7 +21,7 @@ from humanoid_visualrl.utils.utils import (
     get_body_reindexed_indices_from_substring,
 )
 from metasim.utils.math import quat_from_euler_xyz, quat_mul
-
+from humanoid_visualrl.utils.domain_randomization_helper import DomainRandomizationHelper
 
 @register_task("active_vision")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
@@ -147,6 +147,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self._ema_reward = 0.05
         self.last_curriculum_update_step = 0
+        self.domain_randomization_helper = DomainRandomizationHelper(self.cfg.randomization_cfg, self.num_envs, self.env, self.cfg.env_spacing, self.cfg.seed, self.device)
+# 
+        self.domain_randomization_helper.randomization(
+            env_ids=list(range(self.num_envs)), step_count=self.episode_length_buf
+        )
 
 
         
