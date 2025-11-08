@@ -18,8 +18,8 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 256 \
     --task "active_vision" \
-    --run_name "layernorm_critic_with_training_num_env_24_kl_clipping_1.1" \
-    --device "cuda:3" \
+    --run_name "pretrain_end2end_kl_clipping_1.1" \
+    --device "cuda:4" \
     --actor_critic_class "use_rnn" \
     --headless \
     --wandb \

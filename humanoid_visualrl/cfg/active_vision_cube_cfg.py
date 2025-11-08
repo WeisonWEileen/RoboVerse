@@ -496,8 +496,9 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
             # self.randomize_object_yaw_range = 2.14
-            self.randomize_object_yaw_range = 2.3
             self.curriculum_object_yaw = False
+            self.curriculum_initial_object_yaw_range = 0.5
+            self.randomize_object_yaw_range = 2.3
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
             self.curriculum_avg_thres_higher = 0.93
             self.curriculum_avg_thres_lower = 0.85
@@ -647,7 +648,7 @@ class BaseTableHumanoidTaskCfg:
 
 
         self.ema_alpha = 0.03
-        self.thres_radius = 23
+        self.thres_radius = 28
         self.pixel_reward_offset = torch.exp(
             -torch.sqrt(
                 torch.tensor([self.cameras[0].width ** 2 + self.cameras[0].height ** 2])
