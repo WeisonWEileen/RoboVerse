@@ -18,14 +18,14 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 256 \
     --task "active_vision" \
-    --run_name "layernorm_critic_with_pretrained_1000_reaching_num_env_24_kl_logging" \
+    --run_name "layernorm_critic_with_pretrained_1000_reaching_num_env_24_kl_clipping_1.1" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --headless \
     --wandb \
-    --load_run "2025_1106_234709" \
+    --load_run "2025_1107_132622" \
     --resume \
-    --checkpoint 1000 \
+    --checkpoint 800 \
     # --run_name "layernorm_critic_with_pretrained_400_searching" \
     # --enable_opencv_display \
     # --wandb \

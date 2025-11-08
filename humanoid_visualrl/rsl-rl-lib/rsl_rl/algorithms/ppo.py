@@ -317,6 +317,8 @@ class PPO:
                     for param_group in self.optimizer.param_groups:
                         param_group["lr"] = self.learning_rate
 
+                    
+
                     mean_kl += kl_mean.item()
             # Surrogate loss
             ratio = torch.exp(actions_log_prob_batch - torch.squeeze(old_actions_log_prob_batch))
@@ -386,7 +388,8 @@ class PPO:
             # Compute the gradients
             # -- For PPO
             self.optimizer.zero_grad()
-            loss.backward()
+            if mean_kl < 1.1:
+                loss.backward()
             # -- For RND
             if self.rnd:
                 self.rnd_optimizer.zero_grad()  # type: ignore
