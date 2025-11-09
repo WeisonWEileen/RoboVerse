@@ -23,6 +23,7 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --actor_critic_class "use_rnn" \
     --headless \
     --wandb \
+    # --run_name "pretrain_material_kl_clipping_1.1" \
     # --load_run "2025_1107_132622" \
     # --resume \
     # --checkpoint 800 \

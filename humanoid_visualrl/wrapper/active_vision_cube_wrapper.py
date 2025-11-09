@@ -147,11 +147,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self._ema_reward = 0.05
         self.last_curriculum_update_step = 0
-        self.domain_randomization_helper = DomainRandomizationHelper(self.cfg.randomization_cfg, self.num_envs, self.env, self.cfg.env_spacing, self.cfg.seed, self.device)
-# 
-        self.domain_randomization_helper.randomization(
-            env_ids=list(range(self.num_envs)), step_count=self.episode_length_buf
-        )
+#         self.domain_randomization_helper = DomainRandomizationHelper(self.cfg.randomization_cfg, self.num_envs, self.env, self.cfg.env_spacing, self.cfg.seed, self.device)
+# # 
+#         self.domain_randomization_helper.randomization(
+#             env_ids=list(range(self.num_envs)), step_count=self.episode_length_buf
+#         )
 
 
         

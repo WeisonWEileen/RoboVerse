@@ -390,7 +390,7 @@ class PPO:
             # Compute the gradients
             # -- For PPO
             self.optimizer.zero_grad()
-            if mean_kl > 0.6:
+            if mean_kl > 1.1:
                 #  abort this iteration and return the losses. reference: https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/ppo/ppo.py
                 self.storage.clear()
                 return_dict = {
