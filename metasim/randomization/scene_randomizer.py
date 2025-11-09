@@ -143,7 +143,7 @@ class SceneRandomizer(BaseRandomizerType):
         # Track created prims to avoid recreating
         self._created_prims = set()
 
-        logger.debug(f"SceneRandomizer initialized with seed {self._seed}")
+        # logger.debug(f"SceneRandomizer initialized with seed {self._seed}")
 
     def bind_handler(self, handler):
         """Bind the scene randomizer to a simulation handler.
@@ -157,6 +157,10 @@ class SceneRandomizer(BaseRandomizerType):
         if self.cfg.only_if_no_scene:
             self._check_scene_exists()
     
+        for env_id in range(self.handler.num_envs):
+            self._create_floor(f"/World/envs/env_{env_id}", env_id)
+
+
     def _get_env_ids(self) -> list[int]:
         """Get environment IDs to operate on."""
         return self.cfg.env_ids or list(range(self.handler.num_envs))
@@ -205,12 +209,12 @@ class SceneRandomizer(BaseRandomizerType):
         env_prim_path = f"/World/envs/env_{env_id}"
 
         # Create/randomize floor
-        if self.cfg.floor is not None and self.cfg.floor.enabled:
-            self._create_or_update_floor(env_prim_path, env_id)
+        # if self.cfg.floor is not None and self.cfg.floor.enabled:
+        self._update_floor(env_prim_path, env_id)
 
         # Create/randomize walls
-        if self.cfg.walls is not None and self.cfg.walls.enabled:
-            self._create_or_update_walls(env_prim_path, env_id)
+        # if self.cfg.walls is not None and self.cfg.walls.enabled:
+        self._update_wall(env_prim_path, env_id)
 
         # Create/randomize ceiling
         if self.cfg.ceiling is not None and self.cfg.ceiling.enabled:
@@ -218,13 +222,25 @@ class SceneRandomizer(BaseRandomizerType):
 
         # Create/randomize table
         # if self.cfg.table is not None and self.cfg.table.enabled:
-        #     self._create_or_update_table(env_prim_path, env_id)
-        table_material_path = self._select_material(self.cfg.table_materials, "table_index")
-        self._apply_material_to_prim(
-            table_material_path, env_prim_path + "/table"
-        )
+        self._create_or_update_table(env_prim_path, env_id)
+        # table_material_path = self._select_material(self.cfg.table_materials, "table_index")
+        # self._apply_material_to_prim(
+        #     table_material_path, env_prim_path + "/table"
+        # )
+    def _create_floor(self, env_prim_path: str, env_id: int):
+        floor_path = f"{env_prim_path}/scene_floor"
 
-    def _create_or_update_floor(self, env_prim_path: str, env_id: int):
+        if floor_path not in self._created_prims:
+            # Use configured size and position
+            floor_size = self.cfg.floor.size
+            floor_position = self.cfg.floor.position
+
+            self._create_cube_prim(floor_path, floor_size, floor_position)
+            self._created_prims.add(floor_path)
+            logger.info(f"Created custom floor plane at {floor_path} (size={floor_size}, pos={floor_position})")
+
+
+    def _update_floor(self, env_prim_path: str, env_id: int):
         """Create or update floor geometry and material.
 
         We always create our own large floor plane positioned slightly above z=0
@@ -242,14 +258,6 @@ class SceneRandomizer(BaseRandomizerType):
         # Create our own floor geometry at World level (shared across envs)
         floor_path = f"{env_prim_path}/scene_floor"
 
-        if floor_path not in self._created_prims:
-            # Use configured size and position
-            floor_size = self.cfg.floor.size
-            floor_position = self.cfg.floor.position
-
-            self._create_cube_prim(floor_path, floor_size, floor_position)
-            self._created_prims.add(floor_path)
-            logger.info(f"Created custom floor plane at {floor_path} (size={floor_size}, pos={floor_position})")
 
         # Randomize material every time this is called
         if self.cfg.floor.material_randomization and self.cfg.floor_materials is not None:
@@ -259,7 +267,7 @@ class SceneRandomizer(BaseRandomizerType):
                 # logger.info(f"Applying floor material: {material_name} to {floor_path}")
                 self._apply_material_to_prim(material_path, floor_path)
 
-    def _create_or_update_walls(self, env_prim_path: str, env_id: int):
+    def _update_wall(self, env_prim_path: str, env_id: int):
         """Create or update wall geometry and materials (4 walls).
 
         Args:
@@ -267,31 +275,33 @@ class SceneRandomizer(BaseRandomizerType):
             env_id: Environment ID
         """
         # Wall naming: front, back, left, right
-        wall_configs = self._generate_wall_configs(self.cfg.walls.size, self.cfg.walls.position)
+        # wall_configs = self._generate_wall_configs(self.cfg.walls.size, self.cfg.walls.position)
 
-        logger.debug(f"Wall configs: {wall_configs}")
+        # # logger.debug(f"Wall configs: {wall_configs}")
 
-        # Select material once for all walls (same material for all 4 walls)
-        material_path = None
-        if self.cfg.walls.material_randomization and self.cfg.wall_materials is not None:
-            material_path = self._select_material(self.cfg.wall_materials, "wall_index")
+        # # Select material once for all walls (same material for all 4 walls)
+        # material_path = None
+        # if self.cfg.walls.material_randomization and self.cfg.wall_materials is not None:
+        material_path = self._select_material(self.cfg.wall_materials, "wall_index")
 
-        for wall_name, (size, position) in wall_configs.items():
-            wall_path = f"{env_prim_path}/scene_wall_{wall_name}"
+        # for wall_name, (size, position) in wall_configs.items():
+        #     wall_path = f"{env_prim_path}/scene_wall_{wall_name}"
 
-            logger.debug(f"Creating wall '{wall_name}' at {wall_path}: size={size}, position={position}")
 
-            # Create wall if it doesn't exist
-            if wall_path not in self._created_prims:
-                self._create_cube_prim(wall_path, size, position)
-                self._created_prims.add(wall_path)
-                logger.debug(f"Wall '{wall_name}' created and added to _created_prims")
-            else:
-                logger.debug(f"Wall '{wall_name}' already exists, skipping creation")
+        #     # # Create wall if it doesn't exist
+        #     # if wall_path not in self._created_prims:
+        #     #     # logger.debug(f"Creating wall '{wall_name}' at {wall_path}: size={size}, position={position}")
 
-            # Apply the selected material to this wall
-            if material_path:
-                self._apply_material_to_prim(material_path, wall_path)
+        #     #     self._create_cube_prim(wall_path, size, position)
+        #     #     self._created_prims.add(wall_path)
+        #     #     # logger.debug(f"Wall '{wall_name}' created and added to _created_prims")
+        #     # else:
+        #     #     # logger.debug(f"Wall '{wall_name}' already exists, skipping creation")
+
+        #     # Apply the selected material to this wall
+        #     if material_path:
+        wall_path = f"{env_prim_path}/wall"
+        self._apply_material_to_prim(material_path, wall_path)
 
     def _create_or_update_ceiling(self, env_prim_path: str, env_id: int):
         """Create or update ceiling geometry and material.
@@ -320,12 +330,12 @@ class SceneRandomizer(BaseRandomizerType):
             env_prim_path: Environment prim path
             env_id: Environment ID
         """
-        table_path = f"{env_prim_path}/scene_table"
+        table_path = f"{env_prim_path}/table"
 
-        # Create table if it doesn't exist
-        if table_path not in self._created_prims:
-            self._create_cube_prim(table_path, self.cfg.table.size, self.cfg.table.position)
-            self._created_prims.add(table_path)
+        # # Create table if it doesn't exist
+        # if table_path not in self._created_prims:
+        #     self._create_cube_prim(table_path, self.cfg.table.size, self.cfg.table.position)
+        #     self._created_prims.add(table_path)
 
         # Randomize material
         if self.cfg.table.material_randomization and self.cfg.table_materials is not None:
@@ -438,7 +448,7 @@ class SceneRandomizer(BaseRandomizerType):
             scale_factor = tuple(s / 2.0 for s in size)
             scale_op.Set(Gf.Vec3d(*scale_factor))
 
-            logger.debug(f"Created cube at {prim_path} with size {size} (scale={scale_factor}) and position {position}")
+            # logger.debug(f"Created cube at {prim_path} with size {size} (scale={scale_factor}) and position {position}")
 
         except Exception as e:
             logger.warning(f"Failed to create cube prim {prim_path}: {e}")
@@ -480,8 +490,8 @@ class SceneRandomizer(BaseRandomizerType):
             # First, check and download the material file if needed
             from metasim.utils.hf_util import check_and_download_recursive
 
-            # logger.debug(f"Checking and downloading material: {material_path}")
-            check_and_download_recursive([material_path])
+            # # logger.debug(f"Checking and downloading material: {material_path}")
+            # check_and_download_recursive([material_path])
 
             # Get absolute path to MDL file
             import os
@@ -512,13 +522,13 @@ class SceneRandomizer(BaseRandomizerType):
 
             if target_prim.IsA(UsdGeom.Mesh):
                 mesh_prims_paths.append(prim_path)
-                logger.debug(f"Target prim {prim_path} is a Mesh")
+                # logger.debug(f"Target prim {prim_path} is a Mesh")
             elif prim_type in ["Cube", "Sphere", "Cylinder", "Cone", "Capsule"]:
                 # USD geometric primitives can accept materials directly
                 mesh_prims_paths.append(prim_path)
-                # logger.debug(f"Target prim {prim_path} is a {prim_type} primitive")
+                # # logger.debug(f"Target prim {prim_path} is a {prim_type} primitive")
             else:
-                logger.debug(f"Target prim {prim_path} is {prim_type}, searching for Mesh/Primitive children...")
+                # logger.debug(f"Target prim {prim_path} is {prim_type}, searching for Mesh/Primitive children...")
 
                 # Recursively find all mesh/primitive children
                 def find_renderables(prim):
@@ -526,7 +536,7 @@ class SceneRandomizer(BaseRandomizerType):
                     if prim.IsA(UsdGeom.Mesh) or prim_type in ["Cube", "Sphere", "Cylinder", "Cone", "Capsule"]:
                         mesh_path = str(prim.GetPath())
                         mesh_prims_paths.append(mesh_path)
-                        logger.debug(f"  Found {prim_type}: {mesh_path}")
+                        # logger.debug(f"  Found {prim_type}: {mesh_path}")
                     for child in prim.GetChildren():
                         find_renderables(child)
 
@@ -557,7 +567,7 @@ class SceneRandomizer(BaseRandomizerType):
                         logger.warning(f"Failed to ensure UV for terrain: {e}")
 
                 self.material_randomizer._apply_mdl_to_prim(material_path, mesh_path)
-                # logger.debug(f"Applied material to mesh {mesh_path}")
+                # # logger.debug(f"Applied material to mesh {mesh_path}")
 
             # logger.info(f"Successfully applied MDL material to {len(mesh_prims_paths)} mesh(es) under {prim_path}")
 
@@ -576,7 +586,7 @@ class SceneRandomizer(BaseRandomizerType):
         # Get environment IDs to randomize
         target_env_ids = env_ids if env_ids is not None else self._get_env_ids()
 
-        logger.debug("Applying material randomization to existing scene elements")
+        # logger.debug("Applying material randomization to existing scene elements")
 
         # This would require detecting existing scene elements
         # For now, we skip this in favor of explicit material randomization

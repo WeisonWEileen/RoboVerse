@@ -205,10 +205,13 @@ def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     task_name = scenario.task.task_name
     now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
     log_dir = f"./outputs/{task_name}/{now}/"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir, exist_ok=True)
-    log.info("Log directory: {}", log_dir)
-    return log_dir, now
+    if not args.debug:
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+        log.info("Log directory: {}", log_dir)
+        return log_dir, now
+    else:
+        return None, None
 
 
 def get_cfg_cls(args: argparse.Namespace):

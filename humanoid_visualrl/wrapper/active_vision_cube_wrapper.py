@@ -81,6 +81,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         self.curriculum_robot_yaw_range = self.cfg.randomize_robot_yaw_range
 
+        if self.cfg.randomize_material:
+            self.domain_randomization_helper = DomainRandomizationHelper(
+                self.cfg.mode,
+                self.cfg.randomization_cfg,
+                self.num_envs,
+                self.env,
+                self.cfg.env_spacing,
+                self.cfg.seed,
+                self.device,
+            )
+            #
+
         self._reset(list(range(self.num_envs)))
 
         self._update_camera_pose = False
@@ -147,11 +159,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self._ema_reward = 0.05
         self.last_curriculum_update_step = 0
-        self.domain_randomization_helper = DomainRandomizationHelper(self.cfg.randomization_cfg, self.num_envs, self.env, self.cfg.env_spacing, self.cfg.seed, self.device)
-# 
-        self.domain_randomization_helper.randomization(
-            env_ids=list(range(self.num_envs)), step_count=self.episode_length_buf
-        )
+
 
 
         
@@ -448,6 +456,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
 
     def _pre_reset_hook(self, env_ids=None):
+        if self.cfg.randomize_material:
+            self.domain_randomization_helper.randomization(env_ids=env_ids)
         # randomly set y of object in range (-randomize_object_y_range, randomize_object_y_range)
         # if self.cfg.randomize_object_y = True
 
@@ -477,6 +487,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # self.init_states.robots[self.robot.name].joint_pos[env_ids, self.robot_waist_yaw_joint_indices] = robot_yaw
 
     def _post_reset_hook(self, env_ids):
+        if self.cfg.randomize_material:
+            self.domain_randomization_helper.randomization(env_ids=env_ids)
+
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
         self.env.sim.render()

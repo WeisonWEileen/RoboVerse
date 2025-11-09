@@ -488,6 +488,88 @@ class SceneMaterialCollections:
         return materials
 
     @staticmethod
+    def wall_train_materials(
+        base_path_arnold: str = "roboverse_data/materials/arnold",
+        base_path_vmaterials: str = "roboverse_data/materials/vMaterials_2",
+    ) -> list[str]:
+        """Get curated wall material paths (~150 materials).
+
+        Combines architecture materials, painted surfaces, and suitable textures.
+
+        Args:
+            base_path_arnold: Base path to ARNOLD materials
+            base_path_vmaterials: Base path to vMaterials
+
+        Returns:
+            List of material file paths
+        """
+        materials = []
+
+        # ARNOLD Architecture materials
+        arnold_architecture = [
+            "Architecture/Ceiling_Tiles.mdl",
+            "Architecture/Roof_Tiles.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_architecture])
+
+        # ARNOLD Masonry for walls
+        arnold_masonry = [
+            "Masonry/Adobe_Brick.mdl",
+            "Masonry/Brick_Wall_Brown.mdl",
+            "Masonry/Brick_Wall_Red.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_masonry])
+
+        # ARNOLD Wood paneling for walls
+        arnold_wood_wall = [
+            "Wood/Beadboard.mdl",
+            "Wood/Timber_Cladding.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood_wall])
+
+        return materials
+
+    @staticmethod
+    def wall_test_materials(
+        base_path_arnold: str = "roboverse_data/materials/arnold",
+        base_path_vmaterials: str = "roboverse_data/materials/vMaterials_2",
+    ) -> list[str]:
+        """Get curated wall material paths (~150 materials).
+
+        Combines architecture materials, painted surfaces, and suitable textures.
+
+        Args:
+            base_path_arnold: Base path to ARNOLD materials
+            base_path_vmaterials: Base path to vMaterials
+
+        Returns:
+            List of material file paths
+        """
+        materials = []
+
+        # ARNOLD Architecture materials
+        arnold_architecture = [
+            "Architecture/Shingles_01.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_architecture])
+
+        # ARNOLD Masonry for walls
+        arnold_masonry = [
+            "Masonry/Concrete_Block.mdl",
+            "Masonry/Brick_Pavers.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_masonry])
+
+        # ARNOLD Wood paneling for walls
+        arnold_wood_wall = [
+            "Wood/Plywood.mdl",
+        ]
+        materials.extend([f"{base_path_arnold}/{m}" for m in arnold_wood_wall])
+
+        return materials
+
+
+    @staticmethod
     def ceiling_materials(base_path_arnold: str = "roboverse_data/materials/arnold") -> list[str]:
         """Get curated ceiling material paths (subset of wall materials).
 

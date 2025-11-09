@@ -265,6 +265,16 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
+       RigidObjCfg(
+                name="wall",
+                scale=(4.0, 4.0, 1.8),
+                physics=PhysicStateType.GEOM,
+                usd_path="roboverse_data/wall.usd",
+                fix_base_link=True,
+                default_position=(0.0, 0.0, 0.3),
+                collision_enabled=False,
+                enable_gyroscopic_forces=False,
+            ),
 
         PrimitiveCubeCfg(
             name="object",
@@ -469,8 +479,12 @@ class BaseTableHumanoidTaskCfg:
                 "table": {
                     "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
                 },
-            }
+            },
+            "env_setting_randomize_freq": 4,
+            
         }
+
+    mode: Literal["train", "test"] = "train"
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
@@ -664,16 +678,3 @@ class BaseTableHumanoidTaskCfg:
         self.seed = self.ppo_cfg.seed
 
 
-        if not self.randomize_material:
-
-            wall_cfg = RigidObjCfg(
-                name="wall",
-                scale=(3.0, 3.0, 1.0),
-                physics=PhysicStateType.GEOM,
-                usd_path="roboverse_data/wall.usd",
-                fix_base_link=True,
-                default_position=(0.0, 0.0, 0.6),
-                collision_enabled=False,
-                enable_gyroscopic_forces=False,
-            )
-            self.objects.insert(1, wall_cfg)  # 插在索引1的位置（第二个）

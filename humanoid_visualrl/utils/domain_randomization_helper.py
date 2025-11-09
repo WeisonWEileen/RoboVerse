@@ -42,7 +42,9 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 class DomainRandomizationHelper:
     """Helper class for domain randomization tasks."""
     # def __init__(self, cfg, num_envs, lights, robots, objects, cameras, handler, env_spacing, seed, device):
-    def __init__(self, cfg, num_envs, handler, env_spacing, seed, device):
+    def __init__(self, mode,cfg, num_envs, handler, env_spacing, seed, device):
+        assert mode in ["train", "test"], "Mode must be either train or test"
+        self.mode = mode
         self.cfg = cfg
         # self.lights = lights
         # self.robots = robots
@@ -246,7 +248,8 @@ class DomainRandomizationHelper:
                     material_randomization=True,
                 )
                 floor_materials_cfg = SceneMaterialPoolCfg(
-                    material_paths=self.cfg.get("floor_materials", SceneMaterialCollections.floor_materials()),
+                    # material_paths=self.cfg.get("floor_materials", SceneMaterialCollections.floor_materials()),
+                    material_paths=SceneMaterialCollections.floor_train_materials() if self.mode == "train" else SceneMaterialCollections.floor_test_materials(),
                     selection_strategy="random",
                 )
                 log.info(f"  - Floor enabled, {len(floor_materials_cfg.material_paths)} materials)")
@@ -259,31 +262,34 @@ class DomainRandomizationHelper:
                     material_randomization=True,
                 )
                 wall_materials_cfg = SceneMaterialPoolCfg(
-                    material_paths=self.cfg.get("wall_materials", SceneMaterialCollections.wall_materials()),
+                    # material_paths=self.cfg.get("wall_materials", SceneMaterialCollections.wall_materials()),
+                    material_paths=SceneMaterialCollections.wall_train_materials() if self.mode == "train" else SceneMaterialCollections.wall_test_materials(),
                     selection_strategy="random",
                 )
                 log.info(f"  - Walls enabled, {len(wall_materials_cfg.material_paths)} materials)")
 
-            if self.enable_ceiling and self.enable_walls:
-                ceiling_cfg = SceneGeometryCfg(
-                    enabled=True,
-                    size=(room_size, room_size, wall_thickness),
-                    position=(0.0, 0.0, wall_height + wall_thickness / 2),
-                    material_randomization=True,
-                )
-                ceiling_materials_cfg = SceneMaterialPoolCfg(
-                    material_paths=self.cfg.get("ceiling_materials", SceneMaterialCollections.ceiling_materials()),
-                    selection_strategy="random",
-                )
-                log.info("  - Ceiling enabled")
-            elif self.enable_ceiling and not self.enable_walls:
-                log.warning("  - Ceiling disabled (requires --enable-walls)")
+            # if self.enable_ceiling and self.enable_walls:
+            #     ceiling_cfg = SceneGeometryCfg(
+            #         enabled=True,
+            #         size=(room_size, room_size, wall_thickness),
+            #         position=(0.0, 0.0, wall_height + wall_thickness / 2),
+            #         material_randomization=True,
+            #     )
+            #     ceiling_materials_cfg = SceneMaterialPoolCfg(
+            #         material_paths=self.cfg.get("ceiling_materials", SceneMaterialCollections.ceiling_materials()),
+            #         selection_strategy="random",
+            #     )
+            #     log.info("  - Ceiling enabled")
+            # elif self.enable_ceiling and not self.enable_walls:
+            #     log.warning("  - Ceiling disabled (requires --enable-walls)")
 
             # if self.enable_table and self.table_cfg:
             # table_cfg_dict = self.table_cfg
             # table_thickness = table_cfg_dict.get("thickness", 0.1)
             # table_center_z = table_cfg_dict["height"] - table_thickness / 2
 
+
+            # in this setting, we always have table
             table_cfg = SceneGeometryCfg(
                 enabled=False, # self.define table
                 # size=(table_cfg_dict["width"], table_cfg_dict["depth"], table_thickness),
@@ -291,12 +297,10 @@ class DomainRandomizationHelper:
                 material_randomization=True,
             )
             table_materials_cfg = SceneMaterialPoolCfg(
-                material_paths=self.cfg.get("table_materials", SceneMaterialCollections.table_materials()),
+                # material_paths=self.cfg.get("table_materials", SceneMaterialCollections.table_materials()),
+                material_paths=SceneMaterialCollections.table_train_materials() if self.mode == "train" else SceneMaterialCollections.table_test_materials(),
                 selection_strategy="random",
             )
-            # log.info(
-            #     f"  - Table enabled ({table_cfg_dict['width']}x{table_cfg_dict['depth']}m at z={table_cfg_dict['height']}m, ~{len(table_materials_cfg.material_paths)} materials)"
-            # )
 
             # Create scene configuration
             scene_cfg = SceneRandomCfg(
@@ -325,30 +329,51 @@ class DomainRandomizationHelper:
             except Exception as e:
                 log.warning(f"Failed to apply material {material_path} to {prim_path}: {e}")
         
-    def randomization(self, env_ids, step_count=0):
-        self.env_reset_num[env_ids] += 1
-        self.env_reset_num[env_ids] = self.env_reset_num[env_ids] % self.env_setting_randomize_freq
-        if np.any(self.env_reset_num[env_ids] == 0):
-            mask = self.env_reset_num[env_ids] == 0
-            env_ids_to_randomize = np.array(env_ids)[mask].tolist()
+    def should_randomize(self, env_ids):
+        """Return env_ids that should be randomized this step."""
+        self.env_reset_num[env_ids] = (self.env_reset_num[env_ids] + 1) % self.env_setting_randomize_freq
+        return [eid for eid in env_ids if self.env_reset_num[eid] == 0]
+        
+    # def randomization(self, env_ids, step_count=0):
+    # def randomization(self, env_ids):
+    #     self.env_reset_num[env_ids] += 1
+    #     self.env_reset_num[env_ids] = self.env_reset_num[env_ids] % self.env_setting_randomize_freq
+    #     if np.any(self.env_reset_num[env_ids] == 0):
+    #         mask = self.env_reset_num[env_ids] == 0
+    #         env_ids_to_randomize = np.array(env_ids)[mask].tolist()
             
-            # randomize_envs -> [0, 2]
-            # for obj in self.objects:
-            #     if obj.name in self.randomizer:
-            #         self.randomizer[obj.name](env_ids_to_randomize)
-            #     if f"material_{obj.name}" in self.randomizer:
-            #         self.randomizer[f"material_{obj.name}"](env_ids_to_randomize)
-            # for robot in self.robots:
-            #     if robot.name in self.randomizer:
-            #         self.randomizer[robot.name](env_ids_to_randomize)
-            #     if f"material_{robot.name}" in self.randomizer:
-            #         self.randomizer[f"material_{robot.name}"](env_ids_to_randomize)
-            # for camera in self.cameras:
-            #     if camera.name in self.randomizer:
-            #         self.randomizer[camera.name](env_ids_to_randomize)
-            if self.scene_randomizer:
-                self.scene_randomizer(env_ids_to_randomize)
-        # if step_count % self.light_randomize_freq == 0:
-        #     for light in self.lights:
-        #         if light.name in self.randomizer:
-        #             self.randomizer[light.name]()
+    #         # randomize_envs -> [0, 2]
+    #         # for obj in self.objects:
+    #         #     if obj.name in self.randomizer:
+    #         #         self.randomizer[obj.name](env_ids_to_randomize)
+    #         #     if f"material_{obj.name}" in self.randomizer:
+    #         #         self.randomizer[f"material_{obj.name}"](env_ids_to_randomize)
+    #         # for robot in self.robots:
+    #         #     if robot.name in self.randomizer:
+    #         #         self.randomizer[robot.name](env_ids_to_randomize)
+    #         #     if f"material_{robot.name}" in self.randomizer:
+    #         #         self.randomizer[f"material_{robot.name}"](env_ids_to_randomize)
+    #         # for camera in self.cameras:
+    #         #     if camera.name in self.randomizer:
+    #         #         self.randomizer[camera.name](env_ids_to_randomize)
+    #         if self.scene_randomizer:
+    #             self.scene_randomizer(env_ids_to_randomize)
+    #     # if step_count % self.light_randomize_freq == 0:
+    #     #     for light in self.lights:
+    #     #         if light.name in self.randomizer:
+    #     #             self.randomizer[light.name]()
+
+
+    def randomization(self, env_ids):
+        """Perform domain randomization on selected environments."""
+        envs_to_randomize = self.should_randomize(env_ids)
+        if not envs_to_randomize:
+            return
+
+        # Object-level, camera-level randomization
+        # for name, rand in self.randomizer.items():
+        #     rand(envs_to_randomize)
+
+        # Scene-level randomization
+        if self.scene_randomizer:
+            self.scene_randomizer(envs_to_randomize)
