@@ -328,6 +328,7 @@ def get_args():
         opencv_render_env_idx: int = 0
         device: str = "cuda:0"
         actor_critic_class: str = "use_rnn"
+        randomize_material: bool = False
         
 
         def __post_init__(self):

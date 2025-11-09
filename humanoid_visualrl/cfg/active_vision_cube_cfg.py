@@ -265,20 +265,7 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        RigidObjCfg(
-            name="wall",
-            # make sure mask each other in ego centric view
-            scale=(3.0, 3.0, 1.0),
-            physics=PhysicStateType.GEOM,
-            usd_path="roboverse_data/wall.usd",
-            fix_base_link=True,
-            default_position=(0.0, 0.0, 0.6),
-            # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
-            collision_enabled=False,
-            enable_gyroscopic_forces=False,
-            # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-            # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
-        ),
+
         PrimitiveCubeCfg(
             name="object",
             size=(0.09, 0.09, 0.09),
@@ -317,6 +304,7 @@ class BaseTableHumanoidTaskCfg:
         #     randomize_material=True,
         # ),
     ]
+    
     # cameras
     """objects in the environment"""
     traj_filepath = None
@@ -471,6 +459,7 @@ class BaseTableHumanoidTaskCfg:
     reward_pixel_norm_at_object_exp_sharpness = 50.0
     reward_improvement_ratio_threshold = 0.15
 
+    randomize_material = False
     randomization_cfg = {
             "enable_floor": True,
             "enable_walls": True,
@@ -507,7 +496,7 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
             # self.randomize_object_yaw_range = 2.14
-            self.curriculum_object_yaw = False
+            self.curriculum_object_yaw = True
             self.curriculum_initial_object_yaw_range = 0.5
             self.randomize_object_yaw_range = 2.3
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
@@ -673,3 +662,18 @@ class BaseTableHumanoidTaskCfg:
 
 
         self.seed = self.ppo_cfg.seed
+
+
+        if not self.randomize_material:
+
+            wall_cfg = RigidObjCfg(
+                name="wall",
+                scale=(3.0, 3.0, 1.0),
+                physics=PhysicStateType.GEOM,
+                usd_path="roboverse_data/wall.usd",
+                fix_base_link=True,
+                default_position=(0.0, 0.0, 0.6),
+                collision_enabled=False,
+                enable_gyroscopic_forces=False,
+            )
+            self.objects.insert(1, wall_cfg)  # 插在索引1的位置（第二个）

@@ -18,11 +18,13 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 256 \
     --task "active_vision" \
-    --run_name "pretrain_end2end_kl_clipping_1.1" \
-    --device "cuda:4" \
+    --run_name "pretrain_curriculum_kl_clipping_1.1_material_not_randomize" \
+    --device "cuda:0" \
     --actor_critic_class "use_rnn" \
-    --headless \
+    --randomize_material \
     --wandb \
+    --headless \
+    # --debug
     # --run_name "pretrain_material_kl_clipping_1.1" \
     # --load_run "2025_1107_132622" \
     # --resume \

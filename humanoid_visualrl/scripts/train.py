@@ -29,7 +29,7 @@ if __name__ == "__main__":
     task_cfg_cls = get_task_cfg_class(args.task)
     
 
-    task_cfg = task_cfg_cls(finetune=args.resume, actor_critic_class=args.actor_critic_class)
+    task_cfg = task_cfg_cls(finetune=args.resume, actor_critic_class=args.actor_critic_class, randomize_material=args.randomize_material)
     # if not args.debug:
     #  assert args.num_envs == 64 
 
