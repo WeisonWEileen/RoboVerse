@@ -56,7 +56,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         self.scenario_cfg: ScenarioCfg = scenario_cfg
         self.physics_dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 0.01
-        self._step_counter = 0
+        self._physics_step_counter = 0
         self._is_closed = False
         self._render_interval = self.scenario.render_interval
 
@@ -460,7 +460,7 @@ class IsaacsimHandler(BaseSimHandler):
             env_ids = list(range(self.num_envs))
 
         # Special handling for the first frame to ensure camera is properly positioned
-        if self._step_counter == 0:
+        if self._physics_step_counter == 0:
             self._update_camera_pose()
             # Force render and sensor update for first frame
             if self.sim.has_gui() or self.sim.has_rtx_sensors():
@@ -610,17 +610,17 @@ class IsaacsimHandler(BaseSimHandler):
 
         self.scene.write_data_to_sim()
         self.sim.step(render=False)
-        if self._step_counter % self._render_interval == 0 and self._is_rendering:
+        self._physics_step_counter += 1
+        if self._physics_step_counter % self._render_interval == 0 and self._is_rendering:
             self.sim.render()
             # self._update_tiled_camera_pose()
 
         self.scene.update(dt=self.physics_dt)
 
         # Ensure camera pose is correct, especially for the first few frames
-        if self._step_counter < 5:
-            self._update_camera_pose()
+        # if self._physics_step_counter < 5:
+        #     self._update_camera_pose()
 
-        self._step_counter += 1
 
     def _add_robot(self, robot: ArticulationObjCfg) -> None:
         import isaaclab.sim as sim_utils
