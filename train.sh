@@ -16,12 +16,14 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 64 \
+    --num_envs 256 \
     --task "active_vision" \
-    --run_name "pretrain_curriculum_kl_clipping_1.1_material_not_randomize" \
+    --run_name "pretrain_curriculum_kl_clipping_1.1_material_randomize_freq_1" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --randomize_material \
+    --headless \
+    --wandb
     # --debug
     
     # --wandb \

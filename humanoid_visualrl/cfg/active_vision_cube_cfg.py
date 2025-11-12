@@ -481,7 +481,7 @@ class BaseTableHumanoidTaskCfg:
                     "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
                 },
             },
-            "env_setting_randomize_freq": 4,
+            "env_setting_randomize_freq": 1,
             
         }
 

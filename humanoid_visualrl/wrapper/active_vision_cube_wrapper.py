@@ -91,7 +91,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.cfg.seed,
                 self.device,
             )
-            #
+            # randomize all
+            self.domain_randomization_helper.scene_randomizer(env_ids=list(range(self.num_envs)))
 
         self._reset(list(range(self.num_envs)))
 
@@ -147,8 +148,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.vision_seg_buf = torch.zeros(
             self.num_envs, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.int32
         )
-        if self.cfg.randomize_obj_material:
-            self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
+        # if self.cfg.randomize_obj_material:
+        #     self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
 
         # find the objcfg with name "object"
         # find the objcfg with name "object"
@@ -396,10 +397,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 
             window_open = self.opencv_renderer.display(rgb_image)
 
-        if not window_open:
-            # User closed the window, disable further display
-            self.enable_opencv_display = False
-            print("OpenCV display window closed by user")
+            if not window_open:
+                # User closed the window, disable further display
+                self.enable_opencv_display = False
+                print("OpenCV display window closed by user")
 
     def _update_see_flag_history(self):
         """Update the see_flag history buffer for curriculum learning."""
@@ -460,6 +461,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _pre_reset_hook(self, env_ids=None):
         if self.cfg.randomize_material:
             self.domain_randomization_helper.randomization(env_ids=env_ids)
+            
         # randomly set y of object in range (-randomize_object_y_range, randomize_object_y_range)
         # if self.cfg.randomize_object_y = True
 
@@ -496,7 +498,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.env.scene.sensors["camera_first_person"].update(dt=0)
         self.env.sim.render()
         camera_data = self.env.scene.sensors["camera_first_person"].data.output
-        self.vision_rgb_buf[env_ids] = camera_data["rgb"][env_ids].permute(0, 3, 1, 2).float() / 255.0
+        self.vision_rgb_buf[env_ids] = camera_data["rgb"][env_ids].permute(0, 3, 1, 2).float() / 255.0 - 0.5
         if self.semantic_seg:
             # 添加分割数据的更新
             self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
