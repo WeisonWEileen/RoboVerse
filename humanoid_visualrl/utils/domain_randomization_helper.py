@@ -110,7 +110,7 @@ class DomainRandomizationHelper:
         #         )
         #         material_randomizer.bind_handler(handler)
         #         self.randomizer[f"material_{robot.name}"] = material_randomizer
-        # for obj in objects:
+    # for obj in objects:
         #     obj_randomize_cfg = self.randomize_cfg.get(obj.name, None)
         #     if obj_randomize_cfg:
         #         self.randomizer[obj] = ObjectRandomizer(

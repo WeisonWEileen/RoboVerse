@@ -230,7 +230,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     (255, 255, 0),
                     1,
                 )
-            window_open = self.opencv_renderer.display(rgb_image)
+                window_open = self.opencv_renderer.display(rgb_image)
 
             if not window_open:
                 # User closed the window, disable further display

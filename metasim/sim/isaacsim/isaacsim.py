@@ -257,7 +257,7 @@ class IsaacsimHandler(BaseSimHandler):
     def launch(self) -> None:
         self._init_scene()
         self._load_robots()
-        self._load_sensors()
+        # self._load_sensors()
         self._load_cameras()
         self._load_terrain()
         self._load_objects()
@@ -525,15 +525,17 @@ class IsaacsimHandler(BaseSimHandler):
 
         for camera in self.cameras:
             camera_inst = self.scene.sensors[camera.name]
-            rgb_data = camera_inst.data.output.get("rgb", None)
-            depth_data = camera_inst.data.output.get("depth", None)
-            semantic_seg_data = camera_inst.data.output.get("semantic_segmentation", None)
+            data = camera_inst.data
+            rgb_data = data.output.get("rgb", None)
+            depth_data = data.output.get("depth", None)
+            semantic_seg_data = data.output.get("semantic_segmentation", None)
             # semantic_seg_id2label = camera_inst.data.info['semantic_segmentation']
-            semantic_seg_id2label = deep_get(camera_inst.data.info, "semantic_segmentation", "idToLabels")
-            instance_seg_data = deep_get(camera_inst.data.output, "instance_segmentation_fast")
-            instance_seg_id2label = deep_get(camera_inst.data.info, "instance_segmentation_fast", "idToLabels")
-            instance_id_seg_data = deep_get(camera_inst.data.output, "instance_id_segmentation_fast")
-            instance_id_seg_id2label = deep_get(camera_inst.data.info, "instance_id_segmentation_fast", "idToLabels")
+            semantic_seg_id2label = deep_get(data.info, "semantic_segmentation", "idToLabels")
+            # TODO: MERGE THIS INTO ROBOVERSE
+            # instance_seg_data = deep_get(camera_inst.data.output, "instance_segmentation_fast")
+            # instance_seg_id2label = deep_get(camera_inst.data.info, "instance_segmentation_fast", "idToLabels")
+            # instance_id_seg_data = deep_get(camera_inst.data.output, "instance_id_segmentation_fast")
+            # instance_id_seg_id2label = deep_get(camera_inst.data.info, "instance_id_segmentation_fast", "idToLabels")
             if semantic_seg_data is not None:
                 semantic_seg_data = semantic_seg_data.squeeze(-1)
             # if instance_seg_data is not None:
@@ -543,10 +545,10 @@ class IsaacsimHandler(BaseSimHandler):
             camera_states[camera.name] = CameraState(
                 rgb=rgb_data,
                 depth=depth_data,
-                instance_seg=instance_seg_data,
-                instance_seg_id2label=instance_seg_id2label,
-                instance_id_seg=instance_id_seg_data,
-                instance_id_seg_id2label=instance_id_seg_id2label,
+                # instance_seg=instance_seg_data,
+                # instance_seg_id2label=instance_seg_id2label,
+                # instance_id_seg=instance_id_seg_data,
+                # instance_id_seg_id2label=instance_id_seg_id2label,
                 semantic_seg_data=semantic_seg_data,
                 semantic_seg_id2label=semantic_seg_id2label,
                 # pos=(camera_inst.data.pos_w - self.scene.env_origins),
@@ -612,7 +614,6 @@ class IsaacsimHandler(BaseSimHandler):
         self.sim.step(render=False)
         self._physics_step_counter += 1
         if self._physics_step_counter % self._render_interval == 0 and self._is_rendering:
-            self.scene.articulations[self.robots[0].name].data._physics_sim_view.update_articulation_kinematic()
             self.sim.render()
             # self._update_tiled_camera_pose()
 

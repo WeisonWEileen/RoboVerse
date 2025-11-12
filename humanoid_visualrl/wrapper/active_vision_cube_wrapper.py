@@ -231,11 +231,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb / 255.0
         # TODO: normalize it to get better results?
         # # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
-        # vision_rgb -= 0.5
+        vision_rgb -= 0.5
 
-        mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
+        # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
 
-        vision_rgb -= mean_tensor
+        # vision_rgb -= mean_tensor
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
 
         # save a png if count_step is 20
@@ -337,19 +337,21 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # if specific env draw
         if self.env._render_viewport and self.enable_opencv_display:
-            env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
-            # 确保图像是uint8格式
-            rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.3
-            # ensure the image is in the range of [0, 1]
+            rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
+
             rgb_image = torch.clamp(rgb_image, 0, 1)
             rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
+            env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
+            # 确保图像是uint8格式
+            # rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.3
+            # ensure the image is in the range of [0, 1]
             if env_idx.any():
                 env_pos = torch.where(env_idx)[0][0]
 
                 weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(
                     dim=(1, 2)
                 )  # (num_valid_envs,)
-                weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(
+                weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum( 
                     dim=(1, 2)
                 )  # (num_valid_envs,)
 
@@ -394,10 +396,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 
             window_open = self.opencv_renderer.display(rgb_image)
 
-            if not window_open:
-                # User closed the window, disable further display
-                self.enable_opencv_display = False
-                print("OpenCV display window closed by user")
+        if not window_open:
+            # User closed the window, disable further display
+            self.enable_opencv_display = False
+            print("OpenCV display window closed by user")
 
     def _update_see_flag_history(self):
         """Update the see_flag history buffer for curriculum learning."""

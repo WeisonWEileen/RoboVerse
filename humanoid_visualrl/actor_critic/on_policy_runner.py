@@ -308,14 +308,27 @@ class OnPolicyRunner:
                             cur_ereward_sum[new_ids] = 0
                             cur_ireward_sum[new_ids] = 0
                         
+                        # egocentric_frame = ((self.env.vision_rgb_buf[0].permute(1, 2, 0) +0.5)* 255.0).cpu().numpy()
+                        # egocentric_frame = egocentric_frame.astype(np.uint8)
+                        # egocentric_frame = cv2.resize(egocentric_frame, (374, 374))
+                        # if 
                         if record_video:
                             rgb_frame = self.env.env._get_offscreen_viewport_render() 
-                            egocentric_frame = self.env.env.scene.sensors["camera_first_person"].data.output["rgb"][0]
-                            egocentric_frame = egocentric_frame.cpu().numpy()
-                            # change dimension from \
-                            # egocentric_frame = egocentric_frame.transpose(1, 2, 0)
-                            # resize egocentric frame to 374x374
+                            
+                            # a = True
+                            # if a:
+                            #     # FIXME there is a bug when open domain rand and using the data from here 
+                            #     egocentric_frame = self.env.env.scene.sensors["camera_first_person"].data.output["rgb"][0]   
+                            #     egocentric_frame = egocentric_frame.cpu().numpy()
+                            #     # change dimension from \
+                            #     # egocentric_frame = egocentric_frame.transpose(1, 2, 0)
+                            #     # resize egocentric frame to 374x374
+                            #     egocentric_frame = cv2.resize(egocentric_frame, (374, 374))
+                            # else:
+                            egocentric_frame = ((self.env.vision_rgb_buf[0].permute(1, 2, 0) +0.5)* 255.0).cpu().numpy()
+                            egocentric_frame = egocentric_frame.astype(np.uint8)
                             egocentric_frame = cv2.resize(egocentric_frame, (374, 374))
+                        # if 
                             # images.append(rgb_frame)
                             # horizontal concat the egocentric frame and the rgb frame
                             # if record_video:
