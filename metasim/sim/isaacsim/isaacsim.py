@@ -612,6 +612,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.sim.step(render=False)
         self._physics_step_counter += 1
         if self._physics_step_counter % self._render_interval == 0 and self._is_rendering:
+            self.scene.articulations[self.robots[0].name].data._physics_sim_view.update_articulation_kinematic()
             self.sim.render()
             # self._update_tiled_camera_pose()
 

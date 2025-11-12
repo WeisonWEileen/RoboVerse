@@ -265,16 +265,16 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-       RigidObjCfg(
-                name="wall",
-                scale=(4.0, 4.0, 1.8),
-                physics=PhysicStateType.GEOM,
-                usd_path="roboverse_data/wall.usd",
-                fix_base_link=True,
-                default_position=(0.0, 0.0, 0.3),
-                collision_enabled=False,
-                enable_gyroscopic_forces=False,
-            ),
+    #    RigidObjCfg(
+    #             name="wall",
+    #             scale=(4.0, 4.0, 1.8),
+    #             physics=PhysicStateType.GEOM,
+    #             usd_path="roboverse_data/wall.usd",
+    #             fix_base_link=True,
+    #             default_position=(0.0, 0.0, 0.3),
+    #             collision_enabled=False,
+    #             enable_gyroscopic_forces=False,
+    #         ),
 
         PrimitiveCubeCfg(
             name="object",
@@ -438,6 +438,7 @@ class BaseTableHumanoidTaskCfg:
             mount_quat=(0.5, -0.5, 0.5, -0.5),
             focal_length=7.6,
             horizontal_aperture=20.0,
+            clipping_range=(0.05, 2.),
         )
     ]
 
