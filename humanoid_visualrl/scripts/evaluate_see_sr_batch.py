@@ -316,7 +316,7 @@ def play(args):
         for i, v in enumerate(y):
             plt.text(i, v + 0.015, f"{v * 100:.1f}%", ha="center", fontsize=9)
 
-        png_path = os.path.join(evalation_save_dir, "success_rate.png")
+        png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_{args.checkpoint}.png")
         plt.savefig(png_path, dpi=200)
         plt.close()
 
