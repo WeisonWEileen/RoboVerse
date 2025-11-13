@@ -21,9 +21,9 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --run_name "pretrain_curriculum_kl_clipping_1.1_material_randomize_freq_1" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
-    --randomize_material \
     --headless \
     --wandb
+    # --randomize_material \
     # --debug
     
     # --wandb \

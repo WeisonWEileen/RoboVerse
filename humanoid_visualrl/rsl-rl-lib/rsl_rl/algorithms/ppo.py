@@ -305,9 +305,9 @@ class PPO:
                 if self.desired_kl is not None and self.schedule == "adaptive":
                     if self.gpu_global_rank == 0:
                         if kl_mean > self.desired_kl * 2.0:
-                            self.learning_rate = max(1e-4, self.learning_rate / 1.5)
+                            self.learning_rate = max(5e-4, self.learning_rate / 1.5)
                         elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
-                            self.learning_rate = min(1e-2, self.learning_rate * 1.5)
+                            self.learning_rate = min(1e-3, self.learning_rate * 1.5)
 
                     # Update the learning rate for all GPUs
                     if self.is_multi_gpu:

@@ -139,7 +139,7 @@ def play(args):
     video_saver = VideoSaver(os.path.join(evalation_save_dir, "see_video.mp4"))
     success_list  = []
 
-    total_step_count = int (10 / 0.025) # 7s
+    total_step_count = int (7 / 0.025) # 7s
     for i in range(evaluation_round):
         # reset and generate new object position
         # if i % reset_interval == 0:

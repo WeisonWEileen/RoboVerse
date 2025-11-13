@@ -332,6 +332,7 @@ def get_args():
         device: str = "cuda:0"
         actor_critic_class: str = "use_rnn"
         randomize_material: bool = False
+        evaluation_round: int = 1
         
 
         def __post_init__(self):
