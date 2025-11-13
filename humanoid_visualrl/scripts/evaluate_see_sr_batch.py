@@ -140,7 +140,7 @@ def play(args):
     yaw = torch.tensor(0.0, device=env_wrapper.device)
     yaw = (random.random() - 0.5) * 2 * 3.14
     yaw = torch.tensor(yaw, device=env_wrapper.device)
-    evaluation_round = 1
+    evaluation_round = args.evaluation_round
     
     video_saver = VideoSaver(os.path.join(evalation_save_dir, "see_video.mp4"))
     success_flag_average_acc = torch.zeros(env_wrapper.num_envs, device=env_wrapper.device, dtype=torch.float32) # for accumulate and then print each interval
@@ -228,8 +228,8 @@ def play(args):
             log.info(f"Saved {i} round video at: {video_saver.video_path}")
     
     # # generate success rate for each interval
-    # success_flag_average_acc = success_flag_average_acc / evaluation_round
-    # success_flag_acc = success_flag_acc / evaluation_round
+    success_flag_average_acc = success_flag_average_acc / evaluation_round
+    success_flag_acc = success_flag_acc / evaluation_round
     # for i in range(N_DIVIDE):
     #     success_flag_average = success_flag_average_acc[i*N_interval_envs:(i+1)*N_interval_envs].mean()
     #     log.info(
@@ -268,7 +268,7 @@ def play(args):
     interval_success_rates = []
 
     for i in range(N_DIVIDE):
-        rate = success_flag_average_acc[i * N_interval_envs : (i + 1) * N_interval_envs].mean().item()
+        rate = success_flag_acc[i * N_interval_envs : (i + 1) * N_interval_envs].mean().item()
         interval_success_rates.append(rate)
 
     # print ASCII bar chart like wandb
