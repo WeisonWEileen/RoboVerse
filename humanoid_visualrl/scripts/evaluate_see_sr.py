@@ -144,7 +144,7 @@ def play(args):
         # reset and generate new object position
         # if i % reset_interval == 0:
         yaw = (random.random() - 0.5) * 2 * task_cfg.randomize_object_yaw_range
-        yaw = 2.3 * 0.5
+        # yaw = 2.3 * 0.5
         yaw = torch.tensor(yaw, device=env_wrapper.device)
         radius = task_cfg.randomize_object_radius
         radius_bias = 2 * (random.random() - 0.5) * 0.1
@@ -182,11 +182,11 @@ def play(args):
 
             if task_cfg.use_vision:
                 actions = policy(obs)
-                actions *= 0.0
+                # actions *= 0.0
 
             else:
                 actions = policy(obs.detach())
-                actions *= 0.0
+                # actions *= 0.0
             obs, _, _, infos = env_wrapper.step_evaluate(actions.detach())
             state = env_wrapper.env.get_states()
             env_wrapper._refreshed_tensors(state)

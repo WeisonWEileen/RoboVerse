@@ -72,7 +72,7 @@ def play(args):
     task_cfg.objects.append(
         PrimitiveCubeCfg(
             name="occlusion_cube",
-            size=(0.12, 0.12, 0.2),
+            size=(0.10, 0.10, 0.2),
             color=[0.5, 0.5, 0.5],
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
@@ -126,6 +126,9 @@ def play(args):
     # env.init_states.objects["object"].root_state[0, :1] = 0.2
     env_wrapper.init_states.objects["object"].root_state[0, 1] = 0.0
     # breakpoint()
+    # filter occlusion cube collision
+    env_wrapper.env.filter_collisions(env_wrapper.robot.name, "occlusion_cube")
+
     # env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
     # env_wrapper.enable_opencv_display = True
@@ -160,6 +163,10 @@ def play(args):
     total_step_count = int(2 / 0.025)  # 7s
     for i in range(evaluation_round):
         # reset and generate new object position
+        # randomize occlusion cube color
+        occlusion_cube_color = [random.random(), random.random(), random.random()]
+        env_wrapper.cfg.objects[3].color = occlusion_cube_color
+
         # if i % reset_interval == 0:
         yaw = (random.random() - 0.5) * 2 * task_cfg.randomize_object_yaw_range * 0.5
 

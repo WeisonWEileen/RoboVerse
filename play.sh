@@ -26,11 +26,11 @@ else
 fi
 
 # $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_reaching_sr.py \
-$PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_sr.py \
+$PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_occlusion.py \
     --task "active_vision" \
     --resume \
-    --load_run "2025_1108_043702" \
-    --checkpoint 400 \
+    --load_run "2025_1112_143657" \
+    --checkpoint 1400 \
     --enable_opencv_display 
     # --device "cuda:0" \
     # --headless \

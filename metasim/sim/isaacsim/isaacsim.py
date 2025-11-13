@@ -263,6 +263,7 @@ class IsaacsimHandler(BaseSimHandler):
         self._load_objects()
         self._load_lights()
         self.filter_collisions(self.robots[0].name, "object")
+
         # if "active" in self.scenario_cfg.task.task_name:
         #     pass
         #     self.init_marker_viz()

@@ -161,10 +161,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self._ema_reward = 0.05
         self.last_curriculum_update_step = 0
 
-
-
-        
-
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
         if self.robot.name == "g1_static_dex1":
