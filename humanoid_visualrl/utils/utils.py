@@ -336,6 +336,7 @@ def get_args():
         eval_occlu: bool = False
         eval_randomize_material_test: bool = False
         eval_randomize_material_train: bool = False
+        eval_reaching: bool = False
 
         def __post_init__(self):
             """Post-initialization configuration."""

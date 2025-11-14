@@ -10,7 +10,7 @@
 #     # --wandb \
 
 
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5
 
 USER_NAME=$(whoami)
 
@@ -28,14 +28,17 @@ fi
 # $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_reaching_sr.py \
 $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_batch.py \
     --task "active_vision" \
+    --device "cuda:5" \
     --resume \
-    --load_run "2025_1113_010110" \
-    --checkpoint 6000 \
-    --enable_opencv_display \
-    --num_envs 50 \
+    --load_run "2025_1114_130226" \
+    --checkpoint 5200 \
+    --num_envs 10 \
     --evaluation_round 10 \
-    --eval_occlu \
-    --eval_randomize_material_train
+    --eval_reaching \
+    --headless \
+    # --enable_opencv_display \
+    # --eval_occlu \
+    # --eval_randomize_material_train
     # --device "cuda:0" \
     # --headless \
     # --headless \

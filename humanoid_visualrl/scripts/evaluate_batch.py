@@ -32,6 +32,7 @@ from humanoid_visualrl.utils.video_saver import VideoSaver
 
 N_DIVIDE = 10
 SUCCESS_FLAG_THRESHOLD = 0.8
+SUCCESS_REACHING_FRAMES_THRESHOLD = 0.3
 
 def sample_yaw_ranges(R, N_divide, N_env_total, device):
     """
@@ -133,6 +134,15 @@ def play(args):
     else:
         log.info(f"Not evaluating material")
 
+
+    if args.eval_reaching:
+        task_cfg.mask_joint_names = [
+            "right_elbow_joint",
+            "right_shoulder_pitch_joint",
+            "right_shoulder_roll_joint",
+            "right_shoulder_yaw_joint",
+        ]
+
     env_wrapper: ActiveVisionWrapper = load_wrapper(args, scenario)
     # load_path = get_load_path(args)
 
@@ -180,10 +190,12 @@ def play(args):
     video_saver = VideoSaver(os.path.join(evalation_save_dir, "see_video.mp4"))
     success_flag_average_acc = torch.zeros(env_wrapper.num_envs, device=env_wrapper.device, dtype=torch.float32) # for accumulate and then print each interval
     success_flag_acc = torch.zeros(env_wrapper.num_envs, device=env_wrapper.device, dtype=torch.int8)
+    if args.eval_reaching:
+        success_reaching_flag_acc = torch.zeros(env_wrapper.num_envs, device=env_wrapper.device, dtype=torch.int8)
     obj_rand_range = task_cfg.randomize_object_yaw_range 
 
     # total_step_count = int(7 / 0.025)  # 7s
-    total_step_count = int(2 / 0.025) # 7s
+    total_step_count = int(7 / 0.025) # 7s
     for i in range(evaluation_round):
         ppo_runner.alg.policy.reset(list(range(env_wrapper.num_envs)))
         env_wrapper._reset(list(range(env_wrapper.num_envs)))
@@ -231,6 +243,8 @@ def play(args):
         obs, _ = env_wrapper.get_observations()
 
         success_flag_acc_single_count = torch.zeros(env_wrapper.num_envs, device=env_wrapper.device)
+        if args.eval_reaching:
+            success_reaching_flag_acc_single_count = torch.zeros(env_wrapper.num_envs, device=env_wrapper.device)
 
         for _ in range(total_step_count):
 
@@ -247,9 +261,20 @@ def play(args):
 
             success_flag_acc_single_count += env_wrapper.see_flag
 
+            if args.eval_reaching:
+                wrist_pos = state.robots[env_wrapper.robot.name].body_state[:, env_wrapper.left_index_intermediate_link_indices, :7
+                ]
+                dist = torch.norm(wrist_pos[:, 0, :3] - env_wrapper.object_pose_buf[:, :3], dim=1)
+                dis_reaching_flag = dist < 0.3
+                success_reaching_flag = dis_reaching_flag and env_wrapper.see_flag
+                success_reaching_flag_acc_single_count += success_reaching_flag.to(torch.int8)
+
+
+
             camera_pos = env_wrapper.camera_pos_w[:, :3]
             camera_quat = env_wrapper.camera_quat_w[:, :4]
             camera_direction = env_wrapper.object_pose_buf[:, :3] - camera_pos
+
 
             env_wrapper._update_marker_viz(
                 camera_pos,
@@ -265,6 +290,9 @@ def play(args):
         success_flag = success_flag_average > SUCCESS_FLAG_THRESHOLD
         success_flag_acc += success_flag.to(torch.int8)
 
+        if args.eval_reaching:
+            success_reaching_flag_acc +=                 (success_reaching_flag_acc_single_count / total_step_count) > SUCCESS_REACHING_FRAMES_THRESHOLD
+            
         # success_flag = success_flag_average > SUCCESS_FLAG_THRESHOLD
         # if success_flag:
         log.info(f"success_flag: {success_flag} for evaluation round {i}, success_flag_average: {success_flag_average}")
