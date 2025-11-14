@@ -287,7 +287,10 @@ class LightRandomizer(BaseRandomizerType):
             return
 
         try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            # light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            light_path = '/World/DomeLight_0'
+            light_type = "dome"
+            light_prim = prim_utils.get_prim_at_path(light_path)
 
             if self.cfg.intensity.intensity_range:
                 new_intensity = self._generate_random_value(
@@ -311,7 +314,10 @@ class LightRandomizer(BaseRandomizerType):
             return
 
         try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            # light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            light_path = '/World/DomeLight_0'
+            light_type = "dome"
+            light_prim = prim_utils.get_prim_at_path(light_path)
 
             if self.cfg.color.use_temperature and self.cfg.color.temperature_range:
                 # Use color temperature
@@ -346,7 +352,10 @@ class LightRandomizer(BaseRandomizerType):
             return
 
         try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            # light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            light_path = '/World/DomeLight_0'
+            light_type = "dome"
+            light_prim = prim_utils.get_prim_at_path(light_path)
 
             # Skip position randomization for distant lights (they don't have meaningful position)
             if light_type == "distant":
@@ -459,7 +468,10 @@ class LightRandomizer(BaseRandomizerType):
     def get_light_properties(self) -> dict:
         """Get current light properties for logging."""
         try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            # light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            light_path = '/World/DomeLight_0'
+            light_type = "dome"
+            light_prim = prim_utils.get_prim_at_path(light_path)
 
             properties = {"light_path": light_path, "light_type": light_type}
 

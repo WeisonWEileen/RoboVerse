@@ -14,7 +14,7 @@ from metasim.utils.math import quat_from_euler_xyz
 @configclass
 class BaseLightCfg:
     """Base configuration for a light."""
-
+    name: str = "light"
     intensity: float = 500.0
     """Intensity of the light"""
     color: tuple[float, float, float] = (1.0, 1.0, 1.0)

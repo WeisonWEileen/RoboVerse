@@ -84,7 +84,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.cfg.randomize_material:
             self.domain_randomization_helper = DomainRandomizationHelper(
                 self.cfg.mode,
-                self.cfg.randomization_cfg,
+                self.cfg.randomize_cfg,
+                self.scenario.lights,
                 self.num_envs,
                 self.env,
                 self.cfg.env_spacing,
@@ -456,7 +457,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _pre_reset_hook(self, env_ids=None):
         if self.cfg.randomize_material:
-            self.domain_randomization_helper.randomization(env_ids=env_ids)
+            self.domain_randomization_helper.randomization(env_ids=env_ids, step_count=self.common_step_counter)
+            
             
         # randomly set y of object in range (-randomize_object_y_range, randomize_object_y_range)
         # if self.cfg.randomize_object_y = True

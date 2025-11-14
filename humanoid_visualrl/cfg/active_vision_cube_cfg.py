@@ -471,19 +471,27 @@ class BaseTableHumanoidTaskCfg:
     reward_improvement_ratio_threshold = 0.15
 
     randomize_material = False
-    randomization_cfg = {
-            "enable_floor": True,
-            "enable_walls": True,
-            "enable_ceiling": False,
-            "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
-            "material_cfg": {
-                "table": {
-                    "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
-                },
+    randomize_cfg = {
+        "enable_floor": True,
+        "enable_walls": True,
+        "enable_ceiling": False,
+        "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
+        "light_randomize_freq": 100,
+        "material_cfg": {
+            "table": {
+                "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
             },
-            "env_setting_randomize_freq": 1,
-            
-        }
+        },
+        "randomize_cfg":{
+            "light": {
+            "intensity_range": (0.25, 2.0),
+            "randomize_orientation": True,
+            "randomize_position": True,
+            "position_range": ((-10.0, 10.0), (-10.0, 10.0), (-0.0, 0.0)),
+
+        }},
+        "env_setting_randomize_freq": 1,
+    }
 
     mode: Literal["train", "test"] = "train"
 

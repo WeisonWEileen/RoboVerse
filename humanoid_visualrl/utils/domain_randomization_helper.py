@@ -28,7 +28,7 @@ from metasim.randomization.camera_randomizer import (
     CameraRandomCfg,
     CameraRandomizer,
 )
-from metasim.randomization.light_randomizer import LightRandomCfg, LightRandomizer
+from metasim.randomization.light_randomizer import LightRandomCfg, LightRandomizer, LightPositionRandomCfg
 from metasim.randomization.material_randomizer import MaterialRandomCfg, MaterialRandomizer, MDLMaterialCfg, PhysicalMaterialCfg, PBRMaterialCfg
 from metasim.randomization.object_randomizer import ObjectRandomCfg, ObjectRandomizer, PhysicsRandomCfg, PoseRandomCfg
 from metasim.randomization.presets import CameraPresets, LightPresets, MaterialPresets, ObjectPresets, ScenePresets, MaterialProperties, CameraProperties, LightProperties, MDLCollections 
@@ -42,11 +42,11 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 class DomainRandomizationHelper:
     """Helper class for domain randomization tasks."""
     # def __init__(self, cfg, num_envs, lights, robots, objects, cameras, handler, env_spacing, seed, device):
-    def __init__(self, mode,cfg, num_envs, handler, env_spacing, seed, device):
+    def __init__(self, mode, cfg, lights, num_envs, handler, env_spacing, seed, device):
         assert mode in ["train", "test"], "Mode must be either train or test"
         self.mode = mode
         self.cfg = cfg
-        # self.lights = lights
+        self.lights = lights
         # self.robots = robots
         # self.objects = objects
         # self.cameras = cameras
@@ -159,34 +159,42 @@ class DomainRandomizationHelper:
         #         material_randomizer.bind_handler(handler)
         #         self.randomizer[f"material_{obj.name}"] = material_randomizer
                 
-        # for light in lights:
-        #     light_randomize_cfg = self.randomize_cfg.get(light.name, None)
-        #     intensity_range = light_randomize_cfg.get("intensity_range", (1.0, 1.0)) if light_randomize_cfg else (1.0, 1.0)
-        #     intensity_range = (light.intensity * intensity_range[0], light.intensity * intensity_range[1])
-        #     if light_randomize_cfg:
-        #         light_randomizer = LightRandomizer(
-        #             LightRandomCfg(
-        #                 light_name=light.name,
-        #                 intensity=LightIntensityRandomCfg(
-        #                     intensity_range=intensity_range,
-        #                     distribution="uniform",
-        #                     enabled=True,
-        #                 ),
-        #                 color=LightColorRandomCfg(
-        #                     color_range=light_randomize_cfg.get("color_range", ((1.0, 1.0), (1.0, 1.0), (1.0, 1.0))),
-        #                 ),
-        #                 orientation=LightOrientationRandomCfg(
-        #                     angle_range=LightProperties.ORIENTATION_LARGE,
-        #                     relative_to_origin=True,
-        #                     distribution="uniform",
-        #                     enabled=light_randomize_cfg.get("randomize_orientation", False),
-        #                 ),
-        #             ),
-        #             seed=seed,
-        #             device=device,
-        #         )
-        #         light_randomizer.bind_handler(handler)
-        #         self.randomizer[light.name] = light_randomizer
+        for light in lights:
+            light_randomize_cfg = self.randomize_cfg.get(light.name, None)
+            intensity_range = light_randomize_cfg.get("intensity_range", (1.0, 1.0)) if light_randomize_cfg else (1.0, 1.0)
+            intensity_range = (light.intensity * intensity_range[0], light.intensity * intensity_range[1])
+            if light_randomize_cfg:
+                light_randomizer = LightRandomizer(
+                    LightRandomCfg(
+                        light_name=light.name,
+                        intensity=LightIntensityRandomCfg(
+                            intensity_range=intensity_range,
+                            distribution="uniform",
+                            enabled=True,
+                        ),
+                        color=LightColorRandomCfg(
+                            color_range=light_randomize_cfg.get("color_range", ((1.0, 1.0), (1.0, 1.0), (1.0, 1.0))),
+                        ),
+                        orientation=LightOrientationRandomCfg(
+                            angle_range=LightProperties.ORIENTATION_LARGE,
+                            relative_to_origin=True,
+                            distribution="uniform",
+                            enabled=light_randomize_cfg.get("randomize_orientation", False),
+                        ),
+                        position=LightPositionRandomCfg(
+                            position_range=light_randomize_cfg.get(
+                                "position_range", ((0.0, 0.0), (0.0, 0.0), (0.0, 0.0))
+                            ),
+                            relative_to_origin=True,
+                            distribution="uniform",
+                            enabled=light_randomize_cfg.get("randomize_position", False),
+                        ),
+                    ),
+                    seed=seed,
+                    device=device,
+                )
+                light_randomizer.bind_handler(handler)
+                self.randomizer[light.name] = light_randomizer
         
         # for camera in cameras:
         #     camera_randomize_cfg = self.randomize_cfg.get(camera.name, None)
@@ -364,7 +372,7 @@ class DomainRandomizationHelper:
     #     #             self.randomizer[light.name]()
 
 
-    def randomization(self, env_ids, force_randomize=False):
+    def randomization(self, env_ids, force_randomize=False, step_count=0):
         """Perform domain randomization on selected environments."""
         if force_randomize:
             envs_to_randomize = env_ids
@@ -380,3 +388,8 @@ class DomainRandomizationHelper:
         # Scene-level randomization
         if self.scene_randomizer:
             self.scene_randomizer(envs_to_randomize)
+
+        if step_count % self.light_randomize_freq == 0:
+            for light in self.lights:
+                if light.name in self.randomizer:
+                    self.randomizer[light.name]()
