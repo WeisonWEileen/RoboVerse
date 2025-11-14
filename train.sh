@@ -22,7 +22,10 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --headless \
-    --wandb
+    --wandb \
+    --resume \
+    --load_run "2025_1113_013913" \
+    --checkpoint 3800 \
     # --randomize_material \
     # --debug
     

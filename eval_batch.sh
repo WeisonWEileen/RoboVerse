@@ -26,13 +26,16 @@ else
 fi
 
 # $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_reaching_sr.py \
-$PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_sr_batch.py \
+$PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_batch.py \
     --task "active_vision" \
     --resume \
-    --load_run "2025_1113_013913" \
-    --checkpoint 2800 \
+    --load_run "2025_1113_010110" \
+    --checkpoint 6000 \
     --enable_opencv_display \
-    --num_envs 20
+    --num_envs 50 \
+    --evaluation_round 10 \
+    --eval_occlu \
+    --eval_randomize_material_train
     # --device "cuda:0" \
     # --headless \
     # --headless \

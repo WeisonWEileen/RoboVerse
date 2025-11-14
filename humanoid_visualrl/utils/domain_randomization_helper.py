@@ -364,11 +364,14 @@ class DomainRandomizationHelper:
     #     #             self.randomizer[light.name]()
 
 
-    def randomization(self, env_ids):
+    def randomization(self, env_ids, force_randomize=False):
         """Perform domain randomization on selected environments."""
-        envs_to_randomize = self.should_randomize(env_ids)
-        if not envs_to_randomize:
-            return
+        if force_randomize:
+            envs_to_randomize = env_ids
+        else:
+            envs_to_randomize = self.should_randomize(env_ids)
+            if not envs_to_randomize:
+                return
 
         # Object-level, camera-level randomization
         # for name, rand in self.randomizer.items():

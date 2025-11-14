@@ -29,10 +29,10 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_sr_occlu_batch.py \
     --task "active_vision" \
     --resume \
-    --load_run "2025_666" \
+    --load_run "2025_1113_013913" \
     --checkpoint 3800 \
     --enable_opencv_display \
-    --num_envs 50
+    --num_envs 50 \
     --evaluation_round 10
     # --device "cuda:0" \
     # --headless \

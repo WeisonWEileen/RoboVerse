@@ -10,8 +10,8 @@ import rootutils
 rootutils.setup_root(__file__, pythonpath=True)
 
 from metasim.scenario.objects import PrimitiveCubeCfg
-from metasim.constants import PhysicStateType
 
+from metasim.constants import PhysicStateType
 import os
 import random
 import torch
@@ -88,23 +88,23 @@ def play(args):
     task_cfg.ppo_cfg.resume = True
     task_cfg.ppo_cfg.finetune = True
     task_cfg.ppo_cfg.policy.finetune = True
-
-    task_cfg.objects.append(
-        PrimitiveCubeCfg(
-            name="occlusion_cube",
-            size=(0.05, 0.05, 0.2),
-            color=[0.5, 0.5, 0.5],
-            physics=PhysicStateType.RIGIDBODY,
-            collision_enabled=True,
-            fix_base_link=False,
-            default_position=(0.3, 0.1, 0.93),
-            mass=0.2,  # 增加质量以确保更好的物理行为
-        ),
-    )
-    task_cfg.init_states[0]["objects"]["occlusion_cube"] = {
-        "pos": torch.tensor([0.3, 0.1, 0.92]),
-        "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-    }
+    if args.eval_occlu:
+        task_cfg.objects.append(
+            PrimitiveCubeCfg(
+                name="occlusion_cube",
+                size=(0.05, 0.05, 0.2),
+                color=[0.5, 0.5, 0.5],
+                physics=PhysicStateType.RIGIDBODY,
+                collision_enabled=True,
+                fix_base_link=False,
+                default_position=(0.3, 0.1, 0.93),
+                mass=0.2,  # 增加质量以确保更好的物理行为
+            ),
+        )
+        task_cfg.init_states[0]["objects"]["occlusion_cube"] = {
+            "pos": torch.tensor([0.3, 0.1, 0.92]),
+            "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+        }
     # add objects
     scenario.objects = task_cfg.objects
 
@@ -120,6 +120,18 @@ def play(args):
     task_cfg.randomization = False
     # log_dir = get_log_dir(args, scenario)
     from humanoid_visualrl.wrapper.active_vision_cube_wrapper import ActiveVisionWrapper
+    assert not (args.eval_randomize_material_test and args.eval_randomize_material_train), "Must evaluate material in test or train mode, not both"
+    if args.eval_randomize_material_test:
+        task_cfg.mode = "test"
+        task_cfg.randomize_material = True
+        log.info(f"Evaluating material in test mode")
+    elif args.eval_randomize_material_train:
+        task_cfg.mode = "train"
+        task_cfg.randomize_material = True
+
+        log.info(f"Evaluating material in train mode")
+    else:
+        log.info(f"Not evaluating material")
 
     env_wrapper: ActiveVisionWrapper = load_wrapper(args, scenario)
     # load_path = get_load_path(args)
@@ -141,14 +153,13 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, export_jit_path)
         log.info(f"Exported policy as jit script to: {export_jit_path}")
 
+    if args.eval_occlu:
+        env_wrapper.env.filter_collisions(env_wrapper.robot.name, "occlusion_cube")
+        env_wrapper.env.filter_collisions("object", "occlusion_cube")
+
     # env.init_states.objects["object"].root_state[0, :1] = 0.2
     env_wrapper.init_states.objects["object"].root_state[0, 1] = 0.0
     # breakpoint()
-
-    env_wrapper.env.filter_collisions(env_wrapper.robot.name, "occlusion_cube")
-    env_wrapper.env.filter_collisions("object", "occlusion_cube")
-
-
     # env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
     # env_wrapper.enable_opencv_display = True
@@ -171,7 +182,8 @@ def play(args):
     success_flag_acc = torch.zeros(env_wrapper.num_envs, device=env_wrapper.device, dtype=torch.int8)
     obj_rand_range = task_cfg.randomize_object_yaw_range 
 
-    total_step_count = int (7 / 0.025) # 7s
+    # total_step_count = int(7 / 0.025)  # 7s
+    total_step_count = int(2 / 0.025) # 7s
     for i in range(evaluation_round):
         ppo_runner.alg.policy.reset(list(range(env_wrapper.num_envs)))
         env_wrapper._reset(list(range(env_wrapper.num_envs)))
@@ -189,7 +201,6 @@ def play(args):
         object_y = torch.sin(yaw) * (radius + radius_bias)
 
 
-
         object_state[:, 0] = object_x
         object_state[:, 1] = object_y
 
@@ -201,18 +212,24 @@ def play(args):
         if task_cfg.randomize_obj_material:
             env_wrapper.env.randomize_obj_material(list(range(env_wrapper.num_envs)), env_wrapper.obj)
 
-        occlusion_cube_radius = torch.ones(env_wrapper.num_envs, device=env_wrapper.device) * (radius - 0.13)
-        occlusion_cube_x = torch.cos(yaw) * occlusion_cube_radius
-        occlusion_cube_y = torch.sin(yaw) * occlusion_cube_radius
-        occlusion_cube_state = env_wrapper.init_states.objects["occlusion_cube"].root_state
-        occlusion_cube_state[:, 0] = occlusion_cube_x
-        occlusion_cube_state[:, 1] = occlusion_cube_y
-        env_wrapper.env._set_object_pose(
-            env_wrapper.cfg.objects[3], occlusion_cube_state[:, :3], occlusion_cube_state[:, 3:7], env_ids=list(range(env_wrapper.num_envs))
-        )
-        
+        if args.eval_occlu:
+            occlusion_cube_radius = torch.ones(env_wrapper.num_envs, device=env_wrapper.device) * (radius - 0.13)
+            occlusion_cube_x = torch.cos(yaw) * occlusion_cube_radius
+            occlusion_cube_y = torch.sin(yaw) * occlusion_cube_radius
+            occlusion_cube_state = env_wrapper.init_states.objects["occlusion_cube"].root_state
+            occlusion_cube_state[:, 0] = occlusion_cube_x
+            occlusion_cube_state[:, 1] = occlusion_cube_y
+            env_wrapper.env._set_object_pose(
+                env_wrapper.cfg.objects[3],
+                occlusion_cube_state[:, :3],
+                occlusion_cube_state[:, 3:7],
+                env_ids=list(range(env_wrapper.num_envs)),
+            )
+        if args.eval_randomize_material_train or args.eval_randomize_material_test:
+            env_wrapper.domain_randomization_helper.randomization(env_ids=list(range(env_wrapper.num_envs)), force_randomize=True)
+
         obs, _ = env_wrapper.get_observations()
-        
+
         success_flag_acc_single_count = torch.zeros(env_wrapper.num_envs, device=env_wrapper.device)
 
         for _ in range(total_step_count):
@@ -347,8 +364,10 @@ def play(args):
         # annotate %
         for i, v in enumerate(y):
             plt.text(i, v + 0.015, f"{v * 100:.1f}%", ha="center", fontsize=9)
-
-        png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_occlu_{args.checkpoint}.png")
+        if args.eval_occlu:
+            png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_occlu_{args.checkpoint}.png")
+        else:
+            png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_{args.checkpoint}.png")
         plt.savefig(png_path, dpi=200)
         plt.close()
 

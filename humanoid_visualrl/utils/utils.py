@@ -333,7 +333,9 @@ def get_args():
         actor_critic_class: str = "use_rnn"
         randomize_material: bool = False
         evaluation_round: int = 1
-        
+        eval_occlu: bool = False
+        eval_randomize_material_test: bool = False
+        eval_randomize_material_train: bool = False
 
         def __post_init__(self):
             """Post-initialization configuration."""
