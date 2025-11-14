@@ -307,14 +307,16 @@ class IsaacsimHandler(BaseSimHandler):
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
-        if not self._is_closed:
-            del self.scene
-            self.sim.clear_all_callbacks()
-            self.sim.clear_instance()
-            self.sim.stop()
-            self.sim.clear()
-            self.simulation_app.close()
-            self._is_closed = True
+        self.simulation_app.close()
+
+        # if not self._is_closed:
+        #     del self.scene
+        #     self.sim.clear_all_callbacks()
+        #     self.sim.clear_instance()
+        #     self.sim.stop()
+        #     self.sim.clear()
+        #     self.simulation_app.close()
+        #     self._is_closed = True
 
     def __del__(self):
         """Cleanup for the environment."""

@@ -115,3 +115,5 @@ if __name__ == "__main__":
     #     # -- Load model
     # resumed_training = ppo_runner.alg.policy.load_state_dict(loaded_dict["model_state_dict"])
     ppo_runner.learn(num_learning_iterations=args.num_learning_iterations, run_name=f"{args.run_name}_{now}")
+
+ppo_runner.env.simulation_app.close()
