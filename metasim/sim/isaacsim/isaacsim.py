@@ -226,8 +226,8 @@ class IsaacsimHandler(BaseSimHandler):
             else:
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
 
-    def filter_collisions(self, robot_name: str, obj_name: str):
-        """Filter collisions between robot and obj"""
+    def filter_collisions(self, obj1: str, obj2: str):
+        """Filter collisions between robot and obj. obj1"""
         from pxr import UsdPhysics
         import omni.usd
 
@@ -241,18 +241,18 @@ class IsaacsimHandler(BaseSimHandler):
 
         for env_id in range(self.num_envs):
             if env_id == 0:
-                robot_path = f"/World/envs/env_{env_id}/{robot_name}"
-                cube_path = f"/World/envs/env_{env_id}/{obj_name}"
+                obj1_path = f"/World/envs/env_{env_id}/{obj1}"
+                obj2_path = f"/World/envs/env_{env_id}/{obj2}"
 
-                cube_prim = stage.GetPrimAtPath(cube_path)  # 目标只需要一个
-                robot_prim = stage.GetPrimAtPath(robot_path)
+                obj2_prim = stage.GetPrimAtPath(obj2_path)  # 目标只需要一个
+                obj1_prim = stage.GetPrimAtPath(obj1_path)
 
                 # 递归遍历所有子节点（包括嵌套的）
-                for prim in traverse_all_prims(robot_prim):
+                for prim in traverse_all_prims(obj1_prim):
                     # 只挑那些真的参与碰撞的 Prim
                     if prim.HasAPI(UsdPhysics.CollisionAPI):
                         api = UsdPhysics.FilteredPairsAPI.Apply(prim)
-                        api.CreateFilteredPairsRel().AddTarget(cube_prim.GetPath())
+                        api.CreateFilteredPairsRel().AddTarget(obj2_prim.GetPath())
 
     def launch(self) -> None:
         self._init_scene()

@@ -92,7 +92,7 @@ def play(args):
     task_cfg.objects.append(
         PrimitiveCubeCfg(
             name="occlusion_cube",
-            size=(0.10, 0.10, 0.2),
+            size=(0.05, 0.05, 0.2),
             color=[0.5, 0.5, 0.5],
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
@@ -144,6 +144,11 @@ def play(args):
     # env.init_states.objects["object"].root_state[0, :1] = 0.2
     env_wrapper.init_states.objects["object"].root_state[0, 1] = 0.0
     # breakpoint()
+
+    env_wrapper.env.filter_collisions(env_wrapper.robot.name, "occlusion_cube")
+    env_wrapper.env.filter_collisions("object", "occlusion_cube")
+
+
     # env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
     # env_wrapper.enable_opencv_display = True

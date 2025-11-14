@@ -32,7 +32,8 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_sr_occlu_batch.py \
     --load_run "2025_666" \
     --checkpoint 3800 \
     --enable_opencv_display \
-    --num_envs 10
+    --num_envs 50
+    --evaluation_round 10
     # --device "cuda:0" \
     # --headless \
     # --headless \

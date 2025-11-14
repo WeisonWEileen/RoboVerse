@@ -72,7 +72,7 @@ def play(args):
     task_cfg.objects.append(
         PrimitiveCubeCfg(
             name="occlusion_cube",
-            size=(0.10, 0.10, 0.2),
+            size=(0.04, 0.04, 0.2),
             color=[0.5, 0.5, 0.5],
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
@@ -128,6 +128,7 @@ def play(args):
     # breakpoint()
     # filter occlusion cube collision
     env_wrapper.env.filter_collisions(env_wrapper.robot.name, "occlusion_cube")
+    env_wrapper.env.filter_collisions("object", "occlusion_cube")
 
     # env_wrapper.cfg.max_episode_length_s = 100000
     env_wrapper.env.set_states(env_wrapper.init_states)
@@ -160,7 +161,7 @@ def play(args):
     video_saver = VideoSaver(os.path.join(evalation_save_dir, "see_video.mp4"))
     success_list = []
 
-    total_step_count = int(2 / 0.025)  # 7s
+    total_step_count = int(7 / 0.025)  # 7s
     for i in range(evaluation_round):
         # reset and generate new object position
         # randomize occlusion cube color
