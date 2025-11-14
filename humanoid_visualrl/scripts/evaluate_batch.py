@@ -264,7 +264,7 @@ def play(args):
             if args.eval_reaching:
                 wrist_pos = state.robots[env_wrapper.robot.name].body_state[:, env_wrapper.left_index_intermediate_link_indices, :7
                 ]
-                dist = torch.norm(wrist_pos[:, 0, :3] - env_wrapper.object_pose_buf[:, :3], dim=1)
+                dist = torch.norm(wrist_pos[:, 0, :3] - state.objects["object"].root_state[:, :3]-env_wrapper.env.scene.env_origins, dim=1)
                 dis_reaching_flag = dist < 0.3
                 success_reaching_flag = (dis_reaching_flag & env_wrapper.see_flag).float()
                 success_reaching_flag_acc_single_count += success_reaching_flag

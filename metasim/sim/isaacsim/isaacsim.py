@@ -494,6 +494,7 @@ class IsaacsimHandler(BaseSimHandler):
                 obj_inst = self.scene.rigid_objects[obj.name]
                 root_state = obj_inst.data.root_state_w
                 root_state[:, 0:3] -= self.scene.env_origins
+                # root_state[:, 0:3] 
                 state = ObjectState(
                     root_state=root_state,
                 )

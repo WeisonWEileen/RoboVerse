@@ -28,14 +28,14 @@ fi
 # $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_reaching_sr.py \
 $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_batch.py \
     --task "active_vision" \
-    --device "cuda:5" \
+    --device "cuda:0" \
     --resume \
     --load_run "2025_1114_130226" \
     --checkpoint 5200 \
     --num_envs 10 \
     --evaluation_round 10 \
     --eval_reaching \
-    --headless \
+    # --headless \
     # --enable_opencv_display \
     # --eval_occlu \
     # --eval_randomize_material_train
