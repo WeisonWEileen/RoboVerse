@@ -266,8 +266,8 @@ def play(args):
                 ]
                 dist = torch.norm(wrist_pos[:, 0, :3] - env_wrapper.object_pose_buf[:, :3], dim=1)
                 dis_reaching_flag = dist < 0.3
-                success_reaching_flag = dis_reaching_flag and env_wrapper.see_flag
-                success_reaching_flag_acc_single_count += success_reaching_flag.to(torch.int8)
+                success_reaching_flag = (dis_reaching_flag & env_wrapper.see_flag).float()
+                success_reaching_flag_acc_single_count += success_reaching_flag
 
 
 
@@ -291,11 +291,17 @@ def play(args):
         success_flag_acc += success_flag.to(torch.int8)
 
         if args.eval_reaching:
-            success_reaching_flag_acc +=                 (success_reaching_flag_acc_single_count / total_step_count) > SUCCESS_REACHING_FRAMES_THRESHOLD
+            success_reaching_flag_ = (success_reaching_flag_acc_single_count / total_step_count) > SUCCESS_REACHING_FRAMES_THRESHOLD
+            success_reaching_flag_acc += success_reaching_flag_
+            log.info(
+                f"reaching success_flag: {success_reaching_flag} for evaluation round {i}, success_flag_average: {success_reaching_flag_}"
+            )
             
         # success_flag = success_flag_average > SUCCESS_FLAG_THRESHOLD
         # if success_flag:
-        log.info(f"success_flag: {success_flag} for evaluation round {i}, success_flag_average: {success_flag_average}")
+        if not args.eval_reaching:
+            log.info(f"success_flag: {success_flag} for evaluation round {i}, success_flag_average: {success_flag_average}")
+
 
         # generation different interval success rate
 
@@ -307,6 +313,8 @@ def play(args):
     # # generate success rate for each interval
     success_flag_average_acc = success_flag_average_acc / evaluation_round
     success_flag_acc = success_flag_acc / evaluation_round
+    success_reaching_flag_acc = success_reaching_flag_acc / evaluation_round
+
     # for i in range(N_DIVIDE):
     #     success_flag_average = success_flag_average_acc[i*N_interval_envs:(i+1)*N_interval_envs].mean()
     #     log.info(
