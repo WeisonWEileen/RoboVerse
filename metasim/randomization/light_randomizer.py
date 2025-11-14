@@ -422,7 +422,10 @@ class LightRandomizer(BaseRandomizerType):
             return
 
         try:
-            light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            # light_prim, light_path, light_type = self._get_light_prim(self.cfg.light_name)
+            light_path = '/World/DomeLight_0'
+            light_type = "dome"
+            light_prim = prim_utils.get_prim_at_path(light_path)
 
             if self.cfg.orientation.angle_range:
                 if self.cfg.orientation.relative_to_origin:
