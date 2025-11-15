@@ -489,9 +489,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # self.init_states.robots[self.robot.name].joint_pos[env_ids, self.robot_waist_yaw_joint_indices] = robot_yaw
 
     def _post_reset_hook(self, env_ids):
-        if self.cfg.randomize_material:
-            self.domain_randomization_helper.randomization(env_ids=env_ids)
-
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
         self.env.sim.render()

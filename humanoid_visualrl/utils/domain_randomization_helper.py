@@ -390,6 +390,7 @@ class DomainRandomizationHelper:
             self.scene_randomizer(envs_to_randomize)
 
         if step_count % self.light_randomize_freq == 0:
+
             for light in self.lights:
                 if light.name in self.randomizer:
                     self.randomizer[light.name]()
