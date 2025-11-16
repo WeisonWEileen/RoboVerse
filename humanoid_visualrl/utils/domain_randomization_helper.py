@@ -395,7 +395,7 @@ class DomainRandomizationHelper:
                 # if obj.name in self.randomizer:
                 #     self.randomizer[obj.name]()
                 if f"material_{obj.name}" in self.randomizer:
-                    self.randomizer[f"material_{obj.name}"]()
+                    self.randomizer[f"material_{obj.name}"](envs_to_randomize)
 
         if step_count % self.light_randomize_freq == 0:
 
