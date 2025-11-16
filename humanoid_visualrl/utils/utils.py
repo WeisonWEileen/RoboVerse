@@ -332,12 +332,14 @@ def get_args():
         device: str = "cuda:0"
         actor_critic_class: str = "use_rnn"
         randomize_material: bool = False
+        occlude_cube: bool = False
         evaluation_round: int = 1
         eval_occlu: bool = False
         eval_randomize_material_test: bool = False
         eval_randomize_material_train: bool = False
         eval_reaching: bool = False
         seed: int = -1
+        
         """Random seed for reproducibility. -1 means random seed."""
 
 

@@ -464,6 +464,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # if self.cfg.randomize_object_y = True
 
         if self.cfg.randomization:
+           
             yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_object_yaw_range
             # yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
             # radius bias randomize_object_radius_range
@@ -471,6 +472,21 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_object_radius_range
             )
             radius = self.cfg.randomize_object_radius + radius_bias
+
+            # set occlude cube position in front of the object
+
+            if self.cfg.occlude_cube:
+                occlusion_cube_radius = radius - 0.1
+                # +0.1 radius random 抖动
+                occlusion_cube_yaw = yaw + (torch.rand(len(env_ids), device=self.device) -1)* 0.05
+                occlusion_cube_x = torch.cos(occlusion_cube_yaw) * occlusion_cube_radius
+                occlusion_cube_y = torch.sin(occlusion_cube_yaw) * occlusion_cube_radius
+                self.init_states.objects["occlusion_cube"].root_state[env_ids, 0] = occlusion_cube_x
+                self.init_states.objects["occlusion_cube"].root_state[env_ids, 1] = occlusion_cube_y
+                self.init_states.objects["occlusion_cube"].root_state[env_ids, 3:7] = quat_from_euler_xyz(
+                    torch.zeros(len(env_ids), device=self.device), torch.zeros(len(env_ids), device=self.device), occlusion_cube_yaw
+                )
+
             object_x = torch.cos(yaw) * radius
             object_y = torch.sin(yaw) * radius
             self.init_states.objects["object"].root_state[env_ids, 0] = object_x

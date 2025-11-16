@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import random
 from metasim.scenario.lights import DomeLightCfg
+from metasim.scenario.objects import PrimitiveCubeCfg
 
 from loguru import logger as log
 from rich.logging import RichHandler
@@ -17,6 +18,7 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 from metasim.scenario.scenario import ScenarioCfg
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 from humanoid_visualrl.utils.utils import get_log_dir, get_args, get_load_path, dump_instance_file
+from metasim.constants import PhysicStateType
 
 import os
 from metasim.task.registry import get_task_class, get_task_cfg_class
@@ -48,6 +50,25 @@ if __name__ == "__main__":
     task_cfg = task_cfg_cls(
         finetune=args.resume, actor_critic_class=args.actor_critic_class, randomize_material=args.randomize_material
     )
+    if args.occlude_cube:
+        task_cfg.objects.append(
+            PrimitiveCubeCfg(
+                name="occlusion_cube",
+                size=(0.05, 0.05, 0.2),
+                color=[0.5, 0.5, 0.5],
+                physics=PhysicStateType.RIGIDBODY,
+                collision_enabled=True,
+                fix_base_link=False,
+                default_position=(0.3, 0.1, 0.93),
+                mass=0.2,  # 增加质量以确保更好的物理行为
+            ),
+        )
+        task_cfg.init_states[0]["objects"]["occlusion_cube"] = {
+            "pos": torch.tensor([0.3, 0.1, 0.92]),
+            "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+        }
+        task_cfg.filter_pairs.append((task_cfg.robot, "occlusion_cube"))
+        task_cfg.filter_pairs.append(("object", "occlusion_cube"))
     # if not args.debug:
     #  assert args.num_envs == 64
 
@@ -121,11 +142,6 @@ if __name__ == "__main__":
         log.info(f"Loading model from: {resume_path}")
         ppo_runner.load(resume_path)
 
-    # loaded_dict = torch.load(
-    #     "/home/haoran/RoboVerse/outputs/active_vision/2025_1015_060102/model_600.pt", weights_only=False
-    # )
-    #     # -- Load model
-    # resumed_training = ppo_runner.alg.policy.load_state_dict(loaded_dict["model_state_dict"])
-    ppo_runner.learn(num_learning_iterations=args.num_learning_iterations, run_name=f"{args.run_name}_{now}")
+ppo_runner.learn(num_learning_iterations=args.num_learning_iterations, run_name=f"{args.run_name}_{now}")
 
 ppo_runner.env.simulation_app.close()
