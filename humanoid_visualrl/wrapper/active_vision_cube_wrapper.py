@@ -85,6 +85,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.domain_randomization_helper = DomainRandomizationHelper(
                 self.cfg.mode,
                 self.cfg.randomize_cfg,
+                self.scenario.objects,
                 self.scenario.lights,
                 self.num_envs,
                 self.env,
@@ -478,7 +479,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if self.cfg.occlude_cube:
                 occlusion_cube_radius = radius - 0.1
                 # +0.1 radius random 抖动
-                occlusion_cube_yaw = yaw + (torch.rand(len(env_ids), device=self.device) -1)* 0.05
+                occlusion_cube_yaw = yaw + (torch.rand(len(env_ids), device=self.device) -0.5)*2* self.cfg.occlude_cube_yaw_range
                 occlusion_cube_x = torch.cos(occlusion_cube_yaw) * occlusion_cube_radius
                 occlusion_cube_y = torch.sin(occlusion_cube_yaw) * occlusion_cube_radius
                 self.init_states.objects["occlusion_cube"].root_state[env_ids, 0] = occlusion_cube_x

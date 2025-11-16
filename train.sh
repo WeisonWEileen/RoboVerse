@@ -16,15 +16,17 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 256 \
+    --num_envs 232 \
     --task "active_vision" \
-    --run_name "repeat_curriculum_kl_clipping_1.1_material_reaching" \
+    --run_name "momentum_curriculum_kl_clipping_1.1_material_reaching" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --wandb \
     --resume \
     --load_run "2025_1113_013913" \
     --checkpoint 3800 \
+    --headless
+    # --schedule "momentum" 
     # --seed 42 \
     
     # --headless

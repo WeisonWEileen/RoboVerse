@@ -223,6 +223,11 @@ class SceneRandomizer(BaseRandomizerType):
         # Create/randomize table
         # if self.cfg.table is not None and self.cfg.table.enabled:
         self._create_or_update_table(env_prim_path, env_id)
+
+
+        
+
+        # if self.
         # table_material_path = self._select_material(self.cfg.table_materials, "table_index")
         # self._apply_material_to_prim(
         #     table_material_path, env_prim_path + "/table"
@@ -342,6 +347,7 @@ class SceneRandomizer(BaseRandomizerType):
             material_path = self._select_material(self.cfg.table_materials, "table_index")
             if material_path:
                 self._apply_material_to_prim(material_path, table_path)
+                
 
     def _generate_wall_configs(
         self, base_size: tuple[float, float, float], base_position: tuple[float, float, float]

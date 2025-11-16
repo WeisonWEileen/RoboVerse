@@ -48,13 +48,14 @@ if __name__ == "__main__":
     task_cfg_cls = get_task_cfg_class(args.task)
 
     task_cfg = task_cfg_cls(
-        finetune=args.resume, actor_critic_class=args.actor_critic_class, randomize_material=args.randomize_material
+        finetune=args.resume, actor_critic_class=args.actor_critic_class, randomize_material=args.randomize_material, occlude_cube=args.occlude_cube
     )
     if args.occlude_cube:
+        task_cfg.occlude_cube = True
         task_cfg.objects.append(
             PrimitiveCubeCfg(
                 name="occlusion_cube",
-                size=(0.05, 0.05, 0.2),
+                size=(0.10, 0.10, 0.2),
                 color=[0.5, 0.5, 0.5],
                 physics=PhysicStateType.RIGIDBODY,
                 collision_enabled=True,

@@ -95,7 +95,14 @@ class PPO:
         self.policy = policy
         self.policy.to(self.device)
         # Create optimizer
-        self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
+        if schedule == "momentum":
+            self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate, betas=(0.9, 0.999))
+        else:
+            self.optimizer = optim.Adam(
+                self.policy.parameters(),
+                lr=learning_rate,
+              
+            )
         # Create rollout storage
         self.storage: RolloutStorage = None  # type: ignore
         self.transition = RolloutStorage.Transition()

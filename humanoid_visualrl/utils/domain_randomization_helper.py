@@ -42,13 +42,13 @@ log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 class DomainRandomizationHelper:
     """Helper class for domain randomization tasks."""
     # def __init__(self, cfg, num_envs, lights, robots, objects, cameras, handler, env_spacing, seed, device):
-    def __init__(self, mode, cfg, lights, num_envs, handler, env_spacing, seed, device):
+    def __init__(self, mode, cfg, objects,lights, num_envs, handler, env_spacing, seed, device):
         assert mode in ["train", "test"], "Mode must be either train or test"
         self.mode = mode
         self.cfg = cfg
         self.lights = lights
         # self.robots = robots
-        # self.objects = objects
+        self.objects = objects
         # self.cameras = cameras
         self.handler = handler
         self.env_spacing = env_spacing
@@ -110,54 +110,56 @@ class DomainRandomizationHelper:
         #         )
         #         material_randomizer.bind_handler(handler)
         #         self.randomizer[f"material_{robot.name}"] = material_randomizer
-    # for obj in objects:
-        #     obj_randomize_cfg = self.randomize_cfg.get(obj.name, None)
-        #     if obj_randomize_cfg:
-        #         self.randomizer[obj] = ObjectRandomizer(
-        #             ObjectPresets.combined(
-        #                 obj_name=obj.name,
-        #                 mass_range=obj_randomize_cfg.get("mass_range", None),
-        #                 friction_range=obj_randomize_cfg.get("friction_range", None),
-        #                 restitution_range=obj_randomize_cfg.get("restitution_range", None),
-        #                 position_range=obj_randomize_cfg.get("position_range", None),
-        #                 rotation_range=obj_randomize_cfg.get("rotation_range", None),
-        #                 rotation_axes=obj_randomize_cfg.get("rotation_axes", (False, False, False)),
-        #             ),
-        #             seed=seed,
-        #             device=device,
-        #         )
-        #         self.randomizer[obj.name].bind_handler(handler)
-        #     obj_material_cfg = self.material_cfg.get(obj.name, None)
-        #     if obj_material_cfg:
-        #         mdl_cfg = None
-        #         pbr_cfg = None
-        #         if obj_material_cfg.get("material_path", None):
-        #             mdl_cfg = MDLMaterialCfg(mdl_paths=obj_material_cfg["material_path"], enabled=True)
-        #         else:
-        #             pbr_cfg = PBRMaterialCfg(
-        #                 roughness_range=obj_material_cfg.get("roughness_range", None),
-        #                 metallic_range=obj_material_cfg.get("metallic_range", None),
-        #                 diffuse_color_range=obj_material_cfg.get("diffuse_color_range", None),
-        #                 enabled=True,
-        #             )
-        #         config = MaterialRandomCfg(
-        #             obj_name=obj.name,
-        #             physical=PhysicalMaterialCfg(
-        #                 friction_range=obj_material_cfg.get("friction_range", None),
-        #                 restitution_range=obj_material_cfg.get("restitution_range", None),
-        #                 enabled=obj_material_cfg.get("randomize_physical", False),
-        #             ),
-        #             mdl=mdl_cfg if mdl_cfg else None,
-        #             pbr=pbr_cfg if pbr_cfg else None,
-        #             randomization_mode="combined",
-        #         )
-        #         material_randomizer = MaterialRandomizer(
-        #             config,
-        #             seed=seed,
-        #             device=device,
-        #         )
-        #         material_randomizer.bind_handler(handler)
-        #         self.randomizer[f"material_{obj.name}"] = material_randomizer
+        for obj in objects:
+            # obj_randomize_cfg = self.randomize_cfg.get(obj.name, None)
+            # if obj_randomize_cfg:
+            #     self.randomizer[obj] = ObjectRandomizer(
+            #         ObjectPresets.combined(
+            #             obj_name=obj.name,
+            #             mass_range=obj_randomize_cfg.get("mass_range", None),
+            #             friction_range=obj_randomize_cfg.get("friction_range", None),
+            #             restitution_range=obj_randomize_cfg.get("restitution_range", None),
+            #             position_range=obj_randomize_cfg.get("position_range", None),
+            #             rotation_range=obj_randomize_cfg.get("rotation_range", None),
+            #             rotation_axes=obj_randomize_cfg.get("rotation_axes", (False, False, False)),
+            #         ),
+            #         seed=seed,
+            #         device=device,
+            #     )
+            #     self.randomizer[obj.name].bind_handler(handler)
+            if not obj.name == "occlusion_cube":
+                continue
+            obj_material_cfg = self.material_cfg.get(obj.name, None)
+            if obj_material_cfg:
+                mdl_cfg = None
+                pbr_cfg = None
+                if obj_material_cfg.get("material_path", None):
+                    mdl_cfg = MDLMaterialCfg(mdl_paths=obj_material_cfg["material_path"], enabled=True)
+                else:
+                    pbr_cfg = PBRMaterialCfg(
+                        roughness_range=obj_material_cfg.get("roughness_range", None),
+                        metallic_range=obj_material_cfg.get("metallic_range", None),
+                        diffuse_color_range=obj_material_cfg.get("diffuse_color_range", None),
+                        enabled=True,
+                    )
+                config = MaterialRandomCfg(
+                    obj_name=obj.name,
+                    physical=PhysicalMaterialCfg(
+                        friction_range=obj_material_cfg.get("friction_range", None),
+                        restitution_range=obj_material_cfg.get("restitution_range", None),
+                        enabled=obj_material_cfg.get("randomize_physical", False),
+                    ),
+                    mdl=mdl_cfg if mdl_cfg else None,
+                    pbr=pbr_cfg if pbr_cfg else None,
+                    randomization_mode="combined",
+                )
+                material_randomizer = MaterialRandomizer(
+                    config,
+                    seed=seed,
+                    device=device,
+                )
+                material_randomizer.bind_handler(handler)
+                self.randomizer[f"material_{obj.name}"] = material_randomizer
                 
         for light in lights:
             light_randomize_cfg = self.randomize_cfg.get(light.name, None)
@@ -389,8 +391,15 @@ class DomainRandomizationHelper:
         if self.scene_randomizer:
             self.scene_randomizer(envs_to_randomize)
 
+            for obj in self.objects:
+                # if obj.name in self.randomizer:
+                #     self.randomizer[obj.name]()
+                if f"material_{obj.name}" in self.randomizer:
+                    self.randomizer[f"material_{obj.name}"]()
+
         if step_count % self.light_randomize_freq == 0:
 
             for light in self.lights:
                 if light.name in self.randomizer:
                     self.randomizer[light.name]()
+

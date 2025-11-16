@@ -60,8 +60,9 @@ class LeggedRobotRunnerCfg:
         num_mini_batches = 4 #batch size = 128 // 4 = 32  batch size = 64 // 2 = 32 
         """mini batch size = num_envs*n_steps / num_mini_batches"""
         learning_rate = 1.0e-3
-        schedule = "adaptive"
+        # schedule = "adaptive"
         # schedule = "fixed"
+        schedule = "momentum"
         gamma = 0.99
         lam = 0.95
         desired_kl = 0.01
@@ -481,19 +482,22 @@ class BaseTableHumanoidTaskCfg:
             "table": {
                 "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
             },
+            
         },
         "randomize_cfg":{
             "light": {
             "intensity_range": (0.25, 2.0),
             "randomize_orientation": True,
             "randomize_position": True,
-            "position_range": ((-10.0, 10.0), (-10.0, 10.0), (-0.0, 0.0)),
+            "position_range": ((-100.0, 100.0), (-100.0, 100.0), (-0.0, 0.0)),
 
         }},
         "env_setting_randomize_freq": 1,
     }
 
     mode: Literal["train", "test"] = "train"
+    occlude_cube = False
+    occlude_cube_yaw_range = 0.8
 
 
 
@@ -528,11 +532,14 @@ class BaseTableHumanoidTaskCfg:
             self.curriculum_avg_thres_higher = 0.93
             self.curriculum_avg_thres_lower = 0.85
             self.curriculum_randomize_iteration_interval = 200
+
+            
         self.see_flag_his_win_length = 1000
         self.time_range_increase_curriculum = 0.01
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
         # self.randomize_object_radius_range = 0.0
         self.randomize_object_radius_range = 0.1
+
         # self.randomize_object_radius = 0.85  # max
         # self.randomize_object_radius = 0.55
         # self.randomize_object_radius -= 0.07
@@ -691,4 +698,12 @@ class BaseTableHumanoidTaskCfg:
         self.filter_pairs = [
             (self.robot, "object"),
         ]
+
+
+        # randomize occlude cube material
+        from metasim.randomization.presets.scene_presets import SceneMaterialCollections
+        if self.occlude_cube:
+            self.randomize_cfg["material_cfg"]["occlusion_cube"] = {
+                "material_path": SceneMaterialCollections.wall_materials(),
+            }
 
