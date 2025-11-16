@@ -336,7 +336,12 @@ def get_args():
         eval_occlu: bool = False
         eval_randomize_material_test: bool = False
         eval_randomize_material_train: bool = False
+<<<<<<< HEAD
         eval_reaching: bool = False
+=======
+        seed: int = -1
+        """Random seed for reproducibility. -1 means random seed."""
+>>>>>>> 733ab3a5 ([infra] update cube filter param)
 
         def __post_init__(self):
             """Post-initialization configuration."""

@@ -495,6 +495,8 @@ class BaseTableHumanoidTaskCfg:
 
     mode: Literal["train", "test"] = "train"
 
+
+
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
         # self.randomize_object_y_offset = 0.1
@@ -510,7 +512,7 @@ class BaseTableHumanoidTaskCfg:
             self.curriculum_object_yaw = False
 
             self.reward_weights = {
-                "pixel_norm_at_object": 1.4,
+                "pixel_norm_at_object": 1.0,
                 "wrist_close_to_object": 1.0,
             }
         else:
@@ -686,4 +688,7 @@ class BaseTableHumanoidTaskCfg:
 
         self.seed = self.ppo_cfg.seed
 
+        self.filter_pairs = [
+            (self.robot, "object"),
+        ]
 

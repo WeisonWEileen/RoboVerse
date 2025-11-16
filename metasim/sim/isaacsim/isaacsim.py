@@ -244,7 +244,7 @@ class IsaacsimHandler(BaseSimHandler):
                 obj1_path = f"/World/envs/env_{env_id}/{obj1}"
                 obj2_path = f"/World/envs/env_{env_id}/{obj2}"
 
-                obj2_prim = stage.GetPrimAtPath(obj2_path)  # 目标只需要一个
+                obj2_prim = stage.GetPrimAtPath(obj2_path)
                 obj1_prim = stage.GetPrimAtPath(obj1_path)
 
                 # 递归遍历所有子节点（包括嵌套的）
@@ -257,12 +257,13 @@ class IsaacsimHandler(BaseSimHandler):
     def launch(self) -> None:
         self._init_scene()
         self._load_robots()
-        # self._load_sensors()
         self._load_cameras()
         self._load_terrain()
         self._load_objects()
         self._load_lights()
-        self.filter_collisions(self.robots[0].name, "object")
+        # filter collisions before cloning environments
+        for pair in self.scenario.filter_pairs:
+            self.filter_collisions(pair[0], pair[1])
 
         # if "active" in self.scenario_cfg.task.task_name:
         #     pass

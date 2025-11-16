@@ -18,20 +18,17 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 256 \
     --task "active_vision" \
-    --run_name "pretrain_curri_kl_clip_1.1_material_freq_1_light_freq_100" \
+    --run_name "repeat_curriculum_kl_clipping_1.1_material_reaching" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
-    --headless \
-    --randomize_material \
     --wandb \
-    # --debug
-    # --wandb \
-
-    # --debug \
-    # --wandb \
-    # --resume \
-    # --load_run "2025_1113_013913" \
-    # --checkpoint 3800 \
+    --resume \
+    --load_run "2025_1113_013913" \
+    --checkpoint 3800 \
+    # --seed 42 \
+    
+    # --headless
+    # --headless \
     # --randomize_material \
     # --debug
     

@@ -106,6 +106,14 @@ def play(args):
             "pos": torch.tensor([0.3, 0.1, 0.92]),
             "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
         }
+        task_cfg.filter_pairs.append(
+            (task_cfg.robot, "occlusion_cube")
+        )
+        task_cfg.filter_pairs.append(
+            ("object", "occlusion_cube")
+        )
+        
+
     # add objects
     scenario.objects = task_cfg.objects
 
@@ -118,7 +126,10 @@ def play(args):
     scenario.task = task_cfg
     # breakpoint()
     scenario.env_spacing = task_cfg.env_spacing
+    
     task_cfg.randomization = False
+    scenario.filter_pairs = task_cfg.filter_pairs
+    
     # log_dir = get_log_dir(args, scenario)
     from humanoid_visualrl.wrapper.active_vision_cube_wrapper import ActiveVisionWrapper
     assert not (args.eval_randomize_material_test and args.eval_randomize_material_train), "Must evaluate material in test or train mode, not both"

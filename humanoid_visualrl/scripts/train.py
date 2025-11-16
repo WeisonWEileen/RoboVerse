@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import rootutils
 import torch
+import numpy as np
+import random
 from metasim.scenario.lights import DomeLightCfg
 
 from loguru import logger as log
@@ -22,18 +24,32 @@ import shutil
 
 if __name__ == "__main__":
     args = get_args()
+
+    # Set random seed for reproducibility
+    if args.seed != -1:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(args.seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+        log.info(f"Random seed set to: {args.seed}")
+    else:
+        log.info("Using random seed (seed=-1)")
     assert args.opencv_render_env_idx < args.num_envs, "opencv_render_env_idx must be less than num_envs"
-    
-    assert args.actor_critic_class in ["use_vision", "use_rnn", "use_resnet", "use_rnn_foveated", "use_vit_rnn"], "Invalid actor critic class"
+
+    assert args.actor_critic_class in ["use_vision", "use_rnn", "use_resnet", "use_rnn_foveated", "use_vit_rnn"], (
+        "Invalid actor critic class"
+    )
     # task_cfg, cfg_file_path = get_cfg_cls(args)
     task_cfg_cls = get_task_cfg_class(args.task)
-    
 
-    task_cfg = task_cfg_cls(finetune=args.resume, actor_critic_class=args.actor_critic_class, randomize_material=args.randomize_material)
+    task_cfg = task_cfg_cls(
+        finetune=args.resume, actor_critic_class=args.actor_critic_class, randomize_material=args.randomize_material
+    )
     # if not args.debug:
-    #  assert args.num_envs == 64 
-
-
+    #  assert args.num_envs == 64
 
     assert task_cfg.env_spacing > 4.9, "env_spacing must be greater than 5"
     if args.resume:
@@ -61,17 +77,15 @@ if __name__ == "__main__":
     scenario.decimation = task_cfg.decimation
     scenario.render_interval = scenario.decimation
     scenario.task = task_cfg
+    scenario.filter_pairs = task_cfg.filter_pairs
     scenario.env_spacing = task_cfg.env_spacing
     scenario.device = args.device
     log_dir, now = get_log_dir(args, scenario)
 
     if args.debug:
         # do not log, faster reset
-        
+
         log_dir = None
-
-
-
 
     log.info(f"Using simulator: {args.sim}")
     env_cls = get_task_class(args.task)
@@ -84,13 +98,11 @@ if __name__ == "__main__":
         env = env_cls(scenario)
     device = torch.device(args.device)
 
-
     if not args.debug:
         dump_instance_file(task_cfg, os.path.join(log_dir, "cfg.py"))
         dump_instance_file(env, os.path.join(log_dir, "env.py"))
-        shutil.copy('train.sh', os.path.join(log_dir, "train.sh"))
+        shutil.copy("train.sh", os.path.join(log_dir, "train.sh"))
 
-        
     if args.wandb and not args.debug:
         env.train_cfg["logger"] = "wandb"
 
