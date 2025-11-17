@@ -30,24 +30,17 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_batch.py \
     --task "active_vision" \
     --device "cuda:0" \
     --resume \
-    --load_run "2025_1114_130226" \
-<<<<<<< HEAD
+    --load_run "2025_1116_033127" \
     --checkpoint 5200 \
-    --num_envs 10 \
+    --num_envs 50 \
     --evaluation_round 10 \
-    --eval_reaching \
+    --randomize_material \
+    --occlude_cube
+    # --eval_reaching \
     # --headless \
     # --enable_opencv_display \
     # --eval_occlu \
     # --eval_randomize_material_train
-=======
-    --checkpoint 7000 \
-    --enable_opencv_display \
-    --num_envs 20 \
-    --evaluation_round 30 \
-    --eval_occlu \
-    --eval_randomize_material_train
->>>>>>> 733ab3a5 ([infra] update cube filter param)
     # --device "cuda:0" \
     # --headless \
     # --headless \

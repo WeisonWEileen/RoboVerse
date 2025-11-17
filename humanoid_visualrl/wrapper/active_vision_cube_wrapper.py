@@ -23,6 +23,7 @@ from humanoid_visualrl.utils.utils import (
 from metasim.utils.math import quat_from_euler_xyz, quat_mul
 from humanoid_visualrl.utils.domain_randomization_helper import DomainRandomizationHelper
 
+
 @register_task("active_vision")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
@@ -170,7 +171,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             #     self.env, self.robot.name, self.robot.right_hand_palm_links, device=self.device
             # )
             self.left_index_intermediate_link_indices = get_body_reindexed_indices_from_substring(
-                self.env, self.robot.name, ["left_hand_Link1_1"], device=self.device)
+                self.env, self.robot.name, ["left_hand_Link1_1"], device=self.device
+            )
             # self.right_hand_palm_indices = self.wrist_indices
         elif self.robot.name == "g1_static_inpire_left_fixed":
             self.right_hand_palm_indices = get_body_reindexed_indices_from_substring(
@@ -350,7 +352,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(
                     dim=(1, 2)
                 )  # (num_valid_envs,)
-                weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum( 
+                weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(
                     dim=(1, 2)
                 )  # (num_valid_envs,)
 
@@ -362,7 +364,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     rgb_image = (rgb_image * 255).astype(np.uint8)
 
                 cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
-
 
                 # 绘制中空绿色圆圈（半径15像素）
                 cv2.circle(
@@ -392,7 +393,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 # top_left = (16, 16)
                 # bottom_right = (16 + 8, 16 + 8)
                 # cv2.rectangle(rgb_image, top_left, bottom_right, (255, 0, 0), 2)
-                
+
             window_open = self.opencv_renderer.display(rgb_image)
 
             if not window_open:
@@ -459,13 +460,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _pre_reset_hook(self, env_ids=None):
         if self.cfg.randomize_material:
             self.domain_randomization_helper.randomization(env_ids=env_ids, step_count=self.common_step_counter)
-            
-            
+
         # randomly set y of object in range (-randomize_object_y_range, randomize_object_y_range)
         # if self.cfg.randomize_object_y = True
 
         if self.cfg.randomization:
-           
             yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_object_yaw_range
             # yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
             # radius bias randomize_object_radius_range
@@ -479,13 +478,17 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if self.cfg.occlude_cube:
                 occlusion_cube_radius = radius - 0.1
                 # +0.1 radius random 抖动
-                occlusion_cube_yaw = yaw + (torch.rand(len(env_ids), device=self.device) -0.5)*2* self.cfg.occlude_cube_yaw_range
+                occlusion_cube_yaw = (
+                    yaw + (torch.rand(len(env_ids), device=self.device) - 0.5) * 2 * self.cfg.occlude_cube_yaw_range
+                )
                 occlusion_cube_x = torch.cos(occlusion_cube_yaw) * occlusion_cube_radius
                 occlusion_cube_y = torch.sin(occlusion_cube_yaw) * occlusion_cube_radius
                 self.init_states.objects["occlusion_cube"].root_state[env_ids, 0] = occlusion_cube_x
                 self.init_states.objects["occlusion_cube"].root_state[env_ids, 1] = occlusion_cube_y
                 self.init_states.objects["occlusion_cube"].root_state[env_ids, 3:7] = quat_from_euler_xyz(
-                    torch.zeros(len(env_ids), device=self.device), torch.zeros(len(env_ids), device=self.device), occlusion_cube_yaw
+                    torch.zeros(len(env_ids), device=self.device),
+                    torch.zeros(len(env_ids), device=self.device),
+                    occlusion_cube_yaw,
                 )
 
             object_x = torch.cos(yaw) * radius
@@ -547,7 +550,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 torch.exp(-distance / self.cfg.reward_pixel_norm_at_object_exp_sharpness) - self.pixel_reward_offset
             )
         # ema calculate the average reward
-        
+
         self._ema_reward = (
             self.cfg.ema_alpha * self.pixel_rewards_buf.mean() + (1 - self.cfg.ema_alpha) * self._ema_reward
         )
@@ -620,7 +623,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _reward_wrist_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         wrist_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :7]
         # self._update_marker_viz(right_wrist_pos[:,0, :3], right_wrist_pos[:,0, 3:7], right_wrist_pos[:,0, :3] - self.object_pose_buf[:, :3])
-        dist = torch.norm(wrist_pos[:, 0,:3] - self.object_pose_buf[:, :3], dim=1)
+        dist = torch.norm(wrist_pos[:, 0, :3] - self.object_pose_buf[:, :3], dim=1)
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
         return reward
 

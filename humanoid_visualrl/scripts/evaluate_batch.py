@@ -64,7 +64,7 @@ def play(args):
     # get task cfg from cfg.py in load_path
     # breakpoint()
     task_cfg_cls = load_task_cfg(args)
-    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class)
+    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class, occlude_cube=args.eval_occlu)
 
     assert args.num_envs % N_DIVIDE == 0, f"num_envs must be divisible by {N_DIVIDE} for batch evaluation, but got {args.num_envs}"
     N_interval_envs = args.num_envs // N_DIVIDE
@@ -324,7 +324,10 @@ def play(args):
     # # generate success rate for each interval
     success_flag_average_acc = success_flag_average_acc / evaluation_round
     success_flag_acc = success_flag_acc / evaluation_round
-    success_reaching_flag_acc = success_reaching_flag_acc / evaluation_round
+    if args.eval_reaching:
+        success_reaching_flag_acc = success_reaching_flag_acc / evaluation_round
+    else:
+        success_reaching_flag_acc = torch.zeros(env_wrapper.num_envs, device=env_wrapper.device, dtype=torch.int8)
 
     # for i in range(N_DIVIDE):
     #     success_flag_average = success_flag_average_acc[i*N_interval_envs:(i+1)*N_interval_envs].mean()
