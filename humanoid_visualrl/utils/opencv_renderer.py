@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 import torch
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 
 class OpenCVRenderer:
@@ -16,6 +16,7 @@ class OpenCVRenderer:
         fps_limit: int = 30,
         enable_recording: bool = False,
         recording_path: Optional[str] = None,
+        scroll_callback: Optional[Callable[[int], None]] = None,
     ):
         """Initialize the OpenCV renderer.
 
@@ -31,11 +32,13 @@ class OpenCVRenderer:
         self.fps_limit = fps_limit
         self.enable_recording = enable_recording
         self.recording_path = recording_path
+        self.scroll_callback = scroll_callback
 
         # Internal state
         self.window_created = False
         self.last_display_time = 0.0
         self.frame_interval = 1.0 / fps_limit if fps_limit > 0 else 0.0
+        self._status_text: Optional[str] = None
 
         # Video recording
         self.video_writer = None
@@ -170,6 +173,17 @@ class OpenCVRenderer:
             # Add recording dot
             cv2.circle(image_np, (image_np.shape[1] - 80, 25), 5, (0, 0, 255), -1)
 
+        if self._status_text:
+            cv2.putText(
+                image_np,
+                self._status_text,
+                (10, image_np.shape[0] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 155, 255),
+                2,
+            )
+
         return image_np
 
     def display(self, image: np.ndarray, force_update: bool = False) -> bool:
@@ -237,6 +251,10 @@ class OpenCVRenderer:
             screenshot_path = f"screenshot_{int(current_time)}.png"
             cv2.imwrite(screenshot_path, image_np)
             print(f"Screenshot saved: {screenshot_path}")
+        elif key in (ord("h"), ord("H")) and self.scroll_callback is not None:
+            self.scroll_callback(-1)
+        elif key in (ord("j"), ord("J")) and self.scroll_callback is not None:
+            self.scroll_callback(1)
 
         # Check if window was closed by user clicking X
         try:
@@ -251,6 +269,14 @@ class OpenCVRenderer:
     def __del__(self):
         """Cleanup when object is destroyed."""
         self.destroy_window()
+
+    def set_scroll_callback(self, callback: Optional[Callable[[int], None]]):
+        """Update the scroll callback and register mouse handler if needed."""
+        self.scroll_callback = callback
+
+    def set_status_text(self, text: Optional[str]):
+        """Set status text overlay displayed on the rendered image."""
+        self._status_text = text
 
 
 class MultiCameraRenderer:

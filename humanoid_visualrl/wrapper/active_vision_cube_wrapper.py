@@ -491,6 +491,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     occlusion_cube_yaw,
                 )
 
+
+                
+
             object_x = torch.cos(yaw) * radius
             object_y = torch.sin(yaw) * radius
             self.init_states.objects["object"].root_state[env_ids, 0] = object_x

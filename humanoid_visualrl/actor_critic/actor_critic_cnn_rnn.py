@@ -358,6 +358,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
         # self.update_distribution(inputs.squeeze(0))
         # self.update_distribution(inputs.squeeze(0))
         mean = self.actor(inputs.squeeze(0))
+        mean = mean * self.mask
         return mean
 
     def evaluate(self, critic_observations, masks=None, hidden_states=None):

@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from collections import deque
 from copy import deepcopy
 
 import numpy as np
 import torch
+
+# Module-level logger
+logger = logging.getLogger(__name__)
 
 from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
 from humanoid_visualrl.utils.opencv_renderer import OpenCVRenderer
@@ -48,6 +52,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         # Initialize OpenCV renderer for real-time visualization
         self.enable_opencv_display = enable_opencv_display
+        self.opencv_render_env_idx = opencv_render_env_idx
         self.opencv_renderer = None
         if self.enable_opencv_display:
             self.opencv_renderer = OpenCVRenderer(
@@ -56,9 +61,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
                 fps_limit=opencv_fps,
                 enable_recording=True,  # Allow video recording
                 recording_path="humanoid_vision_recording.mp4",
+                scroll_callback=self._handle_opencv_scroll,
             )
-
-        self.opencv_render_env_idx = opencv_render_env_idx
+            self._update_opencv_status_text()
 
     def _parse_indices(self, robot):
         """Parse rigid body indices from robot cfg."""
@@ -362,7 +367,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._post_physics_step_callback()
         tensor_state = self.env.get_states()
 
-        
         self._refreshed_tensors(tensor_state)
         self._check_reset()
 
@@ -386,7 +390,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         self._refreshed_tensors(tensor_state)
         # self._check_reset()
-
 
         # compute obs for actor,  privileged_obs for critic network
         self._compute_observations()
@@ -438,6 +441,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.env.simulate()
 
     def step(self, actions):
+        """Perform one training step and return observation, reward, and reset buffers."""
         action = self._pre_physics_step(actions)
         # start_step = time.time()
         self._physics_step(action)
@@ -445,8 +449,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
         # end_step = time.time()
         # print(f"Step time: {end_step - start_step}")
         return self.obs_buf, self.rew_buf, self.reset_buf, self.extra_buf
-    
+
     def step_evaluate(self, actions):
+        """Perform one evaluation step without reward computation side effects."""
         action = self._pre_physics_step(actions)
         self._physics_step(action)
         self._post_physics_step_evaluate()
@@ -614,3 +619,18 @@ class HumanoidBaseWrapper(RslRlWrapper):
         angles %= 2 * np.pi
         angles -= 2 * np.pi * (angles > np.pi)
         return angles
+
+    def _handle_opencv_scroll(self, direction: int):
+        """Handle mouse scroll events to switch the rendered environment index."""
+        if self.num_envs == 0 or direction == 0:
+            return
+        prev_idx = self.opencv_render_env_idx
+        self.opencv_render_env_idx = int((self.opencv_render_env_idx + direction) % self.num_envs)
+        if prev_idx != self.opencv_render_env_idx:
+            logger.info("OpenCVRenderer switched to env %d", self.opencv_render_env_idx)
+            self._update_opencv_status_text()
+
+    def _update_opencv_status_text(self):
+        """Update status text shown on the OpenCV window."""
+        if self.opencv_renderer is not None:
+            self.opencv_renderer.set_status_text(f"Env {self.opencv_render_env_idx}")

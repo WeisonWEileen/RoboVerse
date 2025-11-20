@@ -31,11 +31,14 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_batch.py \
     --device "cuda:0" \
     --resume \
     --load_run "2025_1116_033127" \
-    --checkpoint 5200 \
+    --checkpoint 5400 \
     --num_envs 50 \
-    --evaluation_round 10 \
+    --evaluation_round 100 \
     --randomize_material \
-    --occlude_cube
+    --eval_randomize_material_train \
+    --eval_occlu \
+    --enable_opencv_display \
+    # --occlude_cube
     # --eval_reaching \
     # --headless \
     # --enable_opencv_display \
