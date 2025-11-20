@@ -227,27 +227,66 @@ def play(args):
         object_state[:, 0] = object_x
         object_state[:, 1] = object_y
 
-        env_wrapper.env._set_object_pose(
-            env_wrapper.cfg.objects[2], object_state[:, :3], object_state[:, 3:7], env_ids=list(range(env_wrapper.num_envs))
-        )
-        env_wrapper._compute_observations()
         # reset texture and material
         if task_cfg.randomize_obj_material:
             env_wrapper.env.randomize_obj_material(list(range(env_wrapper.num_envs)), env_wrapper.obj)
 
         if args.eval_occlu:
-            occlusion_cube_radius = torch.ones(env_wrapper.num_envs, device=env_wrapper.device) * (radius - 0.13)
-            occlusion_cube_x = torch.cos(yaw) * occlusion_cube_radius
-            occlusion_cube_y = torch.sin(yaw) * occlusion_cube_radius
-            occlusion_cube_state = env_wrapper.init_states.objects["occlusion_cube"].root_state
-            occlusion_cube_state[:, 0] = occlusion_cube_x
-            occlusion_cube_state[:, 1] = occlusion_cube_y
-            env_wrapper.env._set_object_pose(
-                env_wrapper.cfg.objects[3],
-                occlusion_cube_state[:, :3],
-                occlusion_cube_state[:, 3:7],
-                env_ids=list(range(env_wrapper.num_envs)),
-            )
+            env_wrapper._randomize_occlusion_cube(object_state, yaw)
+            # occlusion_cube_radius = torch.ones(env_wrapper.num_envs, device=env_wrapper.device) * (radius - 0.13)
+            # occlusion_cube_x = torch.cos(yaw) * occlusion_cube_radius
+            # occlusion_cube_y = torch.sin(yaw) * occlusion_cube_radius
+            # occlusion_cube_state = env_wrapper.init_states.objects["occlusion_cube"].root_state
+            # occlusion_cube_state[:, 0] = occlusion_cube_x
+            # occlusion_cube_state[:, 1] = occlusion_cube_y
+            # # env_wrapper.env._set_object_pose(
+            # #     env_wrapper.cfg.objects[3],
+            # #     occlusion_cube_state[:, :3],
+            # #     occlusion_cube_state[:, 3:7],
+            # #     env_ids=list(range(env_wrapper.num_envs)),
+            # # )
+
+            # # if too close to the object, move it left or right randomly
+            # # too close distance env id list
+            # too_close_env_ids = torch.norm(occlusion_cube_state[:, :3] - object_state[:, :3], dim=1) < 0.1
+
+            # if too_close_env_ids.sum() > 0:
+            #     too_close_env_ids = too_close_env_ids.nonzero().squeeze()
+            #     yaw_too_close = (
+            #         yaw[too_close_env_ids]
+            #         + (torch.randint(0, 2, (too_close_env_ids.shape[0],), device=env_wrapper.device)*2-1)
+            #         * (torch.rand(too_close_env_ids.shape[0], device=env_wrapper.device) + 1)
+            #         * 0.15
+            #     )
+            #     occlusion_cube_state[too_close_env_ids, 0] = torch.cos(yaw_too_close) * occlusion_cube_radius[too_close_env_ids]
+            #     occlusion_cube_state[too_close_env_ids, 1] = torch.sin(yaw_too_close) * occlusion_cube_radius[too_close_env_ids]
+            #     # occlusion_cube_state[too_close_env_ids, 3:7] = quat_from_euler_xyz(
+            #     #     torch.zeros(too_close_env_ids.shape[0], device=env_wrapper.device),
+            #     #     torch.zeros(too_close_env_ids.shape[0], device=env_wrapper.device),
+            #     #     yaw_too_close,
+            #     # )
+            #     env_wrapper.env._set_object_pose(
+            #         env_wrapper.cfg.objects[3],
+            #         occlusion_cube_state[too_close_env_ids, :3],
+            #         occlusion_cube_state[too_close_env_ids, 3:7],
+            #         env_ids=too_close_env_ids,
+            #     )
+
+
+
+            # env_wrapper.env._set_object_pose(
+            #     env_wrapper.cfg.objects[3],
+            #     occlusion_cube_state[:, :3],
+            #     occlusion_cube_state[:, 3:7],
+            #     env_ids=list(range(env_wrapper.num_envs)),
+            # )
+
+        env_wrapper.env._set_object_pose(
+            env_wrapper.cfg.objects[2], object_state[:, :3], object_state[:, 3:7], env_ids=list(range(env_wrapper.num_envs))
+        )
+        env_wrapper._compute_observations()
+
+
         if args.eval_randomize_material_train or args.eval_randomize_material_test:
             env_wrapper.domain_randomization_helper.randomization(env_ids=list(range(env_wrapper.num_envs)), force_randomize=True)
 

@@ -490,9 +490,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     torch.zeros(len(env_ids), device=self.device),
                     occlusion_cube_yaw,
                 )
-
-
                 
+
+
+
 
             object_x = torch.cos(yaw) * radius
             object_y = torch.sin(yaw) * radius
@@ -786,6 +787,48 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     log.info(
                         f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
                     )
+    
+    def _randomize_occlusion_cube(self, object_state, sample_object_yaw):
+        # in front and around the object, random the yaw.
+        occlusion_cube_radius = torch.ones(self.num_envs, device=self.device) * (self.cfg.randomize_object_radius - 0.13)
+        occlusion_cube_x = torch.cos(sample_object_yaw) * occlusion_cube_radius
+        occlusion_cube_y = torch.sin(sample_object_yaw) * occlusion_cube_radius
+        occlusion_cube_state = self.init_states.objects["occlusion_cube"].root_state
+        occlusion_cube_state[:, 0] = occlusion_cube_x
+        occlusion_cube_state[:, 1] = occlusion_cube_y
+        # env_wrapper.env._set_object_pose(
+        #     env_wrapper.cfg.objects[3],
+        #     occlusion_cube_state[:, :3],
+        #     occlusion_cube_state[:, 3:7],
+        #     env_ids=list(range(env_wrapper.num_envs)),
+        # )
+
+        # if too close to the object, move it left or right randomly
+        # too close distance env id list
+        too_close_env_ids = torch.norm(occlusion_cube_state[:, :3] - object_state[:, :3], dim=1) < 0.1
+
+        if too_close_env_ids.sum() > 0:
+            too_close_env_ids = too_close_env_ids.nonzero().squeeze()
+            yaw_too_close = (
+                sample_object_yaw[too_close_env_ids]
+                + (torch.randint(0, 2, (too_close_env_ids.shape[0],), device=self.device)*2-1)
+                * (torch.rand(too_close_env_ids.shape[0], device=self.device) + 1)
+                * 0.15
+            )
+            occlusion_cube_state[too_close_env_ids, 0] = torch.cos(yaw_too_close) * occlusion_cube_radius[too_close_env_ids]
+            occlusion_cube_state[too_close_env_ids, 1] = torch.sin(yaw_too_close) * occlusion_cube_radius[too_close_env_ids]
+            # occlusion_cube_state[too_close_env_ids, 3:7] = quat_from_euler_xyz(
+            #     torch.zeros(too_close_env_ids.shape[0], device=env_wrapper.device),
+            #     torch.zeros(too_close_env_ids.shape[0], device=env_wrapper.device),
+            #     yaw_too_close,
+            # )
+            self.env._set_object_pose(
+                self.cfg.objects[3],
+                occlusion_cube_state[too_close_env_ids, :3],
+                occlusion_cube_state[too_close_env_ids, 3:7],
+                env_ids=too_close_env_ids,
+            )
+
 
     # def _update_curriculum_object_yaw_range(self): 22
     #     # if self.see_flag_history_full:

@@ -67,6 +67,7 @@ class LeggedRobotRunnerCfg:
         lam = 0.95
         desired_kl = 0.01
         max_grad_norm = 1.0
+        kl_clip_thres=0.5
         class_name = "PPO"
 
         # mask = True

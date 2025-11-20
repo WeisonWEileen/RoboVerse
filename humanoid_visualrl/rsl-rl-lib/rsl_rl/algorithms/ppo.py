@@ -38,6 +38,7 @@ class PPO:
         schedule="fixed",
         desired_kl=0.01,
         device="cpu",
+        kl_clip_thres=1.0,
         normalize_advantage_per_mini_batch=False,
         # RND parameters
         rnd_cfg: dict | None = None,
@@ -121,6 +122,7 @@ class PPO:
         self.schedule = schedule
         self.learning_rate = learning_rate
         self.normalize_advantage_per_mini_batch = normalize_advantage_per_mini_batch
+        self.kl_clip_thres = kl_clip_thres
 
     def init_storage(
         self,
@@ -397,7 +399,7 @@ class PPO:
             # Compute the gradients
             # -- For PPO
             self.optimizer.zero_grad()
-            if mean_kl > 1.1:
+            if mean_kl > self.kl_clip_thres:
                 #  abort this iteration and return the losses. reference: https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/ppo/ppo.py
                 self.storage.clear()
                 return_dict = {
