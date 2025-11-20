@@ -456,7 +456,12 @@ def play(args):
         if args.eval_occlu:
             png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_occlu_{args.checkpoint}.png")
         else:
-            png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_{args.checkpoint}.png")
+            if args.eval_randomize_material_train:
+                png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_material_train_{args.checkpoint}.png")
+            else:
+                png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_material_test_{args.checkpoint}.png")
+            
+
         plt.savefig(png_path, dpi=200)
         plt.close()
 
