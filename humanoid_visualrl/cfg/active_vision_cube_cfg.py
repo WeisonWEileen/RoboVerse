@@ -59,15 +59,15 @@ class LeggedRobotRunnerCfg:
         """Number of learning epochs."""
         num_mini_batches = 4 #batch size = 128 // 4 = 32  batch size = 64 // 2 = 32 
         """mini batch size = num_envs*n_steps / num_mini_batches"""
-        learning_rate = 1.0e-3
+        learning_rate = 1.0e-4
         # schedule = "adaptive"
-        # schedule = "fixed"
-        schedule = "momentum"
+        schedule = "fixed"
+        # schedule = "momentum"
         gamma = 0.99
         lam = 0.95
         desired_kl = 0.01
         max_grad_norm = 1.0
-        kl_clip_thres=0.5
+        kl_clip_thres=0.2
         class_name = "PPO"
 
         # mask = True
@@ -78,7 +78,7 @@ class LeggedRobotRunnerCfg:
     algorithm_class_name = "PPO"
     """Algorithm class name."""
     # num_steps_per_env = 96  # *0.005*5*48 = 6 s
-    num_steps_per_env = 24  # *0.005*5*48 = 6 s
+    num_steps_per_env = 48  # *0.005*5*48 = 6 s
     """per iteration"""
     max_iterations = 4000
     """max number of iterations"""
