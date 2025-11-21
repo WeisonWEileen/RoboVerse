@@ -572,6 +572,7 @@ class BaseTableHumanoidTaskCfg:
 
         # training runtime highly relevant
         self.robot = "g1_static_dex1"
+        # self.robot = "g1_static_dex1_comp"
         # self.robot = "g1_static_inpire_left_fixed"
         self.num_envs = 96
         self.enable_opencv_display = True
@@ -599,7 +600,7 @@ class BaseTableHumanoidTaskCfg:
                 "left_shoulder_yaw_joint",
             ]
 
-        if self.robot == "g1_static_dex1":
+        if self.robot in ["g1_static_dex1"]:
             self.init_states[0]["robots"] = {
                 "g1_static_dex1": {
                     "pos": torch.tensor([0.0, 0.0, 0.60]),
@@ -625,11 +626,30 @@ class BaseTableHumanoidTaskCfg:
                     },
                 },
             }
+
             self.cameras[0].mount_to = "g1_static_dex1"
             self.cameras[0].mount_link = "d435_link"
             # self.num_joints = 17 - 7
             self.num_joints = 11
-
+        elif self.robot == "g1_static_dex1_comp":
+            self.init_states[0]["robots"] = {
+                "g1_static_dex1_comp": {
+                    "pos": torch.tensor([0.0, 0.0, 0.60]),
+                    "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
+                    "dof_pos": {
+                        "waist_yaw_joint": 0.0,
+                        "waist_roll_joint": 0.0,
+                        "waist_pitch_joint": 0.0,
+                        "right_shoulder_pitch_joint": 0.0,
+                        "right_shoulder_roll_joint": 0.0,
+                        "right_shoulder_yaw_joint": 0.0,
+                        "right_elbow_joint": 0.0,
+                    },
+                },
+            }
+            self.cameras[0].mount_to = "g1_static_dex1_comp"
+            self.cameras[0].mount_link = "d455_link"
+            self.num_joints = 11
         elif self.robot == "g1_static_inpire_left_fixed":
             self.init_states[0]["robots"] = {
                 "g1_static_inpire_left_fixed": {
