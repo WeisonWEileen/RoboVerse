@@ -18,11 +18,17 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "benchmark_occlu_random_bppt_48" \
+    --run_name "benchmark_occlu_random_bppt_48_curri" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --wandb \
-    --headless
+    --randomize_material \
+    --resume \
+    --load_run "2025_1120_134535" \
+    --checkpoint 1600 \
+    --occlude_cube
+    # --headless \
+
     # --schedule "momentum" 
     # --seed 42 \
     

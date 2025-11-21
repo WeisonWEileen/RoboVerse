@@ -14,16 +14,15 @@ intervals = [
     "[1.38,1.84]",
     "[1.84,2.30]",
 ]
-
-success_no_occlusion = [0.10, 0.34, 0.72, 0.94, 1.00, 0.96, 0.98, 0.96, 0.76, 0.78]
-success_occlusion = [0.10, 0.14, 0.44, 0.56, 0.88, 1.00, 0.94, 0.84, 0.70, 0.60]
+success_no_occlusion= [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 0.98, 0.62]
+success_occlusion=[1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 0.82, 0.90]
 # --- Plot ---
 x = np.arange(len(intervals))
 width = 0.38  # bar width
 
 plt.figure(figsize=(16, 6))
-plt.bar(x - width / 2, success_no_occlusion, width, label="No Occlusion", color="skyblue")
-plt.bar(x + width / 2, success_occlusion, width, label="Occlusion", color="salmon")
+plt.bar(x - width / 2, success_no_occlusion, width, label="Evalute", color="skyblue")
+plt.bar(x + width / 2, success_occlusion, width, label="Training", color="salmon")
 
 # --- Add labels above bars ---
 for i, v in enumerate(success_no_occlusion):
@@ -35,7 +34,7 @@ for i, v in enumerate(success_occlusion):
 plt.xticks(x, intervals, rotation=45, ha="right")
 plt.ylim(0, 1.15)
 plt.ylabel("Success Rate")
-plt.title("Success Rate Comparison Randomize Material (No Occlusion vs Occlusion)")
+plt.title("Success Rate Comparison Eval on Train/Test material set (No Occlusion vs Occlusion)")
 plt.legend()
 plt.tight_layout()
 

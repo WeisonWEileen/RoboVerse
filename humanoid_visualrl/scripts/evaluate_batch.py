@@ -422,6 +422,22 @@ def play(args):
 
     # ---------------- SAVE PNG PLOT ---------------- #
     # ---------------- SAVE PNG PLOT WITH RANGE TICKS (non-overlap version) ---------------- #
+    path_prefix = "success_rate_ckpt"
+    if args.eval_occlu:
+        path_prefix += "_occlu"
+    if args.eval_randomize_material_train:
+        path_prefix += "_material_train"
+    else:
+        path_prefix += "_material_test"
+
+    # save interval success rate as txt
+    interval_success_rates_txt_path = os.path.join(evalation_save_dir, f"{path_prefix}_interval_success_rates.txt")
+    with open(interval_success_rates_txt_path, "w") as f:
+        for i, rate in enumerate(interval_success_rates):
+            start = -obj_rand_range + i * 2 * obj_rand_range / N_DIVIDE
+            end = -obj_rand_range + (i + 1) * 2 * obj_rand_range / N_DIVIDE
+            f.write(f"[{start:.2f}, {end:.2f}] | {rate * 100:.1f}%\n")
+
     try:
         import matplotlib.pyplot as plt
         import numpy as np
@@ -453,14 +469,8 @@ def play(args):
         # annotate %
         for i, v in enumerate(y):
             plt.text(i, v + 0.015, f"{v * 100:.1f}%", ha="center", fontsize=9)
-        if args.eval_occlu:
-            png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_occlu_{args.checkpoint}.png")
-        else:
-            if args.eval_randomize_material_train:
-                png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_material_train_{args.checkpoint}.png")
-            else:
-                png_path = os.path.join(evalation_save_dir, f"success_rate_ckpt_material_test_{args.checkpoint}.png")
-            
+
+        png_path = os.path.join(evalation_save_dir, f"{path_prefix}_{args.checkpoint}.png")
 
         plt.savefig(png_path, dpi=200)
         plt.close()
