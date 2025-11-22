@@ -15,6 +15,7 @@ class ReachingWrapper(HumanoidBaseWrapper):
         tensor_state = self.env.get_states()
         self._init_target_wp(tensor_state)
         self._get_joint_masking_indices()
+        self.marker_viz = self.env.init_marker_viz(marker_type="sphere")
     
     def _init_buffers(self):
         super()._init_buffers()
@@ -90,6 +91,8 @@ class ReachingWrapper(HumanoidBaseWrapper):
             self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
         )
         self.extra_buf["observations"]["critic"] = self.privileged_obs_buf
+        if self.env._render_viewport:
+            self._update_marker_viz()
 
     def _init_target_wp(self, tensor_state: TensorState) -> None:
         self.ori_wrist_pos = (
@@ -149,8 +152,8 @@ class ReachingWrapper(HumanoidBaseWrapper):
 
     def _reward_wrist_pos(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for reaching the target position."""
-        wrist_pos_diff = self.wrist_pose[:, :, :3] - self.ref_wrist_pos[:, :, :3] 
-        wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)
+        wrist_pos_diff = self.wrist_pose[:, 1, :3] - self.ref_wrist_pos[:, 1, :3] 
+        # wrist_pos_diff = torch.flatten(wrist_pos_diff, start_dim=1)
         wrist_pos_error = torch.mean(torch.abs(wrist_pos_diff), dim=1)
         return torch.exp(-4 * wrist_pos_error), wrist_pos_error
 

@@ -16,9 +16,12 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 2048 \
+    --num_envs 3096 \
     --task "reaching" \
     --run_name "reaching" \
     --robot "g1_static_dex1_comp" \
     --device "cuda:0" \
     --wandb \
+    --resume \
+    --load_run "2025_1122_114443" \
+    --checkpoint 1000 \

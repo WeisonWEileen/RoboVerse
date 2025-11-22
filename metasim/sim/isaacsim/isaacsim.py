@@ -30,7 +30,7 @@ from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
 import omni
 import weakref
-
+from typing import Literal
 from isaaclab.app import AppLauncher
 
 
@@ -1228,27 +1228,44 @@ class IsaacsimHandler(BaseSimHandler):
             f"radius={light_cfg.radius} at {light_cfg.pos}"
         )
 
-    def init_marker_viz(self):
+    def init_marker_viz(self, marker_type: Literal["arrow", "sphere"] = "arrow"):
         """Define markers with various different shapes."""
+        assert marker_type in ["arrow", "sphere"], "Invalid marker type"
         import isaaclab.sim as sim_utils
         from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
         from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+        
+        if marker_type == "arrow":
+            marker_cfg = VisualizationMarkersCfg(
+                prim_path="/Visuals/myMarkers",
+                markers={
+                    "arrow_a": sim_utils.UsdFileCfg(
+                        usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                        scale=(0.1, 0.1, 0.25),
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)),
+                    ),
+                    "arrow_b": sim_utils.UsdFileCfg(
+                        usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                        scale=(0.1, 0.1, 0.25),
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+                    ),
+                },
+            )
+        elif marker_type == "sphere":
+            marker_cfg = VisualizationMarkersCfg(
+                prim_path="/Visuals/myMarkers",
+                markers={
+                    "sphere_red": sim_utils.SphereCfg(
+                        radius=0.1,
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
+                    ),
+                    "sphere_blue": sim_utils.SphereCfg(
+                        radius=0.1,
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+                    ),
+                },
+            )
 
-        marker_cfg = VisualizationMarkersCfg(
-            prim_path="/Visuals/myMarkers",
-            markers={
-                "arrow_a": sim_utils.UsdFileCfg(
-                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-                    scale=(0.1, 0.1, 0.25),
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)),
-                ),
-                "arrow_b": sim_utils.UsdFileCfg(
-                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-                    scale=(0.1, 0.1, 0.25),
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
-                ),
-            },
-        )
         self._marker_viz = VisualizationMarkers(marker_cfg)
         return self._marker_viz
 
