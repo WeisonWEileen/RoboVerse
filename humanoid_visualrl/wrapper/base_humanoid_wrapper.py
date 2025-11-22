@@ -357,7 +357,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         #     dim=1,
         # )
         # self.reset_buf = torch.logical_or(self.timeout_buf, reset_buf)
-        self.reset_buf = self.timeout_bufepisode_sums
+        raise NotImplementedError
 
     def _post_physics_step(self):
         """After physics step, compute reward, get obs and privileged_obs, resample command."""
@@ -634,3 +634,11 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """Update status text shown on the OpenCV window."""
         if self.opencv_renderer is not None:
             self.opencv_renderer.set_status_text(f"Env {self.opencv_render_env_idx}")
+
+    def _get_joint_masking_indices(self):
+        mask_joint_names = self.cfg.mask_joint_names
+        self.mask_joint_indices = get_joint_reindexed_indices_from_substring(
+            self.env, self.robot.name, mask_joint_names, device=self.device
+        )
+        self.action_masking = torch.ones(self.num_actions, device=self.device, dtype=torch.float)
+        self.action_masking[self.mask_joint_indices] = 0.0

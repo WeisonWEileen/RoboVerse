@@ -4,7 +4,9 @@ from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 import torch
 from humanoid_visualrl.utils.utils import sample_wp, sample_int_from_float
 from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
+from metasim.task.registry import register_task
 
+@register_task("reaching")
 class ReachingWrapper(HumanoidBaseWrapper):
     """Wrapper for reaching tasks."""
 
@@ -12,6 +14,7 @@ class ReachingWrapper(HumanoidBaseWrapper):
         super().__init__(scenario)
         tensor_state = self.env.get_states()
         self._init_target_wp(tensor_state)
+        self._get_joint_masking_indices()
     
     def _init_buffers(self):
         super()._init_buffers()
@@ -197,3 +200,17 @@ class ReachingWrapper(HumanoidBaseWrapper):
             torch.square((self.last_dof_vel - self.dof_vel) / self.dt),
             dim=1,
         )
+    
+    def _check_reset(self):
+        # TODO check it
+        reset_buf = torch.any(
+            torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1.0, dim=1
+        )
+        reindex = self.env.get_body_reindex(self.robot.name)
+        contact_forces = self.env.contact_sensor.data.net_forces_w[:, reindex, :]
+        reset_buf = torch.any(
+            torch.norm(contact_forces[:,  self.termination_contact_indices, :], dim=-1) > 1.0,
+            dim=1,
+        )
+        self.reset_buf = torch.logical_or(self.timeout_buf, reset_buf)
+        # self.reset_buf = self.timeout_buf 

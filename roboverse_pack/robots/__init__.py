@@ -19,6 +19,7 @@ from .g1_static_lower_body_cfg import G1StaticCfg
 from .g1_static_fixed_lower_fixed_hand_body_cfg_dex1 import G1StaticDex1Cfg
 from .g1_static_fixed_lower_fixed_hand_body_cfg_inpire_left_fixed import G1StaticInpireLeftFixedCfg
 from .g1_static_fixed_lower_fixed_hand_body_cfg_dex1_comp import G1StaticDex1CompCfg
+from .g1_static_fixed_lower_fixed_hand_body_cfg_pp_comp import G1PpCompCfg
 from .google_robot_static_cfg import GoogleRobotStaticCfg
 from .t1_cfg import T1Cfg
 from .h1_2_without_hand_cfg import H12WithoutHandCfg

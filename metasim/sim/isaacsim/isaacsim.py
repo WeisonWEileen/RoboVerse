@@ -79,11 +79,6 @@ class IsaacsimHandler(BaseSimHandler):
             "specular_level",
         ]
 
-
-
-
-        
-
         # TODO  randomize this
 
     def _init_keyboard(self) -> None:
@@ -138,7 +133,7 @@ class IsaacsimHandler(BaseSimHandler):
         import omni.replicator.core as rep
 
         # create render product
-        self._render_product = rep.create.render_product('/OmniverseKit_Persp', (374, 374))
+        self._render_product = rep.create.render_product("/OmniverseKit_Persp", (374, 374))
         # create rgb annotator -- used to read data from the render product
         self._rgb_annotator = rep.AnnotatorRegistry.get_annotator("rgb", device="cpu")
         self._rgb_annotator.attach([self._render_product])
@@ -264,6 +259,11 @@ class IsaacsimHandler(BaseSimHandler):
         # filter collisions before cloning environments
         for pair in self.scenario.filter_pairs:
             self.filter_collisions(pair[0], pair[1])
+        if self.scenario.task.active_contact_sensor:
+            self._load_sensors()
+
+        
+        # activate contact 
 
         # if "active" in self.scenario_cfg.task.task_name:
         #     pass
@@ -333,12 +333,13 @@ class IsaacsimHandler(BaseSimHandler):
         def get_world_transform_xform(prim: Usd.Prim) -> typing.Tuple[Gf.Vec3d, Gf.Rotation, Gf.Vec3d]:
             """copy from https://docs.omniverse.nvidia.com/dev-guide/latest/programmer_ref/usd/transforms/get-world-transforms.html#:~:text=def%20get_world_transform_xform(prim%3A%20Usd.Prim)%20%2D%3E%20typing.Tuple%5BGf.Vec3d"""
             xform = UsdGeom.Xformable(prim)
-            time = Usd.TimeCode.Default() # The time at which we compute the bounding box
+            time = Usd.TimeCode.Default()  # The time at which we compute the bounding box
             world_transform: Gf.Matrix4d = xform.ComputeLocalToWorldTransform(time)
             translation: Gf.Vec3d = world_transform.ExtractTranslation()
             rotation: Gf.Rotation = world_transform.ExtractRotation()
             scale: Gf.Vec3d = Gf.Vec3d(*(v.GetLength() for v in world_transform.ExtractRotationMatrix()))
             return translation, rotation, scale
+
         # get /world/envs/env_10 prim pose
         env_prim = omni.usd.get_context().get_stage().GetPrimAtPath(f"/World/envs/env_0")
         transform = get_world_transform_xform(env_prim)
@@ -347,9 +348,11 @@ class IsaacsimHandler(BaseSimHandler):
 
         # from isaacsim.core.utils import set_camera_view
         from isaacsim.core.utils.viewports import set_camera_view
-        # see https://docs.python.org/3/library/functions.html#float 
+
+        # see https://docs.python.org/3/library/functions.html#float
         import numpy as np
-        prim = omni.usd.get_context().get_stage().GetPrimAtPath('/OmniverseKit_Persp')
+
+        prim = omni.usd.get_context().get_stage().GetPrimAtPath("/OmniverseKit_Persp")
         set_camera_view(
             eye=np.array([
                 transform[0][0] + 1.5,
@@ -357,7 +360,7 @@ class IsaacsimHandler(BaseSimHandler):
                 1.53 + 1,
             ]),
             target=np.array([transform[0][0], transform[0][1], 1.03]),
-            camera_prim_path='/OmniverseKit_Persp',
+            camera_prim_path="/OmniverseKit_Persp",
         )
 
     def _set_states(self, states: list[DictEnvState] | TensorState, env_ids: list[int] | None = None) -> None:
@@ -495,7 +498,7 @@ class IsaacsimHandler(BaseSimHandler):
                 obj_inst = self.scene.rigid_objects[obj.name]
                 root_state = obj_inst.data.root_state_w
                 root_state[:, 0:3] -= self.scene.env_origins
-                # root_state[:, 0:3] 
+                # root_state[:, 0:3]
                 state = ObjectState(
                     root_state=root_state,
                 )
@@ -562,7 +565,6 @@ class IsaacsimHandler(BaseSimHandler):
                 # intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
             )
         extras = self.get_extra()
-        
 
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
@@ -576,7 +578,6 @@ class IsaacsimHandler(BaseSimHandler):
         #     return np.zeros((self.cfg.viewer.resolution[1], self.cfg.viewer.resolution[0], 3), dtype=np.uint8)
         # else:
         return rgb_data[:, :, :3]
-
 
     def set_dof_targets(self, actions: torch.Tensor) -> None:
         # TODO: support set torque
@@ -627,7 +628,6 @@ class IsaacsimHandler(BaseSimHandler):
         # Ensure camera pose is correct, especially for the first few frames
         # if self._physics_step_counter < 5:
         #     self._update_camera_pose()
-
 
     def _add_robot(self, robot: ArticulationObjCfg) -> None:
         import isaaclab.sim as sim_utils
@@ -1006,7 +1006,6 @@ class IsaacsimHandler(BaseSimHandler):
             update_period=self.physics_dt,
             track_air_time=False,
             track_pose=True,
-             
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)
         self.scene.sensors["contact_sensor"] = self.contact_sensor
@@ -1413,8 +1412,6 @@ class IsaacsimHandler(BaseSimHandler):
         )
         self.scene.sensors[camera.name] = camera_inst
         log.debug(f"Added camera {camera.name} to scene with prim_path: {prim_path}")
-    
-    
 
     def refresh_render(self) -> None:
         for sensor in self.scene.sensors.values():

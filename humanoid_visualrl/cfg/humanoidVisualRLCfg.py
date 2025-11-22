@@ -104,6 +104,7 @@ class BaseTableHumanoidTaskCfg:
     reward_functions: list[callable[[list[TensorState], str | None], torch.FloatTensor]] = MISSING
     reward_weights: list[float] = MISSING
     sim_params: SimParamCfg = SimParamCfg()
+    active_contact_sensor: bool = False
 
     @configclass
     class RewardCfg:

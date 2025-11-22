@@ -35,7 +35,7 @@ if __name__ == "__main__":
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(args.seed)
             torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
+            torch.backends.cudnn.benchmark =False
         log.info(f"Random seed set to: {args.seed}")
     else:
         log.info("Using random seed (seed=-1)")
@@ -48,8 +48,15 @@ if __name__ == "__main__":
     task_cfg_cls = get_task_cfg_class(args.task)
 
     task_cfg = task_cfg_cls(
-        finetune=args.resume, actor_critic_class=args.actor_critic_class, randomize_material=args.randomize_material, occlude_cube=args.occlude_cube
+        finetune=args.resume, actor_critic_class=args.actor_critic_class
     )
+
+    if hasattr(task_cfg, "randomize_material"):
+        task_cfg.randomize_material = args.randomize_material
+    if hasattr(task_cfg, "occlude_cube"):
+        task_cfg.occlude_cube = args.occlude_cube
+
+
     if args.occlude_cube:
         task_cfg.occlude_cube = True
         task_cfg.objects.append(
@@ -99,7 +106,10 @@ if __name__ == "__main__":
     scenario.decimation = task_cfg.decimation
     scenario.render_interval = scenario.decimation
     scenario.task = task_cfg
-    scenario.filter_pairs = task_cfg.filter_pairs
+    if hasattr(task_cfg, "filter_pairs"):
+        scenario.filter_pairs = task_cfg.filter_pairs
+    else:
+        scenario.filter_pairs = []
     scenario.env_spacing = task_cfg.env_spacing
     scenario.device = args.device
     log_dir, now = get_log_dir(args, scenario)

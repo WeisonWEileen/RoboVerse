@@ -182,13 +182,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.env, self.robot.name, self.robot.right_index_intermediate_link, device=self.device
             )
 
-    def _get_joint_masking_indices(self):
-        mask_joint_names = self.cfg.mask_joint_names
-        self.mask_joint_indices = get_joint_reindexed_indices_from_substring(
-            self.env, self.robot.name, mask_joint_names, device=self.device
-        )
-        self.action_masking = torch.ones(self.num_actions, device=self.device, dtype=torch.float)
-        self.action_masking[self.mask_joint_indices] = 0.0
+
 
     def _init_buffers(self):
         super()._init_buffers()

@@ -15,7 +15,6 @@ from metasim.types import TensorState
 from metasim.utils.math import quat_apply, quat_mul
 from loguru import logger as log
 from metasim.task.registry import register_task
-from humanoid_visualrl.cfg.booster_racket_cfg import BaseTableHumanoidTaskCfg
 
 
 @register_task("booster_racket")

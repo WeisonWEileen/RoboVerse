@@ -24,8 +24,8 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --wandb \
     --randomize_material \
     --resume \
-    --load_run "2025_1120_134535" \
-    --checkpoint 1600 \
+    --load_run "2025_1121_030856" \
+    --checkpoint 5600 \
     --occlude_cube
     # --headless \
 
