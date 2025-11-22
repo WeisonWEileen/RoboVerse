@@ -21,7 +21,6 @@ class HumanoidReachingCfg(BaseTableHumanoidTaskCfg):
         "dof_acc": -1e-7,
     }
     command_dim = 14
-    finetune = False
     actor_critic_class = "ActorCritic"
     env_spacing = 5
     robot = 'g1_pp_comp'

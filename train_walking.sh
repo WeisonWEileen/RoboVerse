@@ -17,11 +17,8 @@ fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 3096 \
-    --task "reaching" \
-    --run_name "reaching" \
+    --task "walking" \
+    --run_name "walking" \
     --robot "g1_pp_comp" \
     --device "cuda:0" \
-    --wandb \
-    --resume \
-    --load_run "2025_1122_114443" \
-    --checkpoint 1000 \
+    --wandb 

@@ -13,6 +13,7 @@ class WalkingWrapper(HumanoidBaseWrapper):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
         self._prepare_ref_indices()
+        self._get_joint_masking_indices()
 
     def _prepare_ref_indices(self):
         joint_names = self.env.get_joint_names(self.robot.name)
@@ -434,4 +435,15 @@ class WalkingWrapper(HumanoidBaseWrapper):
         ang_mismatch = torch.exp(-torch.norm(self.base_ang_vel[:, :2], dim=1) * 5.0)
         return (lin_mismatch + ang_mismatch) / 2.0
 
-
+    def _check_reset(self):
+        # TODO check it
+        reset_buf = torch.any(
+            torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1.0, dim=1
+        )
+        reindex = self.env.get_body_reindex(self.robot.name)
+        contact_forces = self.env.contact_sensor.data.net_forces_w[:, reindex, :]
+        reset_buf = torch.any(
+            torch.norm(contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1.0,
+            dim=1,
+        )
+        self.reset_buf = torch.logical_or(self.timeout_buf, reset_buf)

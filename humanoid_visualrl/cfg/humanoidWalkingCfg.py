@@ -12,7 +12,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 from metasim.types import TensorState
 from metasim.utils import configclass
 
-
+from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
 @configclass
 class LeggedRobotRunnerCfg:
     """Configuration for PPO."""
@@ -57,7 +57,7 @@ class LeggedRobotRunnerCfg:
         max_grad_norm = 1.0
         class_name = "PPO"
 
-    class_name = "ActorCritic"
+    actor_critic_class = "ActorCritic"
     """Policy class name."""
     algorithm_class_name = "PPO"
     """Algorithm class name."""
@@ -65,7 +65,7 @@ class LeggedRobotRunnerCfg:
     """per iteration"""
     max_iterations = 1500
     """max number of iterations"""
-
+    env_spacing = 5
     # logging
     logger: str = "wandb"
     wandb_project: str = "humanoid_visualrl"
@@ -88,8 +88,9 @@ class LeggedRobotRunnerCfg:
     algorithm: Algorithm = Algorithm()
 
 
-@configclass
-class BaseTableHumanoidTaskCfg:
+
+@configclass(name="walking")
+class HumanoidWalkingCfg(BaseTableHumanoidTaskCfg):
     """Base class for legged-gym style humanoid tasks.
 
     Attributes:
@@ -97,6 +98,7 @@ class BaseTableHumanoidTaskCfg:
     feet_indices: indices of the feet joints
     penalised_contact_indices: indices of the contact joints
     """
+    robot = "g1_pp_comp"
 
     decimation: int = 10  # for isaacgym
     decimation: int = 4  # for isaacsim
@@ -105,8 +107,6 @@ class BaseTableHumanoidTaskCfg:
     reward_weights: list[float] = MISSING
     sim_params: SimParamCfg = SimParamCfg()
     active_contact_sensor: bool = False
-    finetune: bool = False
-    actor_critic_class: str = "ActorCritic"
 
     @configclass
     class RewardCfg:
@@ -250,8 +250,11 @@ class BaseTableHumanoidTaskCfg:
     frame_stack = 1
     c_frame_stack = 3
 
+    robot = "g1_pp_comp"
+    wandb_project = "humanoid_juggling"
+
     command_dim = 3
-    num_actions: int = 29
+    num_actions: int = 21
     """Number of actions."""
     num_single_obs: int = 3 * num_actions + 6 + command_dim  #
     num_observations: int = int(frame_stack * num_single_obs)
@@ -278,43 +281,42 @@ class BaseTableHumanoidTaskCfg:
 
     init_states = [
         {
-            "objects": {},
             "robots": {
-                "g1": {
-                    # "pos": torch.tensor([0.0, 0.0, 0.737]),  # 0.78 is taken from unitree rl_gym
-                    "pos": torch.tensor([0.0, 0.0, 0.8]),  # 0.8 is for g1 29 dof
-                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                "g1_pp_comp": {
+                    "pos": torch.tensor([0.0, 0.0, 0.78]),
+                    "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
                     "dof_pos": {
-                        "left_hip_pitch_joint": -0.4,
+                        "left_hip_pitch_joint": -0.1,
                         "left_hip_roll_joint": 0,
                         "left_hip_yaw_joint": 0.0,
-                        "left_knee_joint": 0.8,
-                        "left_ankle_pitch_joint": -0.4,
+                        "left_knee_joint": 0.4,
+                        "left_ankle_pitch_joint": -0.2,
                         "left_ankle_roll_joint": 0,
                         "right_hip_pitch_joint": -0.4,
                         "right_hip_roll_joint": 0,
                         "right_hip_yaw_joint": 0.0,
-                        "right_knee_joint": 0.8,
-                        "right_ankle_pitch_joint": -0.4,
+                        "right_knee_joint": 0.4,
+                        "right_ankle_pitch_joint": -0.2,
                         "right_ankle_roll_joint": 0,
-                        "left_wrist_roll_joint": 0,
-                        "right_wrist_roll_joint": 0,
                         "waist_yaw_joint": 0.0,
-                        "left_shoulder_pitch_joint": 0.0,
-                        "left_shoulder_roll_joint": 0.0,
-                        "left_shoulder_yaw_joint": 0.0,
-                        "left_elbow_joint": 0.0,
+                        "waist_roll_joint": 0.0,
+                        "waist_pitch_joint": 0.0,
                         "right_shoulder_pitch_joint": 0.0,
                         "right_shoulder_roll_joint": 0.0,
                         "right_shoulder_yaw_joint": 0.0,
                         "right_elbow_joint": 0.0,
+                        "xl330_joint": 0.0,
+                        "d455_joint": 0.0,
+
                     },
                 },
             },
-        }
+            "objects": {},
+        },
     ]
 
     torque_limit_scale = 1.0
+    mask_joint_names = ["xl330_joint", "d455_joint"]
 
     reward_weights: dict[str, float] = {
         "termination": -0.0,
@@ -373,3 +375,12 @@ class BaseTableHumanoidTaskCfg:
         """Interval in steps for applying random push forces and torques."""
 
     random_push = PushRandomCfg(enabled=True)
+    active_contact_sensor = True
+
+    # def __post_init__(self):
+    #     super().__post_init__()
+    #     self.num_actions = 21  #
+    #     self.num_single_obs: int = 3 * self.num_actions + 6 + self.command_dim  #
+    #     # self.ppo_cfg.logger = None
+    #     self.num_observations: int = int(self.frame_stack * self.num_single_obs)
+    #     self.single_num_privileged_obs: int = 4 * self.num_actions + 23
