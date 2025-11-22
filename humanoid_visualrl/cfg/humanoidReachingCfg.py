@@ -25,6 +25,7 @@ class HumanoidReachingCfg(BaseTableHumanoidTaskCfg):
     actor_critic_class = "ActorCritic"
     env_spacing = 5
     robot = 'g1_pp_comp'
+    wandb_project = "humanoid_juggling"
 
 
 

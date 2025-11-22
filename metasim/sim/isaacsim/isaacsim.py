@@ -147,7 +147,7 @@ class IsaacsimHandler(BaseSimHandler):
         AppLauncher.add_app_launcher_args(parser)
         args = parser.parse_args([])
         args.device = self.scenario_cfg.device
-        args.enable_cameras = True
+        args.enable_cameras = True if len(self.cameras) > 0 else False
         args.headless = self.headless
         app_launcher = AppLauncher(args)
         self.simulation_app = app_launcher.app

@@ -128,8 +128,10 @@ class OnPolicyRunner:
                 if obs_context_len != 1
                 else [3, self.env.cfg.cameras[0].height, self.env.cfg.cameras[0].width]
             )
+            self.record_video = True
         else:
             obs_vision_shape = None
+            self.record_video = False
 
         # self.action_masking = action_masking
         # if action_masking:
@@ -245,7 +247,7 @@ class OnPolicyRunner:
         tot_iter = start_iter + num_learning_iterations
         record_video = False
         for it in range(start_iter, tot_iter):
-            if it % 100 == 0:
+            if self.record_video and it % 100 == 0:
                 record_video = True 
                 images = []    
             start = time.time()
@@ -338,7 +340,7 @@ class OnPolicyRunner:
                     # self.env.render()
 
                 # totally record 6 iterations of video
-                if it % 100 == 5 and self.log_dir is not None:
+                if self.record_video and it % 100 == 5 and self.log_dir is not None:
                     record_video = False 
                     iio.mimsave(os.path.join(self.log_dir, f"video_{it-5}_to_{it}.mp4"), images, fps=30)
                     images = [] #reset images buffer
