@@ -262,8 +262,7 @@ class IsaacsimHandler(BaseSimHandler):
         if self.scenario.task.active_contact_sensor:
             self._load_sensors()
 
-        
-        # activate contact 
+        # activate contact
 
         # if "active" in self.scenario_cfg.task.task_name:
         #     pass
@@ -461,6 +460,8 @@ class IsaacsimHandler(BaseSimHandler):
 
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
+        
+        self.sim.forward()
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         if env_ids is None:
@@ -678,6 +679,8 @@ class IsaacsimHandler(BaseSimHandler):
             joint_pos=robot.default_joint_positions,
             joint_vel={".*": 0.0},
         )
+        if robot.name == "vega":
+            init_state.pos = [0.0, 0.0, 0.07]
         cfg.init_state = init_state
         for joint_name, actuator in robot.actuators.items():
             cfg.actuators[joint_name].velocity_limit = actuator.velocity_limit
@@ -1234,7 +1237,7 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
         from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
-        
+
         if marker_type == "arrow":
             marker_cfg = VisualizationMarkersCfg(
                 prim_path="/Visuals/myMarkers",

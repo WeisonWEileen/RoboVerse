@@ -154,6 +154,7 @@ class BaseTableHumanoidTaskCfg:
         """soft torque limit"""
 
     reward_cfg: RewardCfg = RewardCfg()
+    active_contact_sensor: bool = False
 
     @configclass
     class CommandsConfig:
@@ -257,7 +258,8 @@ class BaseTableHumanoidTaskCfg:
     objects = [
         RigidObjCfg(
             name="table",
-            scale=(0.40, 0.2, 0.40),
+            # scale=(0.40, 0.2, 0.40), # work with g1
+            scale=(0.60, 0.2, 0.60), # work with vega
             physics=PhysicStateType.GEOM,
             usd_path="roboverse_data/ring_table.usd",
             fix_base_link=True,
@@ -280,7 +282,7 @@ class BaseTableHumanoidTaskCfg:
 
         PrimitiveCubeCfg(
             name="object",
-            size=(0.09, 0.09, 0.09),
+            size=(0.07, 0.07, 0.07),
             color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
@@ -367,6 +369,7 @@ class BaseTableHumanoidTaskCfg:
                 },
             },
             "robots": {
+                
             },
         }
     ]
@@ -571,7 +574,8 @@ class BaseTableHumanoidTaskCfg:
         log.info("================================================")
 
         # training runtime highly relevant
-        self.robot = "g1_static_dex1"
+        # self.robot = "g1_static_dex1"
+        self.robot = "vega"
         # self.robot = "g1_static_dex1_comp"
         # self.robot = "g1_static_inpire_left_fixed"
         self.num_envs = 96
@@ -653,7 +657,7 @@ class BaseTableHumanoidTaskCfg:
         elif self.robot == "g1_static_inpire_left_fixed":
             self.init_states[0]["robots"] = {
                 "g1_static_inpire_left_fixed": {
-                    "pos": torch.tensor([0.0, 0.0, 0.60]),
+                    "pos": torch.tensor([0.0, 0.0, 0.00]),
                     "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         "waist_yaw_joint": 0.0,
@@ -691,6 +695,47 @@ class BaseTableHumanoidTaskCfg:
             self.cameras[0].mount_to = "g1_static_inpire_left_fixed"
             self.cameras[0].mount_link = "d435_link"
             self.num_joints = 29 - 7  # -
+        elif self.robot in ["vega"]:
+            self.cameras[0].mount_quat = (1.0, 0.0, 0.0, 0.0)
+            self.cameras[0].mount_to = "vega"
+            self.cameras[0].mount_link = "head_l3/zed_left_camera"
+            self.init_states[0]["robots"] = {
+                "vega": { 
+                    "pos": torch.tensor([0.0, 0.0, 0.60]),
+                    "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
+                    "dof_pos": {
+                        "head_j1": 0.0,
+                        "head_j2": 0.0,
+                        "head_j3": 0.0,
+                        # Right arm - neutral pose
+                        "R_arm_j1": 0.0,
+                        "R_arm_j2": 0.0,
+                        "R_arm_j3": 0.0,
+                        "R_arm_j4": 0.0,
+                        "R_arm_j5": 0.0,
+                        "R_arm_j6": 0.0,
+                        "R_arm_j7": 0.0,
+                        # Right hand - open
+                        "R_th_j0": 0.0,
+                        "R_th_j1": 0.0,
+                        "R_th_j2": 0.0,
+                        "R_ff_j1": 0.0,
+                        "R_ff_j2": 0.0,
+                        "R_mf_j1": 0.0,
+                        "R_mf_j2": 0.0,
+                        "R_rf_j1": 0.0,
+                        "R_rf_j2": 0.0,
+                        "R_lf_j1": 0.0,
+                        "R_lf_j2": 0.0,
+                    },
+                },
+            }
+            self.num_joints = 21
+            self.num_actions = 21
+
+        
+        else:
+            raise ValueError(f"Robot {self.robot} not supported")
 
         self.num_single_obs = self.num_joints * 3
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)

@@ -71,10 +71,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.obj = obj
                 break
         self.randomize_robot_yaw_range = self.cfg.randomize_robot_yaw_range * 0.1
-        robot_yaw_limit = self.robot.joint_limits["waist_yaw_joint"]
-        self.robot_yaw_limit = list(robot_yaw_limit)
-        self.robot_yaw_limit[0] = robot_yaw_limit[0] * 0.2
-        self.robot_yaw_limit[1] = robot_yaw_limit[1] * 0.2
+        # robot_yaw_limit = self.robot.joint_limits["waist_yaw_joint"]
+        # self.robot_yaw_limit = list(robot_yaw_limit)
+        # self.robot_yaw_limit[0] = robot_yaw_limit[0] * 0.2
+        # self.robot_yaw_limit[1] = robot_yaw_limit[1] * 0.2
 
         # Get joint indices BEFORE filter_collisions
         self.robot_waist_yaw_joint_indices = get_joint_reindexed_indices_from_substring(

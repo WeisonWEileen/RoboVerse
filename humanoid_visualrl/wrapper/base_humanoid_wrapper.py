@@ -67,13 +67,17 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _parse_indices(self, robot):
         """Parse rigid body indices from robot cfg."""
-        feet_names = robot.feet_links
-        knee_names = robot.knee_links
-        elbow_names = robot.elbow_links
-        wrist_names = robot.wrist_links
-        torso_names = robot.torso_links
-        termination_contact_names = robot.terminate_contacts_links
-        penalised_contact_names = robot.penalized_contacts_links
+        try:
+            feet_names = robot.feet_links
+            knee_names = robot.knee_links
+            elbow_names = robot.elbow_links
+            wrist_names = robot.wrist_links
+            torso_names = robot.torso_links
+            termination_contact_names = robot.terminate_contacts_links
+            penalised_contact_names = robot.penalized_contacts_links
+        except Exception as e:
+            print(f"Error parsing indices for robot {robot.name}: {e}")
+            # raise e
 
         # get sorted indices for specific body links
         self.feet_indices = get_body_reindexed_indices_from_substring(
