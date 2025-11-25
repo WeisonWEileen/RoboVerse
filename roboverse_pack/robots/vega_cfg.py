@@ -25,12 +25,14 @@ class VegaCfg(RobotCfg):
 
     # Asset paths
     # urdf_path: str = "roboverse_pack/robots/robots_vega/humanoid/vega_1/vega.urdf"
-    usd_path: str = "roboverse_data/robots/vega/vega.usd"
+    # usd_path: str = "roboverse_data/robots/vega/vega.usd"
+    usd_path: str = "roboverse_data/robots/vega/vega_left_contraction.usd"
 
     # Physical properties
     enabled_gravity: bool = True  # Disable gravity for default setup
 
     # ==================== Actuator Configuration ====================
+    # head = 2 + hand = 6 + arm = 7 = 15
     actuators: dict[str, BaseActuatorCfg] = {
         # Base wheels - continuous joints need higher stiffness for smooth rotation
         # "B_wheel_j1": BaseActuatorCfg(velocity_limit=12.0, torque_limit=16.0, stiffness=1e4, damping=1e3),
@@ -62,7 +64,7 @@ class VegaCfg(RobotCfg):
         # "L_arm_j6": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         # "L_arm_j7": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         # Right arm - progressive stiffness from base to tip
-        "head_j1": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=6, damping=3.2),
+        # "head_j1": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=6, damping=3.2), # we do not need roll
         "head_j2": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=2.5, damping=3.2),
         "head_j3": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=6, damping=3.2),
         "R_arm_j1": BaseActuatorCfg(
@@ -91,17 +93,17 @@ class VegaCfg(RobotCfg):
         # "L_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
         # Right hand - Thumb
         "R_ff_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "R_ff_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        # "R_ff_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22), follower joint
         "R_lf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "R_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        # "R_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
         "R_mf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "R_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "R_th_j0": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
-        # Right hand - Fingers
+        # "R_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
         "R_rf_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
-        "R_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        # "R_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        # "R_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        "R_th_j0": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
         "R_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
-        "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.1, stiffness=260, damping=20),
+        # "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.1, stiffness=260, damping=20),
     }
 
     # ==================== Joint Limits ====================
@@ -287,7 +289,7 @@ class VegaCfg(RobotCfg):
         # "torso_j2": 0.5,
         # "torso_j3": 0.0,
         # Head - forward looking
-        "head_j1": 0.0,
+        # "head_j1": 0.0,
         "head_j2": 0.0,
         "head_j3": 0.0,
         # Left arm - neutral pose
@@ -299,7 +301,7 @@ class VegaCfg(RobotCfg):
         # "L_arm_j6": 0.0,
         # "L_arm_j7": 0.0,
         # Right arm - neutral pose
-        "R_arm_j1": 0.0,
+        "R_arm_j1": -1.54,
         "R_arm_j2": 0.0,
         "R_arm_j3": 0.0,
         "R_arm_j4": 0.0,
@@ -319,17 +321,28 @@ class VegaCfg(RobotCfg):
         # "L_lf_j1": 0.0,
         # "L_lf_j2": 0.0,
         # Right hand - open
+        # "R_th_j0": 0.0,
+        # "R_th_j1": 0.0,
+        # "R_th_j2": 0.0,
+        # "R_ff_j1": 0.0,
+        # "R_ff_j2": 0.0,
+        # "R_mf_j1": 0.0,
+        # "R_mf_j2": 0.0,
+        # "R_rf_j1": 0.0,
+        # "R_rf_j2": 0.0,
+        # "R_lf_j1": 0.0,
+        # "R_lf_j2": 0.0,
+        "R_ff_j1": 0.0,
+        # "R_ff_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22), follower joint
+        "R_lf_j1": 0.0,
+        # "R_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        "R_mf_j1": 0.0,
+        # "R_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        "R_rf_j1": 0.0,
+        # "R_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        # "R_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
         "R_th_j0": 0.0,
         "R_th_j1": 0.0,
-        "R_th_j2": 0.0,
-        "R_ff_j1": 0.0,
-        "R_ff_j2": 0.0,
-        "R_mf_j1": 0.0,
-        "R_mf_j2": 0.0,
-        "R_rf_j1": 0.0,
-        "R_rf_j2": 0.0,
-        "R_lf_j1": 0.0,
-        "R_lf_j2": 0.0,
     }
 
     torque_limits: dict[str, float] = {
@@ -352,7 +365,7 @@ class VegaCfg(RobotCfg):
         "R_mf_j2": 100.0,
         "R_rf_j1": 100.0,
         "R_rf_j2": 100.0,
-        "R_lf_j1": 100.0, 
+        "R_lf_j1": 100.0,
         "R_lf_j2": 100.0,
     }
     num_joints: int = len(actuators)
@@ -367,6 +380,4 @@ class VegaCfg(RobotCfg):
 
     # joint substrings, to find indices of joints.
 
-    upper_body_joints = [
-
-    ]
+    upper_body_joints = []

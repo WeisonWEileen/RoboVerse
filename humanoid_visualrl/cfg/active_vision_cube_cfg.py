@@ -258,28 +258,30 @@ class BaseTableHumanoidTaskCfg:
     objects = [
         RigidObjCfg(
             name="table",
-            # scale=(0.40, 0.2, 0.40), # work with g1
-            scale=(0.60, 0.2, 0.60), # work with vega
+            scale=(1, 1, 1),  # work with g1
+            # scale=(0.60, 0.2, 0.60), # work with vega
             physics=PhysicStateType.GEOM,
-            usd_path="roboverse_data/ring_table.usd",
+            usd_path="roboverse_data/scenes/tritable.usd",
             fix_base_link=True,
-            default_position=(0.0, 0.0, 0.65),
-            default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
+            # default_position=(0.0, 0.0, 0.65),
+            default_position=(0.0, 0.0, 0.2),
+            # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
+            # default_orientation=(1.0, 0.0, 0.0, 0.0),
+            default_orientation=(0.7071, 0.0, 0.0, -0.7071),
             collision_enabled=True,
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-       RigidObjCfg(
-                name="wall",
-                scale=(4.0, 4.0, 1.8),
-                physics=PhysicStateType.GEOM,
-                usd_path="roboverse_data/wall.usd",
-                fix_base_link=True,
-                default_position=(0.0, 0.0, 0.3),
-                collision_enabled=False,
-                enable_gyroscopic_forces=False,
-            ),
-
+        # RigidObjCfg(
+        #     name="wall",
+        #     scale=(4.0, 4.0, 1.8),
+        #     physics=PhysicStateType.GEOM,
+        #     usd_path="roboverse_data/wall.usd",
+        #     fix_base_link=True,
+        #     default_position=(0.0, 0.0, 0.3),
+        #     collision_enabled=False,
+        #     enable_gyroscopic_forces=False,
+        # ),
         PrimitiveCubeCfg(
             name="object",
             size=(0.07, 0.07, 0.07),
@@ -290,7 +292,6 @@ class BaseTableHumanoidTaskCfg:
             default_position=(0.3, 0.1, 0.851),
             mass=0.2,  # 增加质量以确保更好的物理行为
         ),
-
         # ArticulationObjCfg(
         #     name="box_base",
         #     fix_base_link=True,
@@ -699,12 +700,21 @@ class BaseTableHumanoidTaskCfg:
             self.cameras[0].mount_quat = (1.0, 0.0, 0.0, 0.0)
             self.cameras[0].mount_to = "vega"
             self.cameras[0].mount_link = "head_l3/zed_left_camera"
+            SCALE_FACTOR = 6
+            self.cameras[0].width = int(960 / SCALE_FACTOR)
+            self.cameras[0].height = int(600 / SCALE_FACTOR)
+            self.cameras[0].focal_length = 0.2112011909484863
+            self.cameras[0].intrinsics = [
+                365.5782165527344 / SCALE_FACTOR, 0.0, 494.15985107421875 / SCALE_FACTOR,
+                0.0, 365.5782165527344 / SCALE_FACTOR, 301.70770263671875 / SCALE_FACTOR,
+                0.0, 0.0, 1.0,
+            ]
             self.init_states[0]["robots"] = {
                 "vega": { 
                     "pos": torch.tensor([0.0, 0.0, 0.60]),
                     "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
                     "dof_pos": {
-                        "head_j1": 0.0,
+                        # "head_j1": 0.0,
                         "head_j2": 0.0,
                         "head_j3": 0.0,
                         # Right arm - neutral pose
@@ -718,20 +728,21 @@ class BaseTableHumanoidTaskCfg:
                         # Right hand - open
                         "R_th_j0": 0.0,
                         "R_th_j1": 0.0,
-                        "R_th_j2": 0.0,
+                        # "R_th_j2": 0.0,
                         "R_ff_j1": 0.0,
-                        "R_ff_j2": 0.0,
+                        # "R_ff_j2": 0.0,
                         "R_mf_j1": 0.0,
-                        "R_mf_j2": 0.0,
+                        # "R_mf_j2": 0.0,
                         "R_rf_j1": 0.0,
-                        "R_rf_j2": 0.0,
+                        # "R_rf_j2": 0.0,
                         "R_lf_j1": 0.0,
-                        "R_lf_j2": 0.0,
+                        # "R_lf_j2": 0.0,
                     },
                 },
             }
-            self.num_joints = 21
-            self.num_actions = 21
+            self.num_joints = 15
+            self.num_actions =15
+            
 
         
         else:

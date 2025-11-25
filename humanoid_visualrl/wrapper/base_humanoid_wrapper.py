@@ -121,7 +121,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _parse_actuation_cfg(self, scenario):
         """Parse default joint positions and torque limits from cfg."""
         torque_limits = scenario.robots[0].torque_limits
-        sorted_joint_names = sorted(torque_limits.keys())
+        sorted_joint_names = sorted(scenario.robots[0].actuators.keys())
         sorted_limits = [torque_limits[name] for name in sorted_joint_names]
         self.torque_limits = (
             torch.tensor(sorted_limits, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)

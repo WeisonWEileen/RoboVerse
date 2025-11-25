@@ -33,6 +33,9 @@ class BaseCameraCfg:
     mount_quat: tuple[float, float, float, float] | None = None
     """Quaternion of the camera on the mount. Defaults to None."""
 
+    intrinsics: list[list[float]] = None
+    """Intrinsics matrix of the camera. Type is 3x3 nested list of floats."""
+
 
 @configclass
 class PinholeCameraCfg(BaseCameraCfg):

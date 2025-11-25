@@ -1408,6 +1408,22 @@ class IsaacsimHandler(BaseSimHandler):
             # offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
             offset = TiledCameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="ros")
 
+        # if intrinsics is not None, use intrinsics to create the camera spawn
+        if camera.intrinsics is not None:
+            spawn_cfg = sim_utils.PinholeCameraCfg.from_intrinsic_matrix(
+                
+                camera.intrinsics,
+                camera.width,
+                camera.height,
+            )
+        else:
+            spawn_cfg = sim_utils.PinholeCameraCfg(
+                focal_length=camera.focal_length,
+                focus_distance=camera.focus_distance,
+                horizontal_aperture=camera.horizontal_aperture,
+                clipping_range=camera.clipping_range,
+            )
+         
         camera_inst = TiledCamera(
             TiledCameraCfg(
                 # update_period
@@ -1416,12 +1432,7 @@ class IsaacsimHandler(BaseSimHandler):
                 prim_path=prim_path,
                 offset=offset,
                 data_types=[data_type_map[dt] for dt in camera.data_types],
-                spawn=sim_utils.PinholeCameraCfg(
-                    focal_length=camera.focal_length,
-                    focus_distance=camera.focus_distance,
-                    horizontal_aperture=camera.horizontal_aperture,
-                    clipping_range=camera.clipping_range,
-                ),
+                spawn=spawn_cfg,
                 width=camera.width,
                 height=camera.height,
                 colorize_semantic_segmentation=False,
@@ -1608,12 +1619,3 @@ class IsaacsimHandler(BaseSimHandler):
         else:
             raise ValueError(f"Object {obj_name} not found")
 
-    # it do not work ... at isaacsim 5.0.0 because of the XPrimPath is not update
-    # def _update_tiled_camera_pose(self):
-    #     for camera in self.cameras:
-    #         camera_inst = self.scene.sensors[camera.name]
-    #         pos, quat = camera_inst._view.get_world_poses()
-    #         camera_inst._data.pos_w = pos
-    #         camera_inst._data.quat_w_world = convert_camera_frame_orientation_convention(
-    #             quat, origin="opengl", target="world"
-    #         )
