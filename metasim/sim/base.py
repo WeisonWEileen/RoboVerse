@@ -185,8 +185,38 @@ class BaseSimHandler(ABC):
             sorted_joint_names = self._get_joint_names(obj_name, sort=True)
             self._joint_reindex_cache[obj_name] = [origin_joint_names.index(jn) for jn in sorted_joint_names]
             self._joint_reindex_cache_inverse[obj_name] = [sorted_joint_names.index(jn) for jn in origin_joint_names]
-
         return self._joint_reindex_cache_inverse[obj_name] if inverse else self._joint_reindex_cache[obj_name]
+    
+
+
+
+
+    def get_actuated_joint_reindex(self, obj_name: str) -> list[int]:
+        if not hasattr(self, "_actuated_joint_reindex_cache"):
+            self._actuated_joint_reindex_cache_local = {}
+            self._actuated_joint_reindex_cache_global = {}
+            origin_joint_names = self.get_joint_names(obj_name, sort=False)
+            sorted_joint_names = self.get_joint_names(obj_name, sort=True)
+            actuated_joint_names = [jn for jn in origin_joint_names if jn in self.scenario.robots[0].actuators.keys()]
+            actuated_joint_names_sorted = sorted(actuated_joint_names)
+            actuated_joint_idx_global = [origin_joint_names.index(jn) for jn in actuated_joint_names_sorted]
+            actuated_joint_idx_inverse_local = [actuated_joint_names_sorted.index(jn) for jn in actuated_joint_names]
+            actuated_joint_idx_inverse_global = [sorted_joint_names.index(jn) for jn in actuated_joint_names]
+
+            # compress to [0, len(actuated_joint_names_sorted)-1]
+            # actuated_joint_idx_inverse_compressed = [
+            #     actuated_joint_names_sorted.index(jn) for jn in actuated_joint_names
+            # ]
+
+            self._actuated_joint_reindex_cache_local[obj_name] = actuated_joint_idx_inverse_local
+            self._actuated_joint_reindex_cache_global[obj_name] = actuated_joint_idx_inverse_global
+        return self._actuated_joint_reindex_cache_local[obj_name], self._actuated_joint_reindex_cache_global[obj_name]
+
+
+
+
+
+
 
     # @abstractmethod
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:

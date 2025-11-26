@@ -20,13 +20,13 @@ class VegaCfg(RobotCfg):
     """
 
     name: str = "vega"
-    num_joints: int = 45  # Total movable joints (excluding fixed joints)
+
     fix_base_link: bool = True  # Humanoid robots typically have fixed base in simulation
 
     # Asset paths
     # urdf_path: str = "roboverse_pack/robots/robots_vega/humanoid/vega_1/vega.urdf"
     # usd_path: str = "roboverse_data/robots/vega/vega.usd"
-    usd_path: str = "roboverse_data/robots/vega/vega_left_contraction.usd"
+    usd_path: str = "roboverse_data/robots/vega/vega_left_contraction_1.usd"
 
     # Physical properties
     enabled_gravity: bool = True  # Disable gravity for default setup
@@ -105,6 +105,9 @@ class VegaCfg(RobotCfg):
         "R_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
         # "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.1, stiffness=260, damping=20),
     }
+    
+    # five mimic joints in the finger
+    mimic_joints: dict[str] = {"R_ff_j2", "R_lf_j2", "R_mf_j2", "R_rf_j2", "R_th_j2"}
 
     # ==================== Joint Limits ====================
     # Joint angle limits from URDF (in radians)
@@ -292,6 +295,9 @@ class VegaCfg(RobotCfg):
         # "head_j1": 0.0,
         "head_j2": 0.0,
         "head_j3": 0.0,
+        # "torso_j2": 0.95,
+        # "torso_j1": 0.38,
+
         # Left arm - neutral pose
         # "L_arm_j1": 0.0,
         # "L_arm_j2": 0.0,
@@ -301,11 +307,11 @@ class VegaCfg(RobotCfg):
         # "L_arm_j6": 0.0,
         # "L_arm_j7": 0.0,
         # Right arm - neutral pose
-        "R_arm_j1": -1.54,
-        "R_arm_j2": 0.0,
-        "R_arm_j3": 0.0,
-        "R_arm_j4": 0.0,
-        "R_arm_j5": 0.0,
+        "R_arm_j1":2.54,
+        "R_arm_j2": -0.56,
+        "R_arm_j3": -0.57,
+        "R_arm_j4": -2.36,
+        "R_arm_j5": -1.31,
         "R_arm_j6": 0.0,
         "R_arm_j7": 0.0,
         # Left hand - open
@@ -342,8 +348,39 @@ class VegaCfg(RobotCfg):
         # "R_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
         # "R_rf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
         "R_th_j0": 0.0,
+
         "R_th_j1": 0.0,
+        "L_arm_j1": -1.48,
+        "L_arm_j2": 0.0,
+        "L_arm_j3": 0.307,
+        "L_arm_j4": -0.305,
+        "L_arm_j5": -1.69,
+        "L_arm_j6": 0.0,
+        "L_arm_j7": -0.84,
+        # "torso_j1": 0.38,
+        "torso_j2": 0.49,
+        # "torso_j3": 0.00,
+
+        "R_ff_j2": 0.0,
+        "R_lf_j2": 0.0,
+        "R_mf_j2": 0.0,
+        "R_rf_j2": 0.0,
+        "R_th_j2": 0.0,
     }
+    # joints that need to change default joint positions but not be actuated and fixed
+    default_fixed_joints: list[str] = {
+        "L_arm_j1",
+        "L_arm_j2",
+        "L_arm_j3",
+        "L_arm_j4",
+        "L_arm_j5",
+        "L_arm_j6",
+        "L_arm_j7",
+        # "torso_j1",
+        "torso_j2",
+        # "torso_j3",
+    }
+
 
     torque_limits: dict[str, float] = {
         "head_j1": 150.0,
@@ -368,7 +405,7 @@ class VegaCfg(RobotCfg):
         "R_lf_j1": 100.0,
         "R_lf_j2": 100.0,
     }
-    num_joints: int = len(actuators)
+    num_joints: int = len(actuators) + len(mimic_joints)
 
     feet_links: list[str] = []
     knee_links: list[str] = []
@@ -381,3 +418,14 @@ class VegaCfg(RobotCfg):
     # joint substrings, to find indices of joints.
 
     upper_body_joints = []
+
+    mimic_joints = {
+        "R_th_j2",
+        "R_ff_j2",
+        "R_lf_j2",
+        "R_mf_j2",
+        "R_rf_j2",
+    }
+
+    num_joints_all: int = len(actuators) + len(mimic_joints) + len(default_fixed_joints)
+    assert num_joints_all == len(default_joint_positions), f"num_joints_all: {num_joints_all} != len(default_joint_positions): {len(default_joint_positions)}"

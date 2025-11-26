@@ -83,7 +83,8 @@ class RslRlWrapper(VecEnv):
         self.robot = scenario.robots[0]
         self.num_envs = scenario.num_envs
         self.num_obs = scenario.task.num_observations
-        self.num_actions = scenario.robots[0].num_joints
+        self.num_actions = scenario.task.num_actions
+        self.num_dof = scenario.robots[0].num_joints
         self.num_privileged_obs = scenario.task.num_privileged_obs
         self.max_episode_length = scenario.task.max_episode_length
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

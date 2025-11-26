@@ -81,6 +81,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         # TODO  randomize this
 
+
     def _init_keyboard(self) -> None:
         import carb
 
@@ -287,6 +288,9 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.update(dt=self.physics_dt)
         self._update_camera_pose()
 
+
+        # self._load_valid_joint_indices()
+
         # Force a render to update camera data after position is set
         if self.sim.has_gui() or self.sim.has_rtx_sensors():
             self.sim.render()
@@ -304,6 +308,19 @@ class IsaacsimHandler(BaseSimHandler):
 
         self._init_viewports()
         self._is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
+    
+    # for ac
+    @property
+    def valid_joint_names(self):
+        if not hasattr(self, "_valid_joint_indices"):
+            robot = self.robots[0]
+            # get list
+            joint_names = list(robot.actuators.keys())
+            if hasattr(robot, "mimic_joints"):
+                joint_names.extend([jn for jn in robot.mimic_joints])
+            self._valid_joint_names = joint_names
+            # joint_names = [jn for jn in joint_names if jn in self._get_joint_names(robot.name)]
+        return self._valid_joint_names
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
@@ -448,12 +465,13 @@ class IsaacsimHandler(BaseSimHandler):
                         states.robots[robot.name].root_state[env_ids, 7:], env_ids=env_ids
                     )
                 joint_ids_reindex = self.get_joint_reindex(robot.name, inverse=True)
-                robot_inst.write_joint_position_to_sim(
-                    states.robots[robot.name].joint_pos[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
-                )
-                robot_inst.write_joint_velocity_to_sim(
-                    states.robots[robot.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
-                )
+
+                self._joint_pos_buffer[env_ids,:][:, self.none_static_joint_idx_original] = states.robots[
+                    robot.name
+                ].joint_pos[env_ids, :][:, joint_ids_reindex]
+
+                robot_inst.write_joint_position_to_sim(self._joint_pos_buffer[env_ids,:], env_ids=env_ids)
+                robot_inst.write_joint_velocity_to_sim(self._joint_vel_buffer[env_ids, :], env_ids=env_ids)
                 # robot_inst.write_data_to_sim()
 
                 # self.scene.write_data_to_sim()
@@ -579,12 +597,16 @@ class IsaacsimHandler(BaseSimHandler):
         #     return np.zeros((self.cfg.viewer.resolution[1], self.cfg.viewer.resolution[0], 3), dtype=np.uint8)
         # else:
         return rgb_data[:, :, :3]
+    
+
 
     def set_dof_targets(self, actions: torch.Tensor) -> None:
         # TODO: support set torque
         if isinstance(actions, torch.Tensor):
-            reverse_reindex = self.get_joint_reindex(self.robots[0].name, inverse=True)
-            action_tensor_all = actions[:, reverse_reindex]
+            # reverse_reindex = self.get_joint_reindex(self.robots[0].name)
+            actions_all = torch.zeros((self.num_envs, self.scenario.robots[0].num_joints), device=self.device)
+            reverse_reindex_local, reverse_reindex_global = self.get_actuated_joint_reindex(self.robots[0].name)
+            actions_all[:, reverse_reindex_global] = actions[:, reverse_reindex_local]
         else:
             # Process dictionary-based actions
             action_tensors = []
@@ -606,11 +628,21 @@ class IsaacsimHandler(BaseSimHandler):
             # actionable_joint_ids = [
             #     robot_inst.joint_names.index(jn) for jn in robot.actuators if robot.actuators[jn].fully_actuated
             # ]
-            # TODO: hard code here, at pos control mode
-            robot_inst.set_joint_effort_target(
-                action_tensor_all,
-                # joint_ids=list(range(self.scenario.task.num_actions)),  #
-            )
+            # add effort target to the robot
+            if self.control_effort_mode:
+                robot_inst.set_joint_effort_target(
+                    action_tensor_all,
+                    # joint_ids=list(range(self.scenario.task.num_actions)),  #
+                )
+            else:
+                robot_inst.set_joint_position_target(
+                    actions_all,
+                    joint_ids=self.none_static_joint_idx_original,  #
+                )
+
+
+
+
 
     def _simulate(self):
         # from isaaclab.sim import SimulationContext
@@ -634,6 +666,32 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.actuators import ImplicitActuatorCfg
         from isaaclab.assets import Articulation, ArticulationCfg
+        robot_actuators_names = []
+        # include real actuators and default fixed joints
+        for jn in robot.actuators.keys():
+            robot_actuators_names.append(jn)
+        if hasattr(robot, "default_fixed_joints"):
+            robot_actuators_names.extend(robot.default_fixed_joints)
+
+        sorted_actuator_names = sorted(robot_actuators_names)
+        actuators = {}
+        for jn in sorted_actuator_names:
+            if jn in robot.actuators.keys():
+                actuators[jn] = ImplicitActuatorCfg(
+                    # prim_path
+                    joint_names_expr=[jn],
+                    # TODO fix this with different mode
+                    stiffness=robot.actuators[jn].stiffness if robot.control_type[jn] == "position" else 0.0,
+                    damping=robot.actuators[jn].damping if robot.control_type[jn] == "position" else 0.0,
+                    armature=0.01,
+                    friction=0.05,
+                    # TODO armature to be determined
+                )
+            else:
+                actuators[jn] = ImplicitActuatorCfg(joint_names_expr=[jn], stiffness=1000000.0, damping=100000.0, friction=1000)
+
+
+
 
         cfg = ArticulationCfg(
             spawn=sim_utils.UsdFileCfg(
@@ -656,27 +714,37 @@ class IsaacsimHandler(BaseSimHandler):
                 ),
                 collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=False),
             ),
-            actuators={
-                # jn: ImplicitActuatorCfg(
-                jn: ImplicitActuatorCfg(
-                    # prim_path
-                    joint_names_expr=[jn],
-                    # TODO fix this with different mode
-                    stiffness=0.0,
-                    damping=0,
-                    armature=0.01,
-                    friction=0.05,
-                )
-                for jn, actuator in robot.actuators.items()
-            },
+            # actuators={
+            #     # jn: ImplicitActuatorCfg(
+            #     jn: ImplicitActuatorCfg(
+            #         # prim_path
+            #         joint_names_expr=[jn],
+            #         # TODO fix this with different mode
+            #         stiffness=robot.actuators[jn].stiffness if robot.control_type[jn] == "position" else 0.0,
+            #         damping=robot.actuators[jn].damping if robot.control_type[jn] == "position" else 0.0,
+            #         armature=0.01,
+            #         friction=0.05,
+            #         # TODO armature to be determined
+            #     )
+            #     for jn in sorted_actuator_names
+            # },
+            actuators=actuators,
         )
+        # now it do not support simultaneous position and effort control 
+        assert not any(robot.control_type[jn] == "position" and robot.control_type[jn] == "effort" for jn in robot.actuators.keys()), "Now it do not support simultaneous position and effort control"
+        if any(robot.control_type[jn] == "effort" for jn in robot.actuators.keys()):
+            self.control_effort_mode = True
+        else:
+            self.control_effort_mode = False
+
         cfg.prim_path = f"/World/envs/env_.*/{robot.name}"
         cfg.spawn.usd_path = os.path.abspath(robot.usd_path)
         cfg.spawn.rigid_props.disable_gravity = not robot.enabled_gravity
         init_state = ArticulationCfg.InitialStateCfg(
             # TODO hard code here
             pos=[0.0, 0.0, 0.8],
-            joint_pos=robot.default_joint_positions,
+            # add + {"L_arm_j2": 0.3}
+            joint_pos={jn: robot.default_joint_positions[jn] for jn in robot.actuators.keys()},
             joint_vel={".*": 0.0},
         )
         if robot.name == "vega":
@@ -687,17 +755,46 @@ class IsaacsimHandler(BaseSimHandler):
         robot_inst = Articulation(cfg)
         self.scene.articulations[robot.name] = robot_inst
 
+        # get none-static joint names
+        none_static_joint_names = []
+        for joint_name in robot.actuators.keys():
+            none_static_joint_names.append(joint_name)
+        if hasattr(robot, "mimic_joints"):
+            for joint_name in robot.mimic_joints:
+                none_static_joint_names.append(joint_name)
+
+        # copy none_static_joint_names, and add default_fixed_joints
+        valide_joint_names = none_static_joint_names 
+        if hasattr(robot, "default_fixed_joints"):
+            valide_joint_names.extend(robot.default_fixed_joints)
+
+        # joint_pos tensor buffer
+        self._joint_pos_buffer = torch.zeros((self.num_envs, len(robot.default_joint_positions)), device=self.device)
+        self._joint_vel_buffer = torch.zeros((self.num_envs, len(robot.default_joint_positions)), device=self.device)
+
+
+
+
+
+        
+        # put actuator joints and mimic joints into the obs_joint_list
+        # get indices for obs_joints 
+        # if robot have mimic joints attribute, and the joint name is in the mimic joints attribute, then skip
+
         from pxr import Usd, UsdPhysics
         import omni.usd
-
         stage = omni.usd.get_context().get_stage()
         robot_joint_prim_root = stage.GetPrimAtPath(f"/World/envs/env_0/{robot.name}/joints")  # 你的机器人joints路径
-
-        joint_list = []
         if robot_joint_prim_root and robot_joint_prim_root.IsValid():
             for prim in robot_joint_prim_root.GetChildren():
+                joint_name = prim.GetName()
+                if joint_name in valide_joint_names:
+                    continue
                 prim_type = prim.GetTypeName()
                 if prim_type == "PhysicsRevoluteJoint" or prim_type == "PhysicsPrismaticJoint":
+                    joint_name = prim.GetName()
+                    if hasattr(robot, "mimic_joints") and joint_name in robot.mimic_joints:
+                        continue
                     # get joint name
                     joint_name = prim.GetName()
                     if not joint_name in self.robots[0].actuators.keys():
@@ -722,12 +819,36 @@ class IsaacsimHandler(BaseSimHandler):
                     # stage.RemovePrim(prim.GetPath())
 
                     # joint_list.append((body0.GetPath().pathString, body1.GetPath().pathString))
-                    joint_list.append(prim.GetPath().pathString)
+                    # joint_list.append(prim.GetPath().pathString)
                 # else print the joint type
         else:
             print(f"Robot prim not found at: /World/envs/env_0/{robot.name}")
-        print("Joints found:", joint_list)
+        # print("Joints found:", joint_list)
         print("=" * 100)
+
+    @property
+    def none_static_joint_idx_original(self) -> list[int]:
+        if not hasattr(self, "_none_static_joint_idx_original"):
+            none_static_joint_names = []
+            for joint_name in self.robots[0].actuators.keys():
+                none_static_joint_names.append(joint_name)
+            if hasattr(self.robots[0], "mimic_joints"):
+                for joint_name in self.robots[0].mimic_joints:
+                    none_static_joint_names.append(joint_name)
+            origin_joint_names = self._get_joint_names(self.robots[0].name, sort=False, only_valid=False)
+            stattic_joint_names = self.robots[0].default_fixed_joints
+            none_static_joint_idx_original = []
+            for i, joint_name in enumerate(origin_joint_names):
+                # if joint_name in robot.default_joint_positions.keys():
+                self._joint_pos_buffer[:, i] = self.robots[0].default_joint_positions[joint_name]
+                if joint_name in none_static_joint_names:
+                    none_static_joint_idx_original.append(i)
+            self._none_static_joint_idx_original = none_static_joint_idx_original
+            self._static_joint_idx_original = [origin_joint_names.index(jn) for jn in stattic_joint_names]
+            self.scene.articulations[self.robots[0].name].set_joint_position_target(
+                self._joint_pos_buffer[:, self._static_joint_idx_original], joint_ids=self._static_joint_idx_original)
+        return self._none_static_joint_idx_original
+
 
     def _add_object(self, obj: BaseObjCfg) -> None:
         """Add an object to the scene."""
@@ -1352,9 +1473,12 @@ class IsaacsimHandler(BaseSimHandler):
         )  # ! critical
         obj_inst.write_data_to_sim()
 
-    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+    def _get_joint_names(self, obj_name: str, sort: bool = True, only_valid: bool = True) -> list[str]:
+        # only return actuation and mimic joints
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
             joint_names = deepcopy(self.scene.articulations[obj_name].joint_names)
+            if only_valid:
+                joint_names = [jn for jn in joint_names if jn in self.valid_joint_names]
             if sort:
                 joint_names.sort()
             return joint_names

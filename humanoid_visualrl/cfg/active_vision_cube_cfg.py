@@ -264,7 +264,7 @@ class BaseTableHumanoidTaskCfg:
             usd_path="roboverse_data/scenes/tritable.usd",
             fix_base_link=True,
             # default_position=(0.0, 0.0, 0.65),
-            default_position=(0.0, 0.0, 0.2),
+            default_position=(0.0, 0.0, 0.1),
             # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
             # default_orientation=(1.0, 0.0, 0.0, 0.0),
             default_orientation=(0.7071, 0.0, 0.0, -0.7071),
@@ -710,19 +710,30 @@ class BaseTableHumanoidTaskCfg:
                 0.0, 0.0, 1.0,
             ]
             self.init_states[0]["robots"] = {
-                "vega": { 
+                "vega": {
                     "pos": torch.tensor([0.0, 0.0, 0.60]),
                     "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
                     "dof_pos": {
+                        
                         # "head_j1": 0.0,
                         "head_j2": 0.0,
-                        "head_j3": 0.0,
+                        "head_j3": -0.15,
+                        # "L_arm_j1": 0.92,
+                        # "L_arm_j2": 0.0,
+                        # "L_arm_j3": 0.307,
+                        # "L_arm_j4": -0.305,
+                        # "L_arm_j5": -1.69,
+                        # "L_arm_j6": 0.0,
+                        # "L_arm_j7": -0.84,
+                        # "torso_j1": 0.38,
+                        # "torso_j2": 0.95,
+                        # "torso_j3": 0.00,
                         # Right arm - neutral pose
-                        "R_arm_j1": 0.0,
-                        "R_arm_j2": 0.0,
-                        "R_arm_j3": 0.0,
-                        "R_arm_j4": 0.0,
-                        "R_arm_j5": 0.0,
+                        "R_arm_j1": -1.54,
+                        "R_arm_j2": -0.56,
+                        "R_arm_j3": -0.57,
+                        "R_arm_j4": -1.96,
+                        "R_arm_j5": -1.31,
                         "R_arm_j6": 0.0,
                         "R_arm_j7": 0.0,
                         # Right hand - open
@@ -737,20 +748,25 @@ class BaseTableHumanoidTaskCfg:
                         # "R_rf_j2": 0.0,
                         "R_lf_j1": 0.0,
                         # "R_lf_j2": 0.0,
+                        "R_ff_j2": 0.0,
+                        "R_lf_j2": 0.0,
+                        "R_mf_j2": 0.0,
+                        "R_rf_j2": 0.0,
+                        "R_th_j2": 0.0,
                     },
                 },
             }
-            self.num_joints = 15
-            self.num_actions =15
+            self.num_joints = len(self.init_states[0]["robots"]["vega"]["dof_pos"])
+            self.num_actions = 15
             
 
         
         else:
             raise ValueError(f"Robot {self.robot} not supported")
 
-        self.num_single_obs = self.num_joints * 3
+        self.num_single_obs = self.num_joints * 3-5
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)
-        self.single_num_privileged_obs: int = self.num_joints * 3
+        self.single_num_privileged_obs: int = self.num_joints * 3 -5
         self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
 
 

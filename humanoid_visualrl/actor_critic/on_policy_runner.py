@@ -58,6 +58,7 @@ class OnPolicyRunner:
             raise ValueError(f"Training type not found for algorithm {self.alg_cfg['class_name']}.")
 
         # resolve dimensions of observations
+        # self.env.compute_observations()
         obs, extras = self.env.get_observations()
         if self.use_vision:
             num_obs = obs[0].shape[1]

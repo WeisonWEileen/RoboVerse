@@ -64,6 +64,14 @@ class HumanoidBaseWrapper(RslRlWrapper):
                 scroll_callback=self._handle_opencv_scroll,
             )
             self._update_opencv_status_text()
+        self._load_actuator_indices(scenario.robots[0])
+        
+
+    def _load_actuator_indices(self, robot):
+        """Load actuator indices from robot cfg."""
+        joint_names = self.env.get_joint_names(robot.name)
+        self.actuator_indices = [joint_names.index(jn) for jn in joint_names if jn in robot.actuators.keys()]
+        return self.actuator_indices
 
     def _parse_indices(self, robot):
         """Parse rigid body indices from robot cfg."""
@@ -110,6 +118,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         # TODO fix this
         # self.env._load_contact_sensor_idx()
+        # get 
 
     def _parse_cfg(self, scenario):
         super()._parse_cfg(scenario)
@@ -121,7 +130,11 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _parse_actuation_cfg(self, scenario):
         """Parse default joint positions and torque limits from cfg."""
         torque_limits = scenario.robots[0].torque_limits
-        sorted_joint_names = sorted(scenario.robots[0].actuators.keys())
+        # for joint in scenario.robots[0].actuators.keys():
+        valid_joint_names =  list(scenario.robots[0].actuators.keys()) 
+        if hasattr(scenario.robots[0], "mimic_joints"):
+            valid_joint_names.extend(list(scenario.robots[0].mimic_joints))
+        sorted_joint_names = sorted(valid_joint_names)
         sorted_limits = [torque_limits[name] for name in sorted_joint_names]
         self.torque_limits = (
             torch.tensor(sorted_limits, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
@@ -133,14 +146,17 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.default_joint_pd_target = (
             torch.tensor(sorted_joint_pos, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
         )
+        actuator_keys = scenario.robots[0].actuators.keys()
+        self.actuated_index = [sorted_joint_names.index(name) for name in actuator_keys]
+        # self.actuated_index = torch.tensor(actuated_index, device=self.device)
 
     def _init_buffers(self):
         """Init all buffer for reward computation."""
         super()._init_buffers()
 
         # states
-        self.dof_pos = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
-        self.dof_vel = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
+        self.dof_pos = torch.zeros(self.num_envs, self.scenario.robots[0].num_joints, device=self.device, requires_grad=False)
+        self.dof_vel = torch.zeros(self.num_envs, self.scenario.robots[0].num_joints, device=self.device, requires_grad=False)
         self.root_state = torch.zeros(self.num_envs, 13, device=self.device, requires_grad=False)
         self.base_quat = torch.zeros(self.num_envs, 4, device=self.device, requires_grad=False)
         self.base_lin_vel = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
@@ -148,8 +164,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.projected_gravity = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
         self.base_euler_xyz = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
         self.feet_height = torch.zeros((self.num_envs, 2), device=self.device, requires_grad=False)
-        self.rand_push_force = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
-        self.rand_push_torque = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
+        self.rand_push_force = torch.zeros(
+            (self.num_envs, 3), dtype=torch.float32, device=self.device, requires_grad=False
+        )
+        self.rand_push_torque = torch.zeros(
+            (self.num_envs, 3), dtype=torch.float32, device=self.device, requires_grad=False
+        )
         self.contact_forces = torch.zeros(
             (self.num_envs, len(self.env.get_body_names(self.robot.name)), 3), dtype=torch.float32, device=self.device
         )
@@ -182,13 +202,21 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.num_envs, self.num_actions, device=self.device, requires_grad=False
         )
         dof_names = self.env.get_joint_names(self.robot.name)
-        for i, dof_name in enumerate(dof_names):
+        
+        i = 0
+        for _, dof_name in enumerate(dof_names):
+            # HACK
+            if dof_name not in self.robot.actuators:
+                continue
+
+            if dof_name in self.robot.mimic_joints:
+                continue
             i_actuator_cfg = self.robot.actuators[dof_name]
             self._p_gains[:, i] = i_actuator_cfg.stiffness
             self._d_gains[:, i] = i_actuator_cfg.damping
             torque_limit = self.robot.torque_limits[dof_name]
             self._torque_limits[:, i] = self.scenario.task.torque_limit_scale * torque_limit
-
+            i += 1
         # commands
         self.common_step_counter = 0
         self.commands = torch.zeros(
@@ -224,7 +252,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.last_last_actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
-        self.last_dof_vel = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
+        self.last_dof_vel = torch.zeros(self.num_envs, self.scenario.robots[0].num_joints, device=self.device, requires_grad=False)
         self.obs_history = deque(maxlen=self.cfg.frame_stack)
         self.critic_history = deque(maxlen=self.cfg.c_frame_stack)
 
@@ -424,24 +452,27 @@ class HumanoidBaseWrapper(RslRlWrapper):
         actions = (1 - delay) * actions.to(self.device) + delay * self.actions
         clipped_actions = self.clip_actions(actions)
         self.actions = clipped_actions
+        if not self.env.control_effort_mode:
+            self.actions += self._action_scale * (self.default_joint_pd_target[:, self.actuated_index] + self.actions)
+
         return self.actions
 
     def _physics_step(self, action) -> None:
         self.env.set_dof_targets(action)
-
         for _ in range(self.cfg.decimation):
             # refresh dof states
             # tensor_state = self.env.get_states()
             # self.dof_pos = tensor_state.robots[self.robot.name].joint_pos
             # self.dof_vel = tensor_state.robots[self.robot.name].joint_vel
+            
+            if self.env.control_effort_mode:
+                # test more light weight
+                reindex = self.env.get_joint_reindex(self.robot.name)
+                self.dof_pos = self.env.scene.articulations[self.robot.name].data.joint_pos[:, reindex]
+                self.dof_vel = self.env.scene.articulations[self.robot.name].data.joint_vel[:, reindex]
+                torques = self._compute_effort(action)
+                self.env.set_dof_targets(torques)
 
-            # test more light weight
-            reindex = self.env.get_joint_reindex(self.robot.name)
-            self.dof_pos = self.env.scene.articulations[self.robot.name].data.joint_pos[:, reindex]
-            self.dof_vel = self.env.scene.articulations[self.robot.name].data.joint_vel[:, reindex]
-
-            torques = self._compute_effort(action)
-            self.env.set_dof_targets(torques)
             self.env.simulate()
 
     def step(self, actions):
@@ -469,6 +500,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """Hook method for subclasses to add custom logic after resetting."""
         pass
 
+    def _load_actuator_indices(self, robot):
+        """Load actuator indices from robot cfg."""
+        joint_names = self.env.get_joint_names(robot.name)
+        self.actuator_indices = [joint_names.index(jn) for jn in joint_names if jn in robot.actuators.keys()]
+        return self.actuator_indices
+
     def _reset(self, env_ids=None):
         """Reset the wrapper."""
         if env_ids is None:
@@ -485,7 +522,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.env.sim.forward()
 
         # reset state buffer in the wrapper
-        self.actions[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids]
+        self.actions[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids][:, self.actuator_indices]
         # self.last_actions[env_ids] = 0.0
         # self.last_last_actions[env_ids] = 0.0
         self.last_dof_vel[env_ids] = 0.0
