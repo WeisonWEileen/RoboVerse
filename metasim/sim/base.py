@@ -194,23 +194,44 @@ class BaseSimHandler(ABC):
     def get_actuated_joint_reindex(self, obj_name: str) -> list[int]:
         if not hasattr(self, "_actuated_joint_reindex_cache"):
             self._actuated_joint_reindex_cache_local = {}
-            self._actuated_joint_reindex_cache_global = {}
+            # self._actuated_joint_reindex_cache_global = {}
+            self._actuated_in_valid_original = {}
             origin_joint_names = self.get_joint_names(obj_name, sort=False)
             sorted_joint_names = self.get_joint_names(obj_name, sort=True)
             actuated_joint_names = [jn for jn in origin_joint_names if jn in self.scenario.robots[0].actuators.keys()]
             actuated_joint_names_sorted = sorted(actuated_joint_names)
-            actuated_joint_idx_global = [origin_joint_names.index(jn) for jn in actuated_joint_names_sorted]
-            actuated_joint_idx_inverse_local = [actuated_joint_names_sorted.index(jn) for jn in actuated_joint_names]
-            actuated_joint_idx_inverse_global = [sorted_joint_names.index(jn) for jn in actuated_joint_names]
 
-            # compress to [0, len(actuated_joint_names_sorted)-1]
-            # actuated_joint_idx_inverse_compressed = [
-            #     actuated_joint_names_sorted.index(jn) for jn in actuated_joint_names
-            # ]
+            actuated_joint_names_original = [jn for jn in origin_joint_names if jn in self.scenario.robots[0].actuators.keys()]
 
-            self._actuated_joint_reindex_cache_local[obj_name] = actuated_joint_idx_inverse_local
-            self._actuated_joint_reindex_cache_global[obj_name] = actuated_joint_idx_inverse_global
-        return self._actuated_joint_reindex_cache_local[obj_name], self._actuated_joint_reindex_cache_global[obj_name]
+            acticuated_in_local_original = [actuated_joint_names_original.index(jn) for jn in actuated_joint_names_sorted]
+            self._actuated_joint_reindex_cache_local[obj_name] = acticuated_in_local_original
+
+
+
+
+            # valide joint + actuated joint
+            valid_actuated_joint_names = [jn for jn in origin_joint_names if jn in self.scenario.robots[0].actuators.keys()]
+            valid_actuated_joint_names.extend([jn for jn in origin_joint_names if jn in self.scenario.robots[0].mimic_joints])
+
+            valid_actuated_joint_names_original = [jn for jn in origin_joint_names if jn in valid_actuated_joint_names]
+
+            self._actuated_in_valid_original[obj_name] = [valid_actuated_joint_names_original.index(jn) for jn in actuated_joint_names_original]
+
+
+
+            # valid_actuated_joint_names_sorted = sorted(valid_actuated_joint_names)
+
+            # # actuated_joint_idx_global = [origin_joint_names.index(jn) for jn in actuated_joint_names_sorted]
+            # actuated_joint_idx_inverse_local = [origin_joint_names.index(jn) for jn in actuated_joint_names_sorted]
+
+            # valid_actuated_joint_idx_inverse_local = [origin_joint_names.index(jn) for jn in valid_actuated_joint_names_sorted]
+
+
+            # actuated_joint_idx_inverse_global = [sorted_joint_names.index(jn) for jn in actuated_joint_names]
+            # self._actuated_joint_reindex_cache_local[obj_name] = actuated_joint_idx_inverse_local
+            # self._actuated_joint_reindex_cache_global[obj_name] = actuated_joint_idx_inverse_global
+        return self._actuated_joint_reindex_cache_local[obj_name], self._actuated_in_valid_original[obj_name]
+
 
 
 

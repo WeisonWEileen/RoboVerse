@@ -21,7 +21,7 @@ class VegaCfg(RobotCfg):
 
     name: str = "vega"
 
-    fix_base_link: bool = True  # Humanoid robots typically have fixed base in simulation
+    fix_base_link: bool = False  # Humanoid robots typically have fixed base in simulation
 
     # Asset paths
     # urdf_path: str = "roboverse_pack/robots/robots_vega/humanoid/vega_1/vega.urdf"
@@ -350,10 +350,10 @@ class VegaCfg(RobotCfg):
         "R_th_j0": 0.0,
 
         "R_th_j1": 0.0,
-        "L_arm_j1": -1.48,
-        "L_arm_j2": 0.0,
-        "L_arm_j3": 0.307,
-        "L_arm_j4": -0.305,
+        "L_arm_j1": 2.38,
+        "L_arm_j2": 0.25,
+        "L_arm_j3":-0.12,
+        "L_arm_j4": -1.705,
         "L_arm_j5": -1.69,
         "L_arm_j6": 0.0,
         "L_arm_j7": -0.84,

@@ -711,13 +711,13 @@ class BaseTableHumanoidTaskCfg:
             ]
             self.init_states[0]["robots"] = {
                 "vega": {
-                    "pos": torch.tensor([0.0, 0.0, 0.60]),
+                    "pos": torch.tensor([0.0, 0.0, 0.57]),
                     "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         
                         # "head_j1": 0.0,
                         "head_j2": 0.0,
-                        "head_j3": -0.15,
+                        "head_j3": -0.10, # pitch
                         # "L_arm_j1": 0.92,
                         # "L_arm_j2": 0.0,
                         # "L_arm_j3": 0.307,
@@ -732,7 +732,7 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j1": -1.54,
                         "R_arm_j2": -0.56,
                         "R_arm_j3": -0.57,
-                        "R_arm_j4": -1.96,
+                        "R_arm_j4": -2.2,
                         "R_arm_j5": -1.31,
                         "R_arm_j6": 0.0,
                         "R_arm_j7": 0.0,

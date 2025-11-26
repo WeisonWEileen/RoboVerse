@@ -308,6 +308,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         self._init_viewports()
         self._is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
+        a = self.none_static_joint_idx_original
     
     # for ac
     @property
@@ -466,11 +467,16 @@ class IsaacsimHandler(BaseSimHandler):
                     )
                 joint_ids_reindex = self.get_joint_reindex(robot.name, inverse=True)
 
-                self._joint_pos_buffer[env_ids,:][:, self.none_static_joint_idx_original] = states.robots[
-                    robot.name
-                ].joint_pos[env_ids, :][:, joint_ids_reindex]
+                buf = self._joint_pos_buffer
+                env_ids_t = env_ids if isinstance(env_ids, torch.Tensor) else torch.tensor(env_ids, device=self.device)
+                joint_ids_t = torch.tensor(self._none_static_joint_idx_reindexed, device=self.device)
 
-                robot_inst.write_joint_position_to_sim(self._joint_pos_buffer[env_ids,:], env_ids=env_ids)
+                # joint_out shape: (len(env_ids), num_non_static_joints)
+                joint_out = states.robots[robot.name].joint_pos[env_ids_t, :]
+
+                buf[env_ids_t[:, None], joint_ids_t[None, :]] = joint_out
+
+                robot_inst.write_joint_position_to_sim(buf[env_ids, :], env_ids=env_ids)
                 robot_inst.write_joint_velocity_to_sim(self._joint_vel_buffer[env_ids, :], env_ids=env_ids)
                 # robot_inst.write_data_to_sim()
 
@@ -537,11 +543,11 @@ class IsaacsimHandler(BaseSimHandler):
                 root_state=root_state,
                 body_names=self._get_body_names(obj.name),
                 body_state=body_state,
-                joint_pos=obj_inst.data.joint_pos[:, joint_reindex],
-                joint_vel=obj_inst.data.joint_vel[:, joint_reindex],
-                joint_pos_target=obj_inst.data.joint_pos_target[:, joint_reindex],
-                joint_vel_target=obj_inst.data.joint_vel_target[:, joint_reindex],
-                joint_effort_target=obj_inst.data.joint_effort_target[:, joint_reindex],
+                joint_pos=obj_inst.data.joint_pos[:, self._none_static_joint_idx_reindexed],
+                joint_vel=obj_inst.data.joint_vel[:, self._none_static_joint_idx_reindexed],
+                joint_pos_target=obj_inst.data.joint_pos_target[:, self._none_static_joint_idx_reindexed],
+                joint_vel_target=obj_inst.data.joint_vel_target[:, self._none_static_joint_idx_reindexed],
+                joint_effort_target=obj_inst.data.joint_effort_target[:, self._none_static_joint_idx_reindexed],
             )
             robot_states[obj.name] = state
 
@@ -632,12 +638,14 @@ class IsaacsimHandler(BaseSimHandler):
             if self.control_effort_mode:
                 robot_inst.set_joint_effort_target(
                     action_tensor_all,
+                    env_ids=torch.arange(self.num_envs, device=self.device),
                     # joint_ids=list(range(self.scenario.task.num_actions)),  #
                 )
             else:
                 robot_inst.set_joint_position_target(
                     actions_all,
                     joint_ids=self.none_static_joint_idx_original,  #
+                    env_ids=torch.arange(self.num_envs, device=self.device)
                 )
 
 
@@ -688,7 +696,7 @@ class IsaacsimHandler(BaseSimHandler):
                     # TODO armature to be determined
                 )
             else:
-                actuators[jn] = ImplicitActuatorCfg(joint_names_expr=[jn], stiffness=1000000.0, damping=100000.0, friction=1000)
+                actuators[jn] = ImplicitActuatorCfg(joint_names_expr=[jn], stiffness=100000.0, damping=1000.0, friction=300)
 
 
 
@@ -844,9 +852,20 @@ class IsaacsimHandler(BaseSimHandler):
                 if joint_name in none_static_joint_names:
                     none_static_joint_idx_original.append(i)
             self._none_static_joint_idx_original = none_static_joint_idx_original
-            self._static_joint_idx_original = [origin_joint_names.index(jn) for jn in stattic_joint_names]
+
+            # 
+            none_static_joint_names_sorted = sorted(none_static_joint_names)
+            none_static_joint_idx_reindexed = [origin_joint_names.index(jn) for jn in none_static_joint_names_sorted]
+            self._none_static_joint_idx_reindexed = none_static_joint_idx_reindexed
+      
+            static_static_joint_idx_original = []
+            for i, joint_name in enumerate(origin_joint_names):
+                if joint_name in stattic_joint_names:
+                    static_static_joint_idx_original.append(i)
+
             self.scene.articulations[self.robots[0].name].set_joint_position_target(
-                self._joint_pos_buffer[:, self._static_joint_idx_original], joint_ids=self._static_joint_idx_original)
+                self._joint_pos_buffer[:, static_static_joint_idx_original], joint_ids=static_static_joint_idx_original, env_ids=torch.arange(self.num_envs, device=self.device)
+            )
         return self._none_static_joint_idx_original
 
 

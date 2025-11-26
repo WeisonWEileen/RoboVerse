@@ -141,8 +141,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
             * scenario.task.torque_limit_scale
         )
 
-        default_joint_pos = scenario.robots[0].default_joint_positions
-        sorted_joint_pos = [default_joint_pos[name] for name in sorted_joint_names]
+        all_default_joint_pos = scenario.robots[0].default_joint_positions
+        sorted_joint_pos = [all_default_joint_pos[name] for name in sorted_joint_names]
+
         self.default_joint_pd_target = (
             torch.tensor(sorted_joint_pos, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
         )
