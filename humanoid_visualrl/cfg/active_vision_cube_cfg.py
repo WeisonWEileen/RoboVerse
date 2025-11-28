@@ -264,7 +264,7 @@ class BaseTableHumanoidTaskCfg:
             usd_path="roboverse_data/scenes/tritable.usd",
             fix_base_link=True,
             # default_position=(0.0, 0.0, 0.65),
-            default_position=(0.18, 0.0, 0.1),
+            default_position=(0.28, 0.0, 0.1),
             # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
             # default_orientation=(1.0, 0.0, 0.0, 0.0),
             default_orientation=(0.7071, 0.0, 0.0, -0.7071),
@@ -272,16 +272,16 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        # RigidObjCfg(
-        #     name="wall",
-        #     scale=(4.0, 4.0, 1.8),
-        #     physics=PhysicStateType.GEOM,
-        #     usd_path="roboverse_data/wall.usd",
-        #     fix_base_link=True,
-        #     default_position=(0.0, 0.0, 0.3),
-        #     collision_enabled=False,
-        #     enable_gyroscopic_forces=False,
-        # ),
+        RigidObjCfg(
+            name="wall",
+            scale=(4.0, 4.0, 1.8),
+            physics=PhysicStateType.GEOM,
+            usd_path="roboverse_data/wall.usd",
+            fix_base_link=True,
+            default_position=(0.0, 0.0, 0.3),
+            collision_enabled=False,
+            enable_gyroscopic_forces=False,
+        ),
         PrimitiveCubeCfg(
             name="object",
             size=(0.07, 0.07, 0.07),
@@ -289,7 +289,7 @@ class BaseTableHumanoidTaskCfg:
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
             fix_base_link=False,
-            default_position=(0.3, 0.1, 1.851),
+            default_position=(0.4, 0.1, 1.851),
             mass=0.2,  # 增加质量以确保更好的物理行为
         ),
         # ArticulationObjCfg(
@@ -365,7 +365,7 @@ class BaseTableHumanoidTaskCfg:
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.58, 0.0, 0.2]),
+                    "pos": torch.tensor([0.48, 0.0, 0.8]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -517,7 +517,7 @@ class BaseTableHumanoidTaskCfg:
             # self.update_curriculum_iteration = 100
             # self.randomize_object_yaw_range = 1.8
             # self.randomize_object_yaw_range = 1.8
-            self.randomize_object_yaw_range = 2.3
+            self.randomize_object_yaw_range = 1.57
             self.curriculum_object_yaw = False
 
             self.reward_weights = {
@@ -530,9 +530,9 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
             # self.randomize_object_yaw_range = 2.14
-            self.curriculum_object_yaw = True
+            self.curriculum_object_yaw = False
             self.curriculum_initial_object_yaw_range = 0.5
-            self.randomize_object_yaw_range = 2.3
+            self.randomize_object_yaw_range = 1.57
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
             self.curriculum_avg_thres_higher = 0.93
             self.curriculum_avg_thres_lower = 0.85
