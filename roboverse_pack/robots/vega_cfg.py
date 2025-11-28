@@ -33,7 +33,6 @@ class VegaCfg(RobotCfg):
     # ==================== Actuator Configuration ====================
     # head = 2 + hand = 6 + arm = 7 = 15
     actuators: dict[str, BaseActuatorCfg] = {
-
         # "L_arm_j7": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         # Right arm - progressive stiffness from base to tip
         # "head_j1": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=6, damping=3.2), # we do not need roll
@@ -62,7 +61,7 @@ class VegaCfg(RobotCfg):
         "R_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
         # "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.1, stiffness=260, damping=20),
     }
-    
+
     # five mimic joints in the finger
     mimic_joints: dict[str] = {"R_ff_j2", "R_lf_j2", "R_mf_j2", "R_rf_j2", "R_th_j2"}
 
@@ -187,10 +186,7 @@ class VegaCfg(RobotCfg):
         "R_lf_j2": "position",
     }
 
-
-    ee_body_name: str = (
-        "L_arm_l7"  # Last arm link with geometry (fixed joint, but 
-        )
+    ee_body_name: str = "L_arm_l7"  # Last arm link with geometry (fixed joint, but
     gripper_close_q: list[float] = [
         1.20,  # L_th_j0: thumb abduction (close towards palm)
         -0.30,  # L_th_j1: thumb flexion (negative closes)
@@ -221,14 +217,12 @@ class VegaCfg(RobotCfg):
     # ==================== Default Joint Positions ====================
     # Default home positions (can be customized based on use case)
     default_joint_positions: dict[str, float] = {
-
         "head_j2": 0.0,
-        "head_j3": 0.0,
-
-        "R_arm_j1":2.54,
+        "head_j3": -0.1,
+        "R_arm_j1": -1.54,
         "R_arm_j2": -0.56,
         "R_arm_j3": -0.57,
-        "R_arm_j4": -2.36,
+        "R_arm_j4": -2.2,
         "R_arm_j5": -1.31,
         "R_arm_j6": 0.0,
         "R_arm_j7": 0.0,
@@ -237,27 +231,24 @@ class VegaCfg(RobotCfg):
         "R_mf_j1": 0.0,
         "R_rf_j1": 0.0,
         "R_th_j0": 0.0,
-
         "R_th_j1": 0.0,
-        "L_arm_j1": 2.38,
+        "L_arm_j1": 3.06,
         "L_arm_j2": 0.25,
-        "L_arm_j3":-0.12,
-        "L_arm_j4": -1.705,
+        "L_arm_j3": -0.12,
+        "L_arm_j4": -2.705,
         "L_arm_j5": -1.69,
         "L_arm_j6": 0.0,
         "L_arm_j7": -0.84,
         # "torso_j1": 0.38,
         "torso_j2": 0.49,
         # "torso_j3": 0.00,
-
         "R_ff_j2": 0.0,
         "R_lf_j2": 0.0,
         "R_mf_j2": 0.0,
         "R_rf_j2": 0.0,
         "R_th_j2": 0.0,
         "R_wheel_j1": -0.63783,
-        "L_wheel_j1":0.63783,
-
+        "L_wheel_j1": 0.63783,
         "R_wheel_j2": 0.0,
         "L_wheel_j2": 0.0,
         "B_wheel_j1": 0.0,
@@ -279,13 +270,9 @@ class VegaCfg(RobotCfg):
         "L_wheel_j1",
     }
 
-    origial_config_joint: list[str] = {
-        "B_wheel_j1",
-         "B_wheel_j2"
-    }
+    origial_config_joint: list[str] = {"B_wheel_j1", "B_wheel_j2"}
 
     velocity_joints: list[str] = ["R_wheel_j2", "L_wheel_j2"]
-
 
     torque_limits: dict[str, float] = {
         "head_j1": 150.0,
@@ -332,7 +319,17 @@ class VegaCfg(RobotCfg):
         "R_rf_j2",
     }
 
-    num_joints_all: int = len(actuators) + len(mimic_joints) + len(default_fixed_joints) + len(velocity_joints) + len(origial_config_joint)
-    print(f"Joints Length INFO: {num_joints_all} != {len(default_joint_positions)}, With actuators length: {len(actuators)} + mimic joints length: {len(mimic_joints)} + default fixed joints length: {len(default_fixed_joints)} + velocity joints length: {len(velocity_joints)}")
+    num_joints_all: int = (
+        len(actuators)
+        + len(mimic_joints)
+        + len(default_fixed_joints)
+        + len(velocity_joints)
+        + len(origial_config_joint)
+    )
+    print(
+        f"Joints Length INFO: {num_joints_all} != {len(default_joint_positions)}, With actuators length: {len(actuators)} + mimic joints length: {len(mimic_joints)} + default fixed joints length: {len(default_fixed_joints)} + velocity joints length: {len(velocity_joints)}"
+    )
 
-    assert num_joints_all == len(default_joint_positions), f"num_joints_all: {num_joints_all} != len(default_joint_positions): {len(default_joint_positions)} + velocity joints length: {len(velocity_joints)}"
+    assert num_joints_all == len(default_joint_positions), (
+        f"num_joints_all: {num_joints_all} != len(default_joint_positions): {len(default_joint_positions)} + velocity joints length: {len(velocity_joints)}"
+    )

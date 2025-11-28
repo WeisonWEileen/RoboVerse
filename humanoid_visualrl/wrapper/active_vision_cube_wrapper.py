@@ -490,8 +490,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _pre_physics_step(self, actions):
         # extract the last element of the actions as the robot yaw action
         self.robot_yaw_buffer_action[:, 0] = actions[:, -1]
-        super()._pre_physics_step(actions[:, :-1])
-        return self.actions
+        actions = super()._pre_physics_step(actions[:, :-1])
+        return actions
 
     def _pre_reset_hook(self, env_ids=None):
         if self.cfg.randomize_material:

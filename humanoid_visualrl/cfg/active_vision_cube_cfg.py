@@ -256,22 +256,22 @@ class BaseTableHumanoidTaskCfg:
 
     objects = ["33o1zhw3", "cube", "270o9y3w"]
     objects = [
-        # RigidObjCfg(
-        #     name="table",
-        #     scale=(1, 1, 1),  # work with g1
-        #     # scale=(0.60, 0.2, 0.60), # work with vega
-        #     physics=PhysicStateType.GEOM,
-        #     usd_path="roboverse_data/scenes/tritable.usd",
-        #     fix_base_link=True,
-        #     # default_position=(0.0, 0.0, 0.65),
-        #     default_position=(0.18, 0.0, 0.1),
-        #     # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
-        #     # default_orientation=(1.0, 0.0, 0.0, 0.0),
-        #     default_orientation=(0.7071, 0.0, 0.0, -0.7071),
-        #     collision_enabled=True,
-        #     # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-        #     # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
-        # ),
+        RigidObjCfg(
+            name="table",
+            scale=(1, 1, 1),  # work with g1
+            # scale=(0.60, 0.2, 0.60), # work with vega
+            physics=PhysicStateType.GEOM,
+            usd_path="roboverse_data/scenes/tritable.usd",
+            fix_base_link=True,
+            # default_position=(0.0, 0.0, 0.65),
+            default_position=(0.18, 0.0, 0.1),
+            # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
+            # default_orientation=(1.0, 0.0, 0.0, 0.0),
+            default_orientation=(0.7071, 0.0, 0.0, -0.7071),
+            collision_enabled=True,
+            # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+            # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        ),
         # RigidObjCfg(
         #     name="wall",
         #     scale=(4.0, 4.0, 1.8),
@@ -586,24 +586,33 @@ class BaseTableHumanoidTaskCfg:
         # breakpoint()
         if "wrist_close_to_object" in self.reward_weights:
             self.ppo_cfg.policy.masking_all = False
-            self.mask_joint_names = [
-                "right_elbow_joint",
-                "right_shoulder_pitch_joint",
-                "right_shoulder_roll_joint",
-                "right_shoulder_yaw_joint",
-            ]
+            if self.robot == "vega":
+                self.mask_joint_names = [
+                ]
+            else:
+                self.mask_joint_names = [
+                    "right_elbow_joint",
+                    "right_shoulder_pitch_joint",
+                    "right_shoulder_roll_joint",
+                    "right_shoulder_yaw_joint",
+                ]
         else:
             self.ppo_cfg.policy.masking_all = True
             self.mask_joint_names = [
-                "right_elbow_joint",
-                "right_shoulder_pitch_joint",
-                "right_shoulder_roll_joint",
-                "right_shoulder_yaw_joint",
-                "left_elbow_joint",
-                "left_shoulder_pitch_joint",
-                "left_shoulder_roll_joint",
-                "left_shoulder_yaw_joint",
-            ]
+                    "R_arm_j1",
+                    "R_arm_j2",
+                    "R_arm_j3",
+                    "R_arm_j4",
+                    "R_arm_j5",
+                    "R_arm_j6",
+                    "R_arm_j7",
+                    "R_th_j0",
+                    "R_th_j1",
+                    "R_ff_j1",
+                    "R_mf_j1",
+                    "R_rf_j1",
+                    "R_lf_j1",
+                ]
 
         if self.robot in ["g1_static_dex1"]:
             self.init_states[0]["robots"] = {
@@ -720,7 +729,7 @@ class BaseTableHumanoidTaskCfg:
                         # "head_j1": 0.0,
                         "head_j2": 0.0,
                         "head_j3": -0.10,  # pitch\
-                        # "L_arm_j2": 0.0,
+                    # "L_arm_j2": 0.0,
                         # "L_arm_j3": 0.307,
                         # "L_arm_j4": -0.305,
                         # "L_arm_j5": -1.69,

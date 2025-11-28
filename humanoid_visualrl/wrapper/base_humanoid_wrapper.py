@@ -65,12 +65,11 @@ class HumanoidBaseWrapper(RslRlWrapper):
             )
             self._update_opencv_status_text()
         self._load_actuator_indices(scenario.robots[0])
-        
 
     def _load_actuator_indices(self, robot):
         """Load actuator indices from robot cfg."""
         joint_names = self.env.get_joint_names(robot.name)
-        self.actuator_indices = [joint_names.index(jn) for jn in joint_names if jn in robot.actuators.keys()]
+        self.actuator_indices = [joint_names.index(jn) for jn in joint_names if jn in sorted(robot.actuators.keys())]
         return self.actuator_indices
 
     def _parse_indices(self, robot):
@@ -118,7 +117,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         # TODO fix this
         # self.env._load_contact_sensor_idx()
-        # get 
+        # get
 
     def _parse_cfg(self, scenario):
         super()._parse_cfg(scenario)
@@ -131,7 +130,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """Parse default joint positions and torque limits from cfg."""
         torque_limits = scenario.robots[0].torque_limits
         # for joint in scenario.robots[0].actuators.keys():
-        valid_joint_names =  list(scenario.robots[0].actuators.keys()) 
+        valid_joint_names = list(scenario.robots[0].actuators.keys())
         if hasattr(scenario.robots[0], "mimic_joints"):
             valid_joint_names.extend(list(scenario.robots[0].mimic_joints))
         sorted_joint_names = sorted(valid_joint_names)
@@ -147,7 +146,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.default_joint_pd_target = (
             torch.tensor(sorted_joint_pos, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
         )
-        actuator_keys = scenario.robots[0].actuators.keys()
+        actuator_keys = sorted(scenario.robots[0].actuators.keys())
+
         self.actuated_index = [sorted_joint_names.index(name) for name in actuator_keys]
         # self.actuated_index = torch.tensor(actuated_index, device=self.device)
 
@@ -156,8 +156,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
         super()._init_buffers()
 
         # states
-        self.dof_pos = torch.zeros(self.num_envs, self.scenario.robots[0].num_joints, device=self.device, requires_grad=False)
-        self.dof_vel = torch.zeros(self.num_envs, self.scenario.robots[0].num_joints, device=self.device, requires_grad=False)
+        self.dof_pos = torch.zeros(
+            self.num_envs, self.scenario.robots[0].num_joints, device=self.device, requires_grad=False
+        )
+        self.dof_vel = torch.zeros(
+            self.num_envs, self.scenario.robots[0].num_joints, device=self.device, requires_grad=False
+        )
         self.root_state = torch.zeros(self.num_envs, 13, device=self.device, requires_grad=False)
         self.base_quat = torch.zeros(self.num_envs, 4, device=self.device, requires_grad=False)
         self.base_lin_vel = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
@@ -199,14 +203,14 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._p_gains = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         self._d_gains = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         self._torque_limits = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
-        self._action_scale = self.scenario.task.action_scale * torch.ones(
+        self._action_scale = 1.0 * torch.ones(
             self.num_envs, self.num_actions, device=self.device, requires_grad=False
         )
         dof_names = self.env.get_joint_names(self.robot.name)
 
-        self._pv_gains = 250.0 * torch.ones(self.num_envs, 2, device=self.device, requires_grad=False)
-        self._dv_gains = 50.0 * torch.ones(self.num_envs, 2, device=self.device, requires_grad=False)
-        
+        self._pv_gains = 100.0 * torch.ones(self.num_envs, 2, device=self.device, requires_grad=False)
+        self._dv_gains = 20.0 * torch.ones(self.num_envs, 2, device=self.device, requires_grad=False)
+
         i = 0
         for _, dof_name in enumerate(dof_names):
             # HACK
@@ -256,7 +260,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.last_last_actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
-        self.last_dof_vel = torch.zeros(self.num_envs, self.scenario.robots[0].num_joints, device=self.device, requires_grad=False)
+        self.last_dof_vel = torch.zeros(
+            self.num_envs, self.scenario.robots[0].num_joints, device=self.device, requires_grad=False
+        )
         self.obs_history = deque(maxlen=self.cfg.frame_stack)
         self.critic_history = deque(maxlen=self.cfg.c_frame_stack)
 
@@ -456,26 +462,26 @@ class HumanoidBaseWrapper(RslRlWrapper):
         actions = (1 - delay) * actions.to(self.device) + delay * self.actions
         clipped_actions = self.clip_actions(actions)
         self.actions = clipped_actions
-        if not self.env.control_effort_mode:
-            self.actions += self._action_scale * (self.default_joint_pd_target[:, self.actuated_index] + self.actions)
-        return self.actions
+        # if not self.env.control_effort_mode:
+        #     self.actions +=  (self.default_joint_pd_target[:, self.actuated_index] +self._action_scale * self.actions)
+        return self.actions * self._action_scale
 
     def _physics_step(self, action) -> None:
         #  set pos target
-        self.env.set_dof_targets(action)
-        self.robot_yaw_buffer_action[0] = 1.575 
+        self.env.set_dof_targets(action + self.default_joint_pd_target[:, self.actuated_index])
+        # self.robot_yaw_buffer_action[0] = 1.575
         velocity = self._compute_velocity(self.robot_yaw_buffer_action)
-            # velocity = torch.ones((self.num_envs, 2), device=self.device, dtype=torch.float) * 10
-            # velocity[:,1] *= -1
+        # velocity = torch.ones((self.num_envs, 2), device=self.device, dtype=torch.float) * 10
+        # velocity[:,1] *= -1
         self.env.scene.articulations[self.robot.name].set_joint_velocity_target(
-                -velocity, joint_ids=self._wheel_idx_original
-            )
+            -velocity, joint_ids=self._wheel_idx_original
+        )
         for _ in range(self.cfg.decimation):
             # refresh dof states
             # tensor_state = self.env.get_states()
             # self.dof_pos = tensor_state.robots[self.robot.name].joint_pos
             # self.dof_vel = tensor_state.robots[self.robot.name].joint_vel
-            
+
             if self.env.control_effort_mode:
                 # test more light weight
                 reindex = self.env.get_joint_reindex(self.robot.name)
@@ -483,8 +489,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
                 self.dof_vel = self.env.scene.articulations[self.robot.name].data.joint_vel[:, reindex]
                 torques = self._compute_effort(action)
                 self.env.set_dof_targets(torques)
-            
-
 
             self.env.simulate()
 
@@ -691,8 +695,18 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
     def _get_joint_masking_indices(self):
         mask_joint_names = self.cfg.mask_joint_names
-        self.mask_joint_indices = get_joint_reindexed_indices_from_substring(
-            self.env, self.robot.name, mask_joint_names, device=self.device
-        )
+        mask_joint_names_sorted = sorted(mask_joint_names)
+
+        actionable_joint_names_sorted = sorted(self.robot.actuators.keys())
+
+        actionable_joint_names_indices = [actionable_joint_names_sorted.index(jn) for jn in mask_joint_names_sorted]
+
+        self.mask_joint_indices = actionable_joint_names_indices
+
+        # self.mask_joint_indices = get_joint_reindexed_indices_from_substring(
+        #     self.env, self.robot.name, mask_joint_names, device=self.device
+        # )
+        # compress to actionable indices
+
         self.action_masking = torch.ones(self.num_actions, device=self.device, dtype=torch.float)
         self.action_masking[self.mask_joint_indices] = 0.0

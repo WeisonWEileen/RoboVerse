@@ -192,7 +192,7 @@ class BaseSimHandler(ABC):
 
 
     def get_actuated_joint_reindex(self, obj_name: str) -> list[int]:
-        if not hasattr(self, "_actuated_joint_reindex_cache"):
+        if not hasattr(self, "_actuated_joint_reindex_cache_local"):
             self._actuated_joint_reindex_cache_local = {}
             # self._actuated_joint_reindex_cache_global = {}
             self._actuated_in_valid_original = {}
@@ -203,11 +203,10 @@ class BaseSimHandler(ABC):
 
             actuated_joint_names_original = [jn for jn in origin_joint_names if jn in self.scenario.robots[0].actuators.keys()]
 
-            acticuated_in_local_original = [actuated_joint_names_original.index(jn) for jn in actuated_joint_names_sorted]
+            acticuated_in_local_original = [
+                actuated_joint_names_sorted.index(jn) for jn in actuated_joint_names_original
+            ]
             self._actuated_joint_reindex_cache_local[obj_name] = acticuated_in_local_original
-
-
-
 
             # valide joint + actuated joint
             valid_actuated_joint_names = [jn for jn in origin_joint_names if jn in self.scenario.robots[0].actuators.keys()]

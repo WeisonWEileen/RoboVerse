@@ -703,6 +703,7 @@ class IsaacsimHandler(BaseSimHandler):
                     stiffness=0,
                     damping=100,
                     velocity_limit=100,
+                    effort_limit=100,
                     armature=0.01,
                     friction=0.05,
                 )
