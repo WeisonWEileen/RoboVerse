@@ -84,6 +84,8 @@ class ActorCritic(nn.Module):
         Normal.set_default_validate_args(False)
 
         self.mask = action_masking.clone()
+        # concat the yaw action mask to the end of the mask
+        self.mask = torch.cat([self.mask, torch.ones(1, device=self.mask.device, dtype=self.mask.dtype)], dim=-1)
         from loguru import logger as log
 
         log.info(f"Action Masking: {self.mask}")

@@ -118,7 +118,9 @@ if __name__ == "__main__":
         # do not log, faster reset
 
         log_dir = None
-        task_cfg.max_episode_length_s = 3
+        task_cfg.max_episode_length_s = 10
+        scenario.num_envs = 8
+        
 
     log.info(f"Using simulator: {args.sim}")
     env_cls = get_task_class(args.task)

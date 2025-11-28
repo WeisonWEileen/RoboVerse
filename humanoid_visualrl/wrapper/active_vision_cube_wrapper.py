@@ -22,7 +22,7 @@ from humanoid_visualrl.utils.utils import (
 )
 from metasim.utils.math import quat_from_euler_xyz, quat_mul
 from humanoid_visualrl.utils.domain_randomization_helper import DomainRandomizationHelper
-
+from metasim.utils.math import euler_xyz_from_quat
 
 @register_task("active_vision")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
@@ -96,6 +96,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             )
             # randomize all
             self.domain_randomization_helper.scene_randomizer(env_ids=list(range(self.num_envs)))
+        # for mimic waist yaw joint control
+        self.robot_yaw_buffer = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.float)
+        # for pd control
+        self.last_robot_yaw_buffer = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.float)
+        self.robot_yaw_buffer_action = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.float)
 
         self._reset(list(range(self.num_envs)))
 
@@ -163,6 +168,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self._ema_reward = 0.05
         self.last_curriculum_update_step = 0
+
+        # wheel joint names
+        wheel_joint_names = self.robot.velocity_joints
+        original_joint_names = self.env._get_joint_names(self.robot.name, sort=False, only_valid=False)
+
+        self._wheel_idx_original = [original_joint_names.index(jn) for jn in wheel_joint_names]
+
+
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -283,6 +296,16 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         if self.compute_pixel_distance_reward or (self.enable_opencv_display and self.env._render_viewport):
             self._compute_pixel_distance()
+        
+        self.last_robot_yaw_buffer = self.robot_yaw_buffer.clone()
+        # from met
+        _, _, robot_yaw_buffer = euler_xyz_from_quat(tensor_state.robots[self.robot.name].root_state[:, 3:7])
+
+        # greater than \pi just subject 2 pi
+
+
+        robot_yaw_buffer[robot_yaw_buffer > torch.pi] -= 2 * torch.pi
+        self.robot_yaw_buffer[:, 0] = robot_yaw_buffer
 
     def _compute_pixel_distance(self):
         # target_id = next(k for k, v in self.vision_seg_info.items() if "object" in v)
@@ -406,6 +429,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.see_flag_history_ptr = 0
             self.see_flag_history_full = True
 
+    def _compute_velocity(self, actions):
+        """Compute velocity from actions. for L_wheel_j1 and R_wheel_j1."""
+        # scale the actions (generally output from policy)
+        action_scaled = self.scenario.task.action_scale * actions
+        velocity = self._pv_gains * (action_scaled - self.robot_yaw_buffer) - self._dv_gains * (self.robot_yaw_buffer - self.last_robot_yaw_buffer)
+        # velocity *= -1
+        velocity = torch.clip(velocity, -1000, 1000)
+        return velocity
+
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
@@ -419,8 +451,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 # object_pose_obs,
                 # wrist_pos_obs,  # 14
                 q,  # |A|
+                self.robot_yaw_buffer,
                 dq,  # |A|
                 self.actions,  # |A|
+                self.robot_yaw_buffer_action,
                 # diff_obs,
                 # visual_features,
             ),
@@ -431,8 +465,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             (
                 # diff_obs,  # 3
                 q,  # |A|
+                self.robot_yaw_buffer,
                 dq,  # |A|
                 self.actions,
+                self.robot_yaw_buffer_action,
                 # visual_features,
             ),
             dim=-1,
@@ -450,6 +486,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.obs_buf = (self.obs_buf, self.vision_rgb_buf)
         self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
+
+    def _pre_physics_step(self, actions):
+        # extract the last element of the actions as the robot yaw action
+        self.robot_yaw_buffer_action[:, 0] = actions[:, -1]
+        super()._pre_physics_step(actions[:, :-1])
+        return self.actions
 
     def _pre_reset_hook(self, env_ids=None):
         if self.cfg.randomize_material:
@@ -517,10 +559,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
         # FIXME: this is a hack to reset the object_showup
         self.see_flag_float[env_ids] = 0.0
+        self.robot_yaw_buffer[env_ids] = 0.0
+        self.last_robot_yaw_buffer[env_ids] = 0.0
+        self.robot_yaw_buffer_action[env_ids] = 0.0
 
     def _check_reset(self):
         # move 0.05 to config
-        terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.5
+        terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 9.5
         # self.reset_buf = self.timeout_buf
         self.reset_buf = self.timeout_buf | terminate
         return self.reset_buf

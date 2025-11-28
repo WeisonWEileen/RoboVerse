@@ -203,6 +203,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.num_envs, self.num_actions, device=self.device, requires_grad=False
         )
         dof_names = self.env.get_joint_names(self.robot.name)
+
+        self._pv_gains = 250.0 * torch.ones(self.num_envs, 2, device=self.device, requires_grad=False)
+        self._dv_gains = 50.0 * torch.ones(self.num_envs, 2, device=self.device, requires_grad=False)
         
         i = 0
         for _, dof_name in enumerate(dof_names):
@@ -455,11 +458,18 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.actions = clipped_actions
         if not self.env.control_effort_mode:
             self.actions += self._action_scale * (self.default_joint_pd_target[:, self.actuated_index] + self.actions)
-
         return self.actions
 
     def _physics_step(self, action) -> None:
+        #  set pos target
         self.env.set_dof_targets(action)
+        self.robot_yaw_buffer_action[0] = 1.575 
+        velocity = self._compute_velocity(self.robot_yaw_buffer_action)
+            # velocity = torch.ones((self.num_envs, 2), device=self.device, dtype=torch.float) * 10
+            # velocity[:,1] *= -1
+        self.env.scene.articulations[self.robot.name].set_joint_velocity_target(
+                -velocity, joint_ids=self._wheel_idx_original
+            )
         for _ in range(self.cfg.decimation):
             # refresh dof states
             # tensor_state = self.env.get_states()
@@ -473,6 +483,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
                 self.dof_vel = self.env.scene.articulations[self.robot.name].data.joint_vel[:, reindex]
                 torques = self._compute_effort(action)
                 self.env.set_dof_targets(torques)
+            
+
 
             self.env.simulate()
 

@@ -88,8 +88,7 @@ class OnPolicyRunner:
 
         policy_class = eval(self.policy_cfg.pop("class_name"))
         # TODO: hard code here
-        # breakpoint()
-        policy: ActorCriticCNN = policy_class(num_obs, num_privileged_obs, self.env.num_actions, action_masking=env.action_masking, **self.policy_cfg).to(
+        policy: ActorCriticCNN = policy_class(num_obs, num_privileged_obs, self.env.num_actions +1, action_masking=env.action_masking, **self.policy_cfg).to(
             self.device
         )
 
@@ -165,7 +164,7 @@ class OnPolicyRunner:
             self.num_steps_per_env,
             [num_obs],
             [num_privileged_obs],
-            [self.env.num_actions],
+            [self.env.num_actions + 1],
             obs_vision_shape=obs_vision_shape,
         )
 

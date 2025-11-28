@@ -530,26 +530,26 @@ class IsaacsimHandler(BaseSimHandler):
             object_states[obj.name] = state
 
         robot_states = {}
-        for obj in self.robots:
+        for robot in self.robots:
             ## TODO: dof_pos_target, dof_vel_target, dof_torque
-            obj_inst = self.scene.articulations[obj.name]
-            joint_reindex = self.get_joint_reindex(obj.name)
-            body_reindex = self.get_body_reindex(obj.name)
-            root_state = obj_inst.data.root_state_w
+            robot_inst = self.scene.articulations[robot.name]
+            joint_reindex = self.get_joint_reindex(robot.name)
+            body_reindex = self.get_body_reindex(robot.name)
+            root_state = robot_inst.data.root_state_w
             root_state[:, 0:3] -= self.scene.env_origins
-            body_state = obj_inst.data.body_state_w[:, body_reindex]
+            body_state = robot_inst.data.body_state_w[:, body_reindex]
             body_state[:, :, 0:3] -= self.scene.env_origins[:, None, :]
             state = RobotState(
                 root_state=root_state,
-                body_names=self._get_body_names(obj.name),
+                body_names=self._get_body_names(robot.name),
                 body_state=body_state,
-                joint_pos=obj_inst.data.joint_pos[:, self._none_static_joint_idx_reindexed],
-                joint_vel=obj_inst.data.joint_vel[:, self._none_static_joint_idx_reindexed],
-                joint_pos_target=obj_inst.data.joint_pos_target[:, self._none_static_joint_idx_reindexed],
-                joint_vel_target=obj_inst.data.joint_vel_target[:, self._none_static_joint_idx_reindexed],
-                joint_effort_target=obj_inst.data.joint_effort_target[:, self._none_static_joint_idx_reindexed],
+                joint_pos=robot_inst.data.joint_pos[:, self._none_static_joint_idx_reindexed],
+                joint_vel=robot_inst.data.joint_vel[:, self._none_static_joint_idx_reindexed],
+                joint_pos_target=robot_inst.data.joint_pos_target[:, self._none_static_joint_idx_reindexed],
+                joint_vel_target=robot_inst.data.joint_vel_target[:, self._none_static_joint_idx_reindexed],
+                joint_effort_target=robot_inst.data.joint_effort_target[:, self._none_static_joint_idx_reindexed],
             )
-            robot_states[obj.name] = state
+            robot_states[robot.name] = state
 
         camera_states = {}
         # Force camera sensor update to ensure correct position data
@@ -680,11 +680,13 @@ class IsaacsimHandler(BaseSimHandler):
             robot_actuators_names.append(jn)
         if hasattr(robot, "default_fixed_joints"):
             robot_actuators_names.extend(robot.default_fixed_joints)
+        if hasattr(robot, "velocity_joints"):
+            robot_actuators_names.extend(robot.velocity_joints)
 
         sorted_actuator_names = sorted(robot_actuators_names)
         actuators = {}
         for jn in sorted_actuator_names:
-            if jn in robot.actuators.keys():
+            if jn in robot.actuators.keys() :
                 actuators[jn] = ImplicitActuatorCfg(
                     # prim_path
                     joint_names_expr=[jn],
@@ -695,8 +697,20 @@ class IsaacsimHandler(BaseSimHandler):
                     friction=0.05,
                     # TODO armature to be determined
                 )
-            else:
-                actuators[jn] = ImplicitActuatorCfg(joint_names_expr=[jn], stiffness=100000.0, damping=1000.0, friction=300)
+            elif hasattr(robot, "velocity_joints") and jn in robot.velocity_joints:
+                actuators[jn] = ImplicitActuatorCfg(
+                    joint_names_expr=[jn],
+                    stiffness=0,
+                    damping=100,
+                    velocity_limit=100,
+                    armature=0.01,
+                    friction=0.05,
+                )
+            elif hasattr(robot, "default_fixed_joints") and jn in robot.default_fixed_joints:
+                actuators[jn] = ImplicitActuatorCfg(joint_names_expr=[jn], stiffness=100000.0, damping=1000.0, friction=300, armature=1000.0)
+            elif hasattr(robot, "origial_config_joints") and jn in robot.origial_config_joints:
+                actuators[jn] = ImplicitActuatorCfg(joint_names_expr=[jn], stiffness=0.0, damping=0.00, friction=0.01,armature=0.01)
+                # default config joint just let it go
 
 
 
@@ -716,7 +730,8 @@ class IsaacsimHandler(BaseSimHandler):
                 ),
                 articulation_props=sim_utils.ArticulationRootPropertiesCfg(
                     fix_root_link=robot.fix_base_link,
-                    enabled_self_collisions=robot.enabled_self_collisions,
+                    # enabled_self_collisions=robot.enabled_self_collisions,
+                    enabled_self_collisions=False,
                     solver_position_iteration_count=4,
                     solver_velocity_iteration_count=0,
                 ),
@@ -782,8 +797,6 @@ class IsaacsimHandler(BaseSimHandler):
 
 
 
-
-
         
         # put actuator joints and mimic joints into the obs_joint_list
         # get indices for obs_joints 
@@ -796,7 +809,7 @@ class IsaacsimHandler(BaseSimHandler):
         if robot_joint_prim_root and robot_joint_prim_root.IsValid():
             for prim in robot_joint_prim_root.GetChildren():
                 joint_name = prim.GetName()
-                if joint_name in valide_joint_names:
+                if joint_name in robot.default_joint_positions.keys():
                     continue
                 prim_type = prim.GetTypeName()
                 if prim_type == "PhysicsRevoluteJoint" or prim_type == "PhysicsPrismaticJoint":
@@ -836,6 +849,7 @@ class IsaacsimHandler(BaseSimHandler):
 
     @property
     def none_static_joint_idx_original(self) -> list[int]:
+        # let velocity joints alone here, do not do anything
         if not hasattr(self, "_none_static_joint_idx_original"):
             none_static_joint_names = []
             for joint_name in self.robots[0].actuators.keys():
@@ -1105,7 +1119,7 @@ class IsaacsimHandler(BaseSimHandler):
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 friction_combine_mode="multiply",
                 restitution_combine_mode="multiply",
-                static_friction=1.0,
+                static_friction=20.0,
                 dynamic_friction=1.0,
                 restitution=0.0,
             ),
@@ -1554,7 +1568,6 @@ class IsaacsimHandler(BaseSimHandler):
         # if intrinsics is not None, use intrinsics to create the camera spawn
         if camera.intrinsics is not None:
             spawn_cfg = sim_utils.PinholeCameraCfg.from_intrinsic_matrix(
-                
                 camera.intrinsics,
                 camera.width,
                 camera.height,

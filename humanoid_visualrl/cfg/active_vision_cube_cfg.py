@@ -256,22 +256,22 @@ class BaseTableHumanoidTaskCfg:
 
     objects = ["33o1zhw3", "cube", "270o9y3w"]
     objects = [
-        RigidObjCfg(
-            name="table",
-            scale=(1, 1, 1),  # work with g1
-            # scale=(0.60, 0.2, 0.60), # work with vega
-            physics=PhysicStateType.GEOM,
-            usd_path="roboverse_data/scenes/tritable.usd",
-            fix_base_link=True,
-            # default_position=(0.0, 0.0, 0.65),
-            default_position=(0.0, 0.0, 0.1),
-            # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
-            # default_orientation=(1.0, 0.0, 0.0, 0.0),
-            default_orientation=(0.7071, 0.0, 0.0, -0.7071),
-            collision_enabled=True,
-            # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
-            # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
-        ),
+        # RigidObjCfg(
+        #     name="table",
+        #     scale=(1, 1, 1),  # work with g1
+        #     # scale=(0.60, 0.2, 0.60), # work with vega
+        #     physics=PhysicStateType.GEOM,
+        #     usd_path="roboverse_data/scenes/tritable.usd",
+        #     fix_base_link=True,
+        #     # default_position=(0.0, 0.0, 0.65),
+        #     default_position=(0.18, 0.0, 0.1),
+        #     # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
+        #     # default_orientation=(1.0, 0.0, 0.0, 0.0),
+        #     default_orientation=(0.7071, 0.0, 0.0, -0.7071),
+        #     collision_enabled=True,
+        #     # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
+        #     # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
+        # ),
         # RigidObjCfg(
         #     name="wall",
         #     scale=(4.0, 4.0, 1.8),
@@ -289,7 +289,7 @@ class BaseTableHumanoidTaskCfg:
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
             fix_base_link=False,
-            default_position=(0.3, 0.1, 0.851),
+            default_position=(0.3, 0.1, 1.851),
             mass=0.2,  # 增加质量以确保更好的物理行为
         ),
         # ArticulationObjCfg(
@@ -365,7 +365,7 @@ class BaseTableHumanoidTaskCfg:
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.58, 0.0, 0.89]),
+                    "pos": torch.tensor([0.58, 0.0, 0.2]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -711,14 +711,15 @@ class BaseTableHumanoidTaskCfg:
             ]
             self.init_states[0]["robots"] = {
                 "vega": {
-                    "pos": torch.tensor([0.0, 0.0, 0.57]),
-                    "rot": torch.tensor([0.8, 0.0, 0.0, 0.0]),
+                    "pos": torch.tensor([0.0, 0.0, 0.06]),
+                    # "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                    # same the torso 27 degress
+                    # "rot": torch.tensor([0.9701373249726354 0.0, 0.24255632478857206, 0.0]),
+                    "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
-                        
                         # "head_j1": 0.0,
                         "head_j2": 0.0,
-                        "head_j3": -0.10, # pitch
-                        # "L_arm_j1": 0.92,
+                        "head_j3": -0.10,  # pitch\
                         # "L_arm_j2": 0.0,
                         # "L_arm_j3": 0.307,
                         # "L_arm_j4": -0.305,
@@ -757,16 +758,17 @@ class BaseTableHumanoidTaskCfg:
                 },
             }
             self.num_joints = len(self.init_states[0]["robots"]["vega"]["dof_pos"])
-            self.num_actions = 15
+            self.num_actions = 15  # 2 head, 7 arm, 6 hand, 1 wheel(yaw orientation)
+            self.num_extra_actions = 1
             
 
         
         else:
             raise ValueError(f"Robot {self.robot} not supported")
 
-        self.num_single_obs = self.num_joints * 3-5
+        self.num_single_obs = self.num_joints * 3-5 + 2 # -5 for mimic joint are not in action +2 means yaw orientation desire and current
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)
-        self.single_num_privileged_obs: int = self.num_joints * 3 -5
+        self.single_num_privileged_obs: int = self.num_joints * 3 -5 + 2
         self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
 
 
