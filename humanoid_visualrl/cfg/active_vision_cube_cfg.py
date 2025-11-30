@@ -740,7 +740,7 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j3": -0.13,
                         "R_arm_j4": -2.65,
                         "R_arm_j5": -0.36,
-                        "R_arm_j6": 0.3,
+                        "R_arm_j6": 0.4,
                         "R_arm_j7": 0.0,
                         # Right hand - open
                         "R_th_j0": 0.0,
