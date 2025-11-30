@@ -278,18 +278,18 @@ class BaseTableHumanoidTaskCfg:
             physics=PhysicStateType.GEOM,
             usd_path="roboverse_data/wall.usd",
             fix_base_link=True,
-            default_position=(0.0, 0.0, 0.8),
+            default_position=(0.0, 0.0, 0.5),
             collision_enabled=False,
             enable_gyroscopic_forces=False,
         ),
         PrimitiveCubeCfg(
             name="object",
-            size=(0.07, 0.07, 0.07),
+            size=(0.05, 0.05, 0.05),
             color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
             fix_base_link=False,
-            default_position=(0.4, 0.1, 1.851),
+            default_position=(0.55, 0.1, 0.75+0.07/2+0.01),
             mass=0.2,  # 增加质量以确保更好的物理行为
         ),
         # ArticulationObjCfg(
@@ -365,7 +365,7 @@ class BaseTableHumanoidTaskCfg:
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.48, 0.0, 0.8]),
+                    "pos": torch.tensor([0.65, 0.0, 0.8]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -543,7 +543,7 @@ class BaseTableHumanoidTaskCfg:
         self.time_range_increase_curriculum = 0.01
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
         # self.randomize_object_radius_range = 0.0
-        self.randomize_object_radius_range = 0.1
+        self.randomize_object_radius_range = 0.17
 
         # self.randomize_object_radius = 0.85  # max
         # self.randomize_object_radius = 0.55
@@ -741,9 +741,9 @@ class BaseTableHumanoidTaskCfg:
                         # "torso_j3": 0.00,
                         # Right arm - neutral pose
                         "R_arm_j1": -1.54,
-                        "R_arm_j2": -0.56,
-                        "R_arm_j3": -0.57,
-                        "R_arm_j4": -2.2,
+                        "R_arm_j2": -0.66,
+                        "R_arm_j3": -0.67,
+                        "R_arm_j4": -2.4,
                         "R_arm_j5": -1.31,
                         "R_arm_j6": 0.0,
                         "R_arm_j7": 0.0,

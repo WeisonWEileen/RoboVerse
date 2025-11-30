@@ -164,7 +164,7 @@ def get_robot(robot_name: str) -> RobotCfg:
 def get_scene(scene_name: str) -> SceneCfg:
     """Get the scene cfg instance from the scene name.
 
-    Args:
+Args:
         scene_name: The name of the scene.
 
     Returns:

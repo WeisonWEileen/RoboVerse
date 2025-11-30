@@ -132,9 +132,9 @@ class VegaCfg(RobotCfg):
     control_type: dict[str, Literal["position", "effort"]] = {
         "base_yaw_joint": "position",
         # Base wheels
-        "B_wheel_j1": "effort",
+        # "B_wheel_j1": "effort",
         "B_wheel_j2": "position",
-        "R_wheel_j1": "effort",
+        # "R_wheel_j1": "effort",
         "R_wheel_j2": "position",
         "L_wheel_j1": "position",
         "L_wheel_j2": "position",
@@ -224,8 +224,8 @@ class VegaCfg(RobotCfg):
         "head_j3": -0.1,
         "R_arm_j1": -1.54,
         "R_arm_j2": -0.56,
-        "R_arm_j3": -0.57,
-        "R_arm_j4": -2.2,
+        "R_arm_j3": -0.3,
+        "R_arm_j4": -2.4,
         "R_arm_j5": -1.31,
         "R_arm_j6": 0.0,
         "R_arm_j7": 0.0,
@@ -235,6 +235,8 @@ class VegaCfg(RobotCfg):
         "R_rf_j1": 0.0,
         "R_th_j0": 0.0,
         "R_th_j1": 0.0,
+
+        # tight initial pose
         "L_arm_j1": 3.06,
         "L_arm_j2": 0.25,
         "L_arm_j3": -0.12,
@@ -243,6 +245,16 @@ class VegaCfg(RobotCfg):
         "L_arm_j6": 0.0,
         "L_arm_j7": -0.84,
         # "torso_j1": 0.38,
+
+        # open initial pose
+        # "L_arm_j1": 0.0,
+        # "L_arm_j2": 0.0,
+        # "L_arm_j3": 0.0,
+        # "L_arm_j4": 0.0,
+        # "L_arm_j5": 0.0,
+        # "L_arm_j6": -0.63,
+        # "L_arm_j7": 0.0,
+
         "torso_j2": 0.49,
         # "torso_j3": 0.00,
         "R_ff_j2": 0.0,
@@ -252,10 +264,10 @@ class VegaCfg(RobotCfg):
         "R_th_j2": 0.0,
         "R_wheel_j1": -0.63783,
         "L_wheel_j1": 0.63783,
-        "R_wheel_j2": 0.0,
-        "L_wheel_j2": 0.0,
-        "B_wheel_j1": 0.0,
-        "B_wheel_j2": 0.0,
+        # "R_wheel_j2": 0.0,
+        # "L_wheel_j2": 0.0,
+        # "B_wheel_j1": 0.0,
+        # "B_wheel_j2": 0.0,
     }
     # joints that need to change default joint positions but not be actuated and fixed
     default_fixed_joints: list[str] = {
@@ -273,9 +285,9 @@ class VegaCfg(RobotCfg):
         "L_wheel_j1",
     }
 
-    origial_config_joint: list[str] = {"B_wheel_j1", "B_wheel_j2"}
+    # origial_config_joint: list[str] = {"B_wheel_j1", "B_wheel_j2"}
 
-    velocity_joints: list[str] = ["R_wheel_j2", "L_wheel_j2"]
+    # velocity_joints: list[str] = ["R_wheel_j2", "L_wheel_j2"]
 
     torque_limits: dict[str, float] = {
         "base_yaw_joint": 1000.0,
@@ -327,13 +339,13 @@ class VegaCfg(RobotCfg):
         len(actuators)
         + len(mimic_joints)
         + len(default_fixed_joints)
-        + len(velocity_joints)
-        + len(origial_config_joint)
+        # + len(velocity_joints)
+        # + len(origial_config_joint)
     )
     print(
-        f"Joints Length INFO: {num_joints_all} != {len(default_joint_positions)}, With actuators length: {len(actuators)} + mimic joints length: {len(mimic_joints)} + default fixed joints length: {len(default_fixed_joints)} + velocity joints length: {len(velocity_joints)}"
+        f"Joints Length INFO: {num_joints_all} != {len(default_joint_positions)}, With actuators length: {len(actuators)} + mimic joints length: {len(mimic_joints)} + default fixed joints length: {len(default_fixed_joints)}"
     )
 
     assert num_joints_all == len(default_joint_positions), (
-        f"num_joints_all: {num_joints_all} != len(default_joint_positions): {len(default_joint_positions)} + velocity joints length: {len(velocity_joints)}"
+        f"num_joints_all: {num_joints_all} != len(default_joint_positions): {len(default_joint_positions)}"
     )

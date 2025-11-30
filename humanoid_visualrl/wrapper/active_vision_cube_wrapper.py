@@ -170,10 +170,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.last_curriculum_update_step = 0
 
         # wheel joint names
-        wheel_joint_names = self.robot.velocity_joints
-        original_joint_names = self.env._get_joint_names(self.robot.name, sort=False, only_valid=False)
+        # wheel_joint_names = self.robot.velocity_joints
+        # original_joint_names = self.env._get_joint_names(self.robot.name, sort=False, only_valid=False)
 
-        self._wheel_idx_original = [original_joint_names.index(jn) for jn in wheel_joint_names]
+        # self._wheel_idx_original = [original_joint_names.index(jn) for jn in wheel_joint_names]
+
+
+
+
+
 
 
 
