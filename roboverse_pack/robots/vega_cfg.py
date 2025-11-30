@@ -21,12 +21,12 @@ class VegaCfg(RobotCfg):
 
     name: str = "vega"
 
-    fix_base_link: bool = False  # Humanoid robots typically have fixed base in simulation
+    fix_base_link: bool = True  # Humanoid robots typically have fixed base in simulation
 
     # Asset paths
     # urdf_path: str = "roboverse_pack/robots/robots_vega/humanoid/vega_1/vega.urdf"
     # usd_path: str = "roboverse_data/robots/vega/vega.usd"
-    usd_path: str = "roboverse_data/robots/vega/vega_new.usd"
+    usd_path: str = "roboverse_data/robots/vega/vega_root_revol.usd"
     # Physical properties
     enabled_gravity: bool = True  # Disable gravity for default setup
 
@@ -36,6 +36,7 @@ class VegaCfg(RobotCfg):
         # "L_arm_j7": BaseActuatorCfg(velocity_limit=2.7, torque_limit=25.0, stiffness=5e3, damping=500),
         # Right arm - progressive stiffness from base to tip
         # "head_j1": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=6, damping=3.2), # we do not need roll
+        "base_yaw_joint": BaseActuatorCfg(velocity_limit=2.4, torque_limit=1000.0, stiffness=10000.0, damping=2000.0),
         "head_j2": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=2.5, damping=3.2),
         "head_j3": BaseActuatorCfg(velocity_limit=2.4, torque_limit=150.0, stiffness=6, damping=3.2),
         "R_arm_j1": BaseActuatorCfg(
@@ -129,6 +130,7 @@ class VegaCfg(RobotCfg):
     # ==================== Control Types ====================
     # Default to position control for all joints
     control_type: dict[str, Literal["position", "effort"]] = {
+        "base_yaw_joint": "position",
         # Base wheels
         "B_wheel_j1": "effort",
         "B_wheel_j2": "position",
@@ -217,6 +219,7 @@ class VegaCfg(RobotCfg):
     # ==================== Default Joint Positions ====================
     # Default home positions (can be customized based on use case)
     default_joint_positions: dict[str, float] = {
+        "base_yaw_joint": 0.0,  
         "head_j2": 0.0,
         "head_j3": -0.1,
         "R_arm_j1": -1.54,
@@ -275,6 +278,7 @@ class VegaCfg(RobotCfg):
     velocity_joints: list[str] = ["R_wheel_j2", "L_wheel_j2"]
 
     torque_limits: dict[str, float] = {
+        "base_yaw_joint": 1000.0,
         "head_j1": 150.0,
         "head_j2": 150.0,
         "head_j3": 150.0,

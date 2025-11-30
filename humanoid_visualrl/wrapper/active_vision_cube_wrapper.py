@@ -451,10 +451,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 # object_pose_obs,
                 # wrist_pos_obs,  # 14
                 q,  # |A|
-                self.robot_yaw_buffer,
+                # self.robot_yaw_buffer,
                 dq,  # |A|
                 self.actions,  # |A|
-                self.robot_yaw_buffer_action,
+                # self.robot_yaw_buffer_action,
                 # diff_obs,
                 # visual_features,
             ),
@@ -465,10 +465,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             (
                 # diff_obs,  # 3
                 q,  # |A|
-                self.robot_yaw_buffer,
+                # self.robot_yaw_buffer,
                 dq,  # |A|
                 self.actions,
-                self.robot_yaw_buffer_action,
+                # self.robot_yaw_buffer_action,
                 # visual_features,
             ),
             dim=-1,

@@ -264,10 +264,10 @@ class BaseTableHumanoidTaskCfg:
             usd_path="roboverse_data/scenes/tritable.usd",
             fix_base_link=True,
             # default_position=(0.0, 0.0, 0.65),
-            default_position=(0.28, 0.0, 0.1),
+            default_position=(0.15, 0.0, 0.75),
             # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
-            # default_orientation=(1.0, 0.0, 0.0, 0.0),
-            default_orientation=(0.7071, 0.0, 0.0, -0.7071),
+            default_orientation=(1.0, 0.0, 0.0, 0.0),
+            # default_orientation=(0.7071, 0.0, 0.0, -0.7071),
             collision_enabled=True,
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
@@ -278,7 +278,7 @@ class BaseTableHumanoidTaskCfg:
             physics=PhysicStateType.GEOM,
             usd_path="roboverse_data/wall.usd",
             fix_base_link=True,
-            default_position=(0.0, 0.0, 0.3),
+            default_position=(0.0, 0.0, 0.8),
             collision_enabled=False,
             enable_gyroscopic_forces=False,
         ),
@@ -727,6 +727,7 @@ class BaseTableHumanoidTaskCfg:
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         # "head_j1": 0.0,
+                        "base_yaw_joint": 0.0,
                         "head_j2": 0.0,
                         "head_j3": -0.10,  # pitch\
                     # "L_arm_j2": 0.0,
@@ -767,7 +768,7 @@ class BaseTableHumanoidTaskCfg:
                 },
             }
             self.num_joints = len(self.init_states[0]["robots"]["vega"]["dof_pos"])
-            self.num_actions = 15  # 2 head, 7 arm, 6 hand, 1 wheel(yaw orientation)
+            self.num_actions = 16  # 2 head, 7 arm, 6 hand, 1 wheel(yaw orientation)
             self.num_extra_actions = 1
             
 
@@ -775,9 +776,9 @@ class BaseTableHumanoidTaskCfg:
         else:
             raise ValueError(f"Robot {self.robot} not supported")
 
-        self.num_single_obs = self.num_joints * 3-5 + 2 # -5 for mimic joint are not in action +2 means yaw orientation desire and current
+        self.num_single_obs = self.num_joints * 2 + self.num_actions # q. dq. actions
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)
-        self.single_num_privileged_obs: int = self.num_joints * 3 -5 + 2
+        self.single_num_privileged_obs: int = self.num_single_obs
         self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
 
 

@@ -470,12 +470,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
         #  set pos target
         self.env.set_dof_targets(action + self.default_joint_pd_target[:, self.actuated_index])
         # self.robot_yaw_buffer_action[0] = 1.575
-        velocity = self._compute_velocity(self.robot_yaw_buffer_action)
+        # velocity = self._compute_velocity(self.robot_yaw_buffer_action)
         # velocity = torch.ones((self.num_envs, 2), device=self.device, dtype=torch.float) * 10
         # velocity[:,1] *= -1
-        self.env.scene.articulations[self.robot.name].set_joint_velocity_target(
-            -velocity, joint_ids=self._wheel_idx_original
-        )
+        # self.env.scene.articulations[self.robot.name].set_joint_velocity_target(
+        #     -velocity, joint_ids=self._wheel_idx_original
+        # )
         for _ in range(self.cfg.decimation):
             # refresh dof states
             # tensor_state = self.env.get_states()
