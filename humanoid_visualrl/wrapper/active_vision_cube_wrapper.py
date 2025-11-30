@@ -492,12 +492,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.obs_buf = (self.obs_buf, self.vision_rgb_buf)
         self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
 
-    def _pre_physics_step(self, actions):
-        # extract the last element of the actions as the robot yaw action
-        self.robot_yaw_buffer_action[:, 0] = actions[:, -1]
-        actions = super()._pre_physics_step(actions[:, :-1])
-        return actions
-
     def _pre_reset_hook(self, env_ids=None):
         if self.cfg.randomize_material:
             self.domain_randomization_helper.randomization(env_ids=env_ids, step_count=self.common_step_counter)
