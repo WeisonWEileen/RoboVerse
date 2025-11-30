@@ -17,6 +17,7 @@ from loguru import logger as log
 
 from metasim.scenario.objects import RigidObjCfg, ArticulationObjCfg
 
+
 @configclass
 class LeggedRobotRunnerCfg:
     """Configuration for PPO."""
@@ -57,7 +58,7 @@ class LeggedRobotRunnerCfg:
         """Entropy coefficient."""
         num_learning_epochs = 5
         """Number of learning epochs."""
-        num_mini_batches = 4 #batch size = 128 // 4 = 32  batch size = 64 // 2 = 32 
+        num_mini_batches = 4  # batch size = 128 // 4 = 32  batch size = 64 // 2 = 32
         """mini batch size = num_envs*n_steps / num_mini_batches"""
         learning_rate = 1.0e-3
         # schedule = "adaptive"
@@ -67,7 +68,7 @@ class LeggedRobotRunnerCfg:
         lam = 0.95
         desired_kl = 0.01
         max_grad_norm = 1.0
-        kl_clip_thres=0.2
+        kl_clip_thres = 0.2
         class_name = "PPO"
 
         # mask = True
@@ -264,7 +265,7 @@ class BaseTableHumanoidTaskCfg:
             usd_path="roboverse_data/scenes/tritable.usd",
             fix_base_link=True,
             # default_position=(0.0, 0.0, 0.65),
-            default_position=(0.15, 0.0, 0.75),
+            default_position=(0.10, 0.0, 0.85),
             # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
             default_orientation=(1.0, 0.0, 0.0, 0.0),
             # default_orientation=(0.7071, 0.0, 0.0, -0.7071),
@@ -278,18 +279,18 @@ class BaseTableHumanoidTaskCfg:
             physics=PhysicStateType.GEOM,
             usd_path="roboverse_data/wall.usd",
             fix_base_link=True,
-            default_position=(0.0, 0.0, 0.5),
+            default_position=(0.0, 0.0, 0.3),
             collision_enabled=False,
             enable_gyroscopic_forces=False,
         ),
         PrimitiveCubeCfg(
             name="object",
-            size=(0.05, 0.05, 0.05),
+            size=(0.06, 0.06, 0.06),
             color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
             fix_base_link=False,
-            default_position=(0.55, 0.1, 0.75+0.07/2+0.01),
+            default_position=(0.55, 0.1, 0.85 + 0.07 / 2 + 0.01),
             mass=0.2,  # 增加质量以确保更好的物理行为
         ),
         # ArticulationObjCfg(
@@ -319,7 +320,7 @@ class BaseTableHumanoidTaskCfg:
         #     randomize_material=True,
         # ),
     ]
-    
+
     # cameras
     """objects in the environment"""
     traj_filepath = None
@@ -339,10 +340,6 @@ class BaseTableHumanoidTaskCfg:
     max_episode_length: int = 2400
     randomize_obj_material: bool = False
     update_obj_material_step_interval: int = 96 * 100
-
-
-    
-
 
     @configclass
     class HumanoidExtraCfg:
@@ -365,13 +362,11 @@ class BaseTableHumanoidTaskCfg:
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.65, 0.0, 0.8]),
+                    "pos": torch.tensor([0.60, 0.0, 0.85 + 0.07 / 2 + 0.01]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
-            "robots": {
-                
-            },
+            "robots": {},
         }
     ]
 
@@ -487,24 +482,21 @@ class BaseTableHumanoidTaskCfg:
             "table": {
                 "material_path": ["roboverse_data/materials/arnold/Wood/Walnut.mdl"],
             },
-            
         },
-        "randomize_cfg":{
+        "randomize_cfg": {
             "light": {
-            "intensity_range": (0.25, 2.0),
-            "randomize_orientation": True,
-            "randomize_position": True,
-            "position_range": ((-100.0, 100.0), (-100.0, 100.0), (-0.0, 0.0)),
-
-        }},
+                "intensity_range": (0.25, 2.0),
+                "randomize_orientation": True,
+                "randomize_position": True,
+                "position_range": ((-100.0, 100.0), (-100.0, 100.0), (-0.0, 0.0)),
+            }
+        },
         "env_setting_randomize_freq": 1,
     }
 
     mode: Literal["train", "test"] = "train"
     occlude_cube = False
     occlude_cube_yaw_range = 0.8
-
-
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
@@ -538,7 +530,6 @@ class BaseTableHumanoidTaskCfg:
             self.curriculum_avg_thres_lower = 0.85
             self.curriculum_randomize_iteration_interval = 200
 
-            
         self.see_flag_his_win_length = 1000
         self.time_range_increase_curriculum = 0.01
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
@@ -554,7 +545,6 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_object_yaw_stages = [0.2, 0.5, 1.0]  # Multipliers for randomize_object_yaw_range
         self.curriculum_object_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
         self.curriculum_object_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
-
 
         # self.actor_critic_class = "use_rnn_foveated"
         # self.actor_critic_class = "use_rnn_foveated"
@@ -587,8 +577,7 @@ class BaseTableHumanoidTaskCfg:
         if "wrist_close_to_object" in self.reward_weights:
             self.ppo_cfg.policy.masking_all = False
             if self.robot == "vega":
-                self.mask_joint_names = [
-                ]
+                self.mask_joint_names = []
             else:
                 self.mask_joint_names = [
                     "right_elbow_joint",
@@ -599,20 +588,20 @@ class BaseTableHumanoidTaskCfg:
         else:
             self.ppo_cfg.policy.masking_all = True
             self.mask_joint_names = [
-                    "R_arm_j1",
-                    "R_arm_j2",
-                    "R_arm_j3",
-                    "R_arm_j4",
-                    "R_arm_j5",
-                    "R_arm_j6",
-                    "R_arm_j7",
-                    "R_th_j0",
-                    "R_th_j1",
-                    "R_ff_j1",
-                    "R_mf_j1",
-                    "R_rf_j1",
-                    "R_lf_j1",
-                ]
+                "R_arm_j1",
+                "R_arm_j2",
+                "R_arm_j3",
+                "R_arm_j4",
+                "R_arm_j5",
+                "R_arm_j6",
+                "R_arm_j7",
+                "R_th_j0",
+                "R_th_j1",
+                "R_ff_j1",
+                "R_mf_j1",
+                "R_rf_j1",
+                "R_lf_j1",
+            ]
 
         if self.robot in ["g1_static_dex1"]:
             self.init_states[0]["robots"] = {
@@ -714,9 +703,15 @@ class BaseTableHumanoidTaskCfg:
             self.cameras[0].height = int(600 / SCALE_FACTOR)
             self.cameras[0].focal_length = 0.2112011909484863
             self.cameras[0].intrinsics = [
-                365.5782165527344 / SCALE_FACTOR, 0.0, 494.15985107421875 / SCALE_FACTOR,
-                0.0, 365.5782165527344 / SCALE_FACTOR, 301.70770263671875 / SCALE_FACTOR,
-                0.0, 0.0, 1.0,
+                365.5782165527344 / SCALE_FACTOR,
+                0.0,
+                494.15985107421875 / SCALE_FACTOR,
+                0.0,
+                365.5782165527344 / SCALE_FACTOR,
+                301.70770263671875 / SCALE_FACTOR,
+                0.0,
+                0.0,
+                1.0,
             ]
             self.init_states[0]["robots"] = {
                 "vega": {
@@ -730,7 +725,7 @@ class BaseTableHumanoidTaskCfg:
                         "base_yaw_joint": 0.0,
                         "head_j2": 0.0,
                         "head_j3": -0.10,  # pitch\
-                    # "L_arm_j2": 0.0,
+                        # "L_arm_j2": 0.0,
                         # "L_arm_j3": 0.307,
                         # "L_arm_j4": -0.305,
                         # "L_arm_j5": -1.69,
@@ -745,7 +740,7 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j3": -0.13,
                         "R_arm_j4": -2.65,
                         "R_arm_j5": -0.36,
-                        "R_arm_j6": 0.0,
+                        "R_arm_j6": 0.3,
                         "R_arm_j7": 0.0,
                         # Right hand - open
                         "R_th_j0": 0.0,
@@ -770,33 +765,29 @@ class BaseTableHumanoidTaskCfg:
             self.num_joints = len(self.init_states[0]["robots"]["vega"]["dof_pos"])
             self.num_actions = 16  # 2 head, 7 arm, 6 hand, 1 wheel(yaw orientation)
             self.num_extra_actions = 1
-            
 
-        
         else:
             raise ValueError(f"Robot {self.robot} not supported")
 
-        self.num_single_obs = self.num_joints * 2 + self.num_actions # q. dq. actions
+        self.num_single_obs = self.num_joints * 2 + self.num_actions  # q. dq. actions
         self.num_observations: int = int(self.frame_stack * self.num_single_obs)
         self.single_num_privileged_obs: int = self.num_single_obs
         self.num_privileged_obs = int(self.c_frame_stack * self.single_num_privileged_obs)
 
-
         self.randomize_robot_yaw_range = 1.6
-
 
         self.ema_alpha = 0.03
         self.thres_radius = 28
         self.pixel_reward_offset = torch.exp(
-            -torch.sqrt(
-                torch.tensor([self.cameras[0].width ** 2 + self.cameras[0].height ** 2])
-            )
+            -torch.sqrt(torch.tensor([self.cameras[0].width ** 2 + self.cameras[0].height ** 2]))
             / 2.0
             / self.reward_pixel_norm_at_object_exp_sharpness
         )
-        self.ema_reward_threshold = (torch.exp(torch.tensor([- self.thres_radius / self.reward_pixel_norm_at_object_exp_sharpness])) - self.pixel_reward_offset).item()
+        self.ema_reward_threshold = (
+            torch.exp(torch.tensor([-self.thres_radius / self.reward_pixel_norm_at_object_exp_sharpness]))
+            - self.pixel_reward_offset
+        ).item()
         log.info(f"reward_threshold: {self.ema_reward_threshold}")
-
 
         self.seed = self.ppo_cfg.seed
 
@@ -804,11 +795,10 @@ class BaseTableHumanoidTaskCfg:
             (self.robot, "object"),
         ]
 
-
         # randomize occlude cube material
         from metasim.randomization.presets.scene_presets import SceneMaterialCollections
+
         if self.occlude_cube:
             self.randomize_cfg["material_cfg"]["occlusion_cube"] = {
                 "material_path": SceneMaterialCollections.wall_materials(),
             }
-
