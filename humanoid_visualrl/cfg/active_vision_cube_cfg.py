@@ -59,7 +59,7 @@ class LeggedRobotRunnerCfg:
         """Number of learning epochs."""
         num_mini_batches = 4 #batch size = 128 // 4 = 32  batch size = 64 // 2 = 32 
         """mini batch size = num_envs*n_steps / num_mini_batches"""
-        learning_rate = 1.0e-4
+        learning_rate = 1.0e-3
         # schedule = "adaptive"
         schedule = "fixed"
         # schedule = "momentum"
@@ -85,7 +85,7 @@ class LeggedRobotRunnerCfg:
 
     # logging
     # logger: str = "wandb"
-    wandb_project: str = "active_vision"
+    wandb_project: str = "active_vision_vega"
 
     save_interval = 200
     """save interval for checkpoints"""
@@ -530,7 +530,7 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
             # self.randomize_object_yaw_range = 2.14
-            self.curriculum_object_yaw = False
+            self.curriculum_object_yaw = True
             self.curriculum_initial_object_yaw_range = 0.5
             self.randomize_object_yaw_range = 1.57
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
