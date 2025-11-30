@@ -22,8 +22,9 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --randomize_material \
-    --enable_opencv_display \
     --wandb \
+    # --debug \
+    # --enable_opencv_display \
 
 
     # --schedule "momentum" 

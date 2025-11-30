@@ -222,13 +222,15 @@ class VegaCfg(RobotCfg):
         "base_yaw_joint": 0.0,  
         "head_j2": 0.0,
         "head_j3": -0.1,
-        "R_arm_j1": -1.54,
-        "R_arm_j2": -0.56,
-        "R_arm_j3": -0.3,
-        "R_arm_j4": -2.4,
-        "R_arm_j5": -1.31,
+
+        "R_arm_j1": -2.06,
+        "R_arm_j2": -0.21,
+        "R_arm_j3": -0.13,
+        "R_arm_j4": -2.65,
+        "R_arm_j5": -0.36,
         "R_arm_j6": 0.0,
         "R_arm_j7": 0.0,
+
         "R_ff_j1": 0.0,
         "R_lf_j1": 0.0,
         "R_mf_j1": 0.0,
@@ -238,12 +240,12 @@ class VegaCfg(RobotCfg):
 
         # tight initial pose
         "L_arm_j1": 3.06,
-        "L_arm_j2": 0.25,
-        "L_arm_j3": -0.12,
-        "L_arm_j4": -2.705,
-        "L_arm_j5": -1.69,
-        "L_arm_j6": 0.0,
-        "L_arm_j7": -0.84,
+        "L_arm_j2": 0.00,
+        "L_arm_j3": 0.0,
+        "L_arm_j4": -2.1,
+        "L_arm_j5": 0.0,
+        "L_arm_j6": -0.71,
+        "L_arm_j7": -0.13,
         # "torso_j1": 0.38,
 
         # open initial pose
@@ -255,8 +257,9 @@ class VegaCfg(RobotCfg):
         # "L_arm_j6": -0.63,
         # "L_arm_j7": 0.0,
 
-        "torso_j2": 0.49,
-        # "torso_j3": 0.00,
+        "torso_j1": 0.74,
+        "torso_j2": 1.11,
+        "torso_j3": -0.52,
         "R_ff_j2": 0.0,
         "R_lf_j2": 0.0,
         "R_mf_j2": 0.0,
@@ -278,9 +281,9 @@ class VegaCfg(RobotCfg):
         "L_arm_j5",
         "L_arm_j6",
         "L_arm_j7",
-        # "torso_j1",
+        "torso_j1",
         "torso_j2",
-        # "torso_j3",
+        "torso_j3",
         "R_wheel_j1",
         "L_wheel_j1",
     }

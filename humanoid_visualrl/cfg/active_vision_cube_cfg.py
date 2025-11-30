@@ -740,11 +740,11 @@ class BaseTableHumanoidTaskCfg:
                         # "torso_j2": 0.95,
                         # "torso_j3": 0.00,
                         # Right arm - neutral pose
-                        "R_arm_j1": -1.54,
-                        "R_arm_j2": -0.66,
-                        "R_arm_j3": -0.67,
-                        "R_arm_j4": -2.4,
-                        "R_arm_j5": -1.31,
+                        "R_arm_j1": -2.06,
+                        "R_arm_j2": -0.21,
+                        "R_arm_j3": -0.13,
+                        "R_arm_j4": -2.65,
+                        "R_arm_j5": -0.36,
                         "R_arm_j6": 0.0,
                         "R_arm_j7": 0.0,
                         # Right hand - open
