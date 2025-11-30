@@ -478,6 +478,7 @@ class IsaacsimHandler(BaseSimHandler):
 
                 robot_inst.write_joint_position_to_sim(buf[env_ids, :], env_ids=env_ids)
                 robot_inst.write_joint_velocity_to_sim(self._joint_vel_buffer[env_ids, :], env_ids=env_ids)
+            self.sim.forward()
                 # robot_inst.write_data_to_sim()
 
                 # self.scene.write_data_to_sim()

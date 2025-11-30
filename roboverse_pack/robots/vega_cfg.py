@@ -221,7 +221,7 @@ class VegaCfg(RobotCfg):
     default_joint_positions: dict[str, float] = {
         "base_yaw_joint": 0.0,  
         "head_j2": 0.0,
-        "head_j3": -0.1,
+        "head_j3": 0.0,
 
         "R_arm_j1": -2.06,
         "R_arm_j2": -0.21,

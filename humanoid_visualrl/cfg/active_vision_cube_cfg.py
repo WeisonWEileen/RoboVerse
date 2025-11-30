@@ -265,7 +265,7 @@ class BaseTableHumanoidTaskCfg:
             usd_path="roboverse_data/scenes/tritable.usd",
             fix_base_link=True,
             # default_position=(0.0, 0.0, 0.65),
-            default_position=(0.10, 0.0, 0.85),
+            default_position=(0.20, 0.0, 0.85),
             # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
             default_orientation=(1.0, 0.0, 0.0, 0.0),
             # default_orientation=(0.7071, 0.0, 0.0, -0.7071),
@@ -290,7 +290,7 @@ class BaseTableHumanoidTaskCfg:
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
             fix_base_link=False,
-            default_position=(0.55, 0.1, 0.85 + 0.07 / 2 + 0.01),
+            default_position=(0.55, 0.1, 0.9 + 0.07 / 2 + 0.01),
             mass=0.2,  # 增加质量以确保更好的物理行为
         ),
         # ArticulationObjCfg(
@@ -362,7 +362,7 @@ class BaseTableHumanoidTaskCfg:
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.60, 0.0, 0.85 + 0.07 / 2 + 0.01]),
+                    "pos": torch.tensor([0.70, 0.0, 0.85 + 0.07 / 2 + 0.01]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -522,9 +522,9 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
             # self.randomize_object_yaw_range = 2.14
-            self.curriculum_object_yaw = True
-            self.curriculum_initial_object_yaw_range = 0.5
-            self.randomize_object_yaw_range = 1.57
+            self.curriculum_object_yaw = False
+            self.curriculum_initial_object_yaw_range = 0.7
+            self.randomize_object_yaw_range = 2.2
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
             self.curriculum_avg_thres_higher = 0.93
             self.curriculum_avg_thres_lower = 0.85
@@ -724,7 +724,7 @@ class BaseTableHumanoidTaskCfg:
                         # "head_j1": 0.0,
                         "base_yaw_joint": 0.0,
                         "head_j2": 0.0,
-                        "head_j3": -0.10,  # pitch\
+                        "head_j3": 0.0,  # pitch\
                         # "L_arm_j2": 0.0,
                         # "L_arm_j3": 0.307,
                         # "L_arm_j4": -0.305,

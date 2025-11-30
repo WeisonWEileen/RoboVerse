@@ -16,7 +16,7 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 128 \
+    --num_envs 80 \
     --task "active_vision" \
     --run_name "benchmark_random_material_bppt_48_curri" \
     --device "cuda:0" \
