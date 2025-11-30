@@ -327,7 +327,7 @@ def list_state_to_tensor(
             joint_vel=jvel,
             joint_pos_target=jpos_t,
             joint_vel_target=jvel_t,
-            joint_effort_target=jeff_t,
+            joint_effort=jeff_t,
         )
 
     # -------- cameras ---------------------------------------------

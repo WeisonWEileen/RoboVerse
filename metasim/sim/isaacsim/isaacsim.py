@@ -546,9 +546,9 @@ class IsaacsimHandler(BaseSimHandler):
                 body_state=body_state,
                 joint_pos=robot_inst.data.joint_pos[:, self._none_static_joint_idx_reindexed],
                 joint_vel=robot_inst.data.joint_vel[:, self._none_static_joint_idx_reindexed],
-                joint_pos_target=robot_inst.data.joint_pos_target[:, self._none_static_joint_idx_reindexed],
-                joint_vel_target=robot_inst.data.joint_vel_target[:, self._none_static_joint_idx_reindexed],
-                joint_effort_target=robot_inst.data.joint_effort_target[:, self._none_static_joint_idx_reindexed],
+                # joint_pos_target=robot_inst.data.joint_pos_target[:, self._none_static_joint_idx_reindexed],
+                # joint_vel_target=robot_inst.data.joint_vel_target[:, self._none_static_joint_idx_reindexed],
+                joint_effort=robot_inst.data.applied_torque[:, self._none_static_joint_idx_reindexed],
             )
             robot_states[robot.name] = state
 

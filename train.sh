@@ -16,15 +16,15 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 80 \
+    --num_envs 128 \
     --task "active_vision" \
     --run_name "benchmark_random_material_bppt_48_curri" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --randomize_material \
     --wandb \
+    --enable_opencv_display \
     # --debug \
-    # --enable_opencv_display \
 
 
     # --schedule "momentum" 

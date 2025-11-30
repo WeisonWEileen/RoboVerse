@@ -668,6 +668,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         dist = torch.norm(wrist_pos[:, 0, :3] - self.object_pose_buf[:, :3], dim=1)
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
         return reward
+    
+    def _reward_energy_consumption(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        torque = tensor_state.robots[robot_name].joint_effort[:, self.actuated_index] * self.action_masking
+        return torch.sum(torch.square(torque), dim=1)
 
     def _reward_goal_object_dist(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         # TODO: implement this

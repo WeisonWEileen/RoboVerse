@@ -86,11 +86,11 @@ class RobotState:
     """Joint positions. Shape is (num_envs, num_joints)."""
     joint_vel: torch.Tensor
     """Joint velocities. Shape is (num_envs, num_joints)."""
-    joint_pos_target: torch.Tensor
     """Joint positions target. Shape is (num_envs, num_joints)."""
-    joint_vel_target: torch.Tensor
     """Joint velocities target. Shape is (num_envs, num_joints)."""
-    joint_effort_target: torch.Tensor
+    joint_effort: torch.Tensor
+    joint_vel_target: torch.Tensor | None = None
+    joint_pos_target: torch.Tensor | None = None
     """Joint effort targets. Shape is (num_envs, num_joints)."""
 
 
