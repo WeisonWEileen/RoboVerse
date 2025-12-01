@@ -376,7 +376,7 @@ class BaseTableHumanoidTaskCfg:
 
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 1.4,
-        "energy_consumption": -1e-5,
+        "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
         # "wrist_close_to_object_and_grasp": 1.0,
@@ -515,6 +515,7 @@ class BaseTableHumanoidTaskCfg:
 
             self.reward_weights = {
                 "pixel_norm_at_object": 1.0,
+                "energy_consumption": -1e-7,
                 "wrist_close_to_object": 1.0,
             }
         else:
@@ -523,7 +524,7 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
             # self.randomize_object_yaw_range = 2.14
-            self.curriculum_object_yaw = True
+            self.curriculum_object_yaw = False
             self.curriculum_initial_object_yaw_range = 0.7
             self.randomize_object_yaw_range = 2.2
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
@@ -578,7 +579,21 @@ class BaseTableHumanoidTaskCfg:
         if "wrist_close_to_object" in self.reward_weights:
             self.ppo_cfg.policy.masking_all = False
             if self.robot == "vega":
-                self.mask_joint_names = []
+                self.mask_joint_names = [
+                    # "R_arm_j1",
+                    # "R_arm_j2",
+                    # "R_arm_j3",
+                    # "R_arm_j4",
+                    # "R_arm_j5",
+                    # "R_arm_j6",
+                    # "R_arm_j7",
+                    "R_th_j0",
+                    "R_th_j1",
+                    "R_ff_j1",
+                    "R_mf_j1",
+                    "R_rf_j1",
+                    "R_lf_j1",
+                ]
             else:
                 self.mask_joint_names = [
                     "right_elbow_joint",

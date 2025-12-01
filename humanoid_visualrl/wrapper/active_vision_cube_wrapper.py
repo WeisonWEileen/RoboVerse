@@ -199,6 +199,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.right_index_intermediate_link_indices = get_body_reindexed_indices_from_substring(
                 self.env, self.robot.name, self.robot.right_index_intermediate_link, device=self.device
             )
+        elif self.robot.name == "vega":
+            self.left_index_intermediate_link_indices = get_body_reindexed_indices_from_substring(
+                self.env, self.robot.name, ["R_ff_l2"], device=self.device
+            )
 
 
 

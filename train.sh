@@ -18,13 +18,15 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "benchmark_random_material_bppt_48_curri" \
+    --run_name "benchmark_random_material_bppt_48_energy_reaching" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --randomize_material \
     --wandb \
     --enable_opencv_display \
-    # --debug \
+    --resume \
+    --load_run "2025_1130_171851" \
+    --checkpoint 3200 \
 
 
     # --schedule "momentum" 
