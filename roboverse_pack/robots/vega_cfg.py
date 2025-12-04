@@ -26,7 +26,7 @@ class VegaCfg(RobotCfg):
     # Asset paths
     # urdf_path: str = "roboverse_pack/robots/robots_vega/humanoid/vega_1/vega.urdf"
     # usd_path: str = "roboverse_data/robots/vega/vega.usd"
-    usd_path: str = "roboverse_data/robots/vega/vega_root_revol.usd"
+    usd_path: str = "roboverse_data/robots/vega/vega_root_rot_finger_tip.usd"
     # Physical properties
     enabled_gravity: bool = True  # Disable gravity for default setup
 
@@ -380,4 +380,11 @@ class VegaCfg(RobotCfg):
         "R_arm_j5",
         "R_arm_j6",
         "R_arm_j7",
+    }
+
+    tip_link_names = {
+        "R_ff_tip",
+        "R_lf_tip",
+        "R_mf_tip",
+        "R_rf_tip",
     }

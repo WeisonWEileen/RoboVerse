@@ -414,20 +414,6 @@ class BaseTableHumanoidTaskCfg:
     from metasim.scenario.cameras import PinholeCameraCfg
 
     cameras = [
-        # PinholeCameraCfg(
-        #     name="camera_first_person",
-        #     data_types=["rgb", "semantic_seg"],
-        #     # data_types=["rgb", "instance_id_seg"],
-        #     # data_types=["rgb", "semantic_seg"],
-        #     width=128,
-        #     height=96,
-        #     pos=(1.5, -1.5, 1.5),
-        #     look_at=(0.0, 0.0, 0.0),
-        #     mount_to="g1_static_dex1",
-        #     mount_link="torso_link/d435_link",
-        #     mount_pos=(0.0, 0.0, 0.0),
-        #     mount_quat=(1.0, 0.0, 0.0, 0.0),
-        # )
         # same as unitree isaacsim
         PinholeCameraCfg(
             name="camera_first_person",
@@ -526,7 +512,7 @@ class BaseTableHumanoidTaskCfg:
             self.reward_weights = {
                 "pixel_norm_at_object": 1.0,
                 # "energy_consumption": -1e-7,
-                "wrist_close_to_object": 3.0,
+                "finger_close_to_object": 3.0,
                 "right_arm_default_joint_pos": -0.17,
                 
             }

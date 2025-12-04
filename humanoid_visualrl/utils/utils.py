@@ -23,6 +23,7 @@ def get_body_reindexed_indices_from_substring(
     """Given substrings of body name, find all the bodies indices in sorted order."""
     matches = []
     sorted_names = sim_handler.get_body_names(obj_name, sort=True)
+    body_names = sorted(body_names)
 
     for name in body_names:
         for i, s in enumerate(sorted_names):

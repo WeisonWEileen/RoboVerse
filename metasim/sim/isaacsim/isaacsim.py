@@ -81,7 +81,6 @@ class IsaacsimHandler(BaseSimHandler):
 
         # TODO  randomize this
 
-
     def _init_keyboard(self) -> None:
         import carb
 
@@ -288,7 +287,6 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.update(dt=self.physics_dt)
         self._update_camera_pose()
 
-
         # self._load_valid_joint_indices()
 
         # Force a render to update camera data after position is set
@@ -309,7 +307,8 @@ class IsaacsimHandler(BaseSimHandler):
         self._init_viewports()
         self._is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         a = self.none_static_joint_idx_original
-    
+
+
     # for ac
     @property
     def valid_joint_names(self):
@@ -479,13 +478,13 @@ class IsaacsimHandler(BaseSimHandler):
                 robot_inst.write_joint_position_to_sim(buf[env_ids, :], env_ids=env_ids)
                 robot_inst.write_joint_velocity_to_sim(self._joint_vel_buffer[env_ids, :], env_ids=env_ids)
             self.sim.forward()
-                # robot_inst.write_data_to_sim()
+            # robot_inst.write_data_to_sim()
 
-                # self.scene.write_data_to_sim()
+            # self.scene.write_data_to_sim()
 
         else:
             raise Exception("Unsupported state type, must be DictEnvState or TensorState")
-        
+
         self.sim.forward()
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
@@ -604,8 +603,6 @@ class IsaacsimHandler(BaseSimHandler):
         #     return np.zeros((self.cfg.viewer.resolution[1], self.cfg.viewer.resolution[0], 3), dtype=np.uint8)
         # else:
         return rgb_data[:, :, :3]
-    
-
 
     def set_dof_targets(self, actions: torch.Tensor) -> None:
         # TODO: support set torque
@@ -646,12 +643,8 @@ class IsaacsimHandler(BaseSimHandler):
                 robot_inst.set_joint_position_target(
                     actions_all,
                     joint_ids=self.none_static_joint_idx_original,  #
-                    env_ids=torch.arange(self.num_envs, device=self.device)
+                    env_ids=torch.arange(self.num_envs, device=self.device),
                 )
-
-
-
-
 
     def _simulate(self):
         # from isaaclab.sim import SimulationContext
@@ -675,6 +668,7 @@ class IsaacsimHandler(BaseSimHandler):
         import isaaclab.sim as sim_utils
         from isaaclab.actuators import ImplicitActuatorCfg
         from isaaclab.assets import Articulation, ArticulationCfg
+
         robot_actuators_names = []
         # include real actuators and default fixed joints
         for jn in robot.actuators.keys():
@@ -687,7 +681,7 @@ class IsaacsimHandler(BaseSimHandler):
         sorted_actuator_names = sorted(robot_actuators_names)
         actuators = {}
         for jn in sorted_actuator_names:
-            if jn in robot.actuators.keys() :
+            if jn in robot.actuators.keys():
                 actuators[jn] = ImplicitActuatorCfg(
                     # prim_path
                     joint_names_expr=[jn],
@@ -709,13 +703,14 @@ class IsaacsimHandler(BaseSimHandler):
                     friction=0.05,
                 )
             elif hasattr(robot, "default_fixed_joints") and jn in robot.default_fixed_joints:
-                actuators[jn] = ImplicitActuatorCfg(joint_names_expr=[jn], stiffness=100000.0, damping=1000.0, friction=300, armature=1000.0)
+                actuators[jn] = ImplicitActuatorCfg(
+                    joint_names_expr=[jn], stiffness=100000.0, damping=1000.0, friction=300, armature=1000.0
+                )
             elif hasattr(robot, "origial_config_joints") and jn in robot.origial_config_joints:
-                actuators[jn] = ImplicitActuatorCfg(joint_names_expr=[jn], stiffness=0.0, damping=0.00, friction=0.01,armature=0.01)
+                actuators[jn] = ImplicitActuatorCfg(
+                    joint_names_expr=[jn], stiffness=0.0, damping=0.00, friction=0.01, armature=0.01
+                )
                 # default config joint just let it go
-
-
-
 
         cfg = ArticulationCfg(
             spawn=sim_utils.UsdFileCfg(
@@ -755,8 +750,10 @@ class IsaacsimHandler(BaseSimHandler):
             # },
             actuators=actuators,
         )
-        # now it do not support simultaneous position and effort control 
-        assert not any(robot.control_type[jn] == "position" and robot.control_type[jn] == "effort" for jn in robot.actuators.keys()), "Now it do not support simultaneous position and effort control"
+        # now it do not support simultaneous position and effort control
+        assert not any(
+            robot.control_type[jn] == "position" and robot.control_type[jn] == "effort" for jn in robot.actuators.keys()
+        ), "Now it do not support simultaneous position and effort control"
         if any(robot.control_type[jn] == "effort" for jn in robot.actuators.keys()):
             self.control_effort_mode = True
         else:
@@ -789,7 +786,7 @@ class IsaacsimHandler(BaseSimHandler):
                 none_static_joint_names.append(joint_name)
 
         # copy none_static_joint_names, and add default_fixed_joints
-        valide_joint_names = none_static_joint_names 
+        valide_joint_names = none_static_joint_names
         if hasattr(robot, "default_fixed_joints"):
             valide_joint_names.extend(robot.default_fixed_joints)
 
@@ -797,15 +794,13 @@ class IsaacsimHandler(BaseSimHandler):
         self._joint_pos_buffer = torch.zeros((self.num_envs, len(robot.default_joint_positions)), device=self.device)
         self._joint_vel_buffer = torch.zeros((self.num_envs, len(robot.default_joint_positions)), device=self.device)
 
-
-
-        
         # put actuator joints and mimic joints into the obs_joint_list
-        # get indices for obs_joints 
+        # get indices for obs_joints
         # if robot have mimic joints attribute, and the joint name is in the mimic joints attribute, then skip
 
         from pxr import Usd, UsdPhysics
         import omni.usd
+
         stage = omni.usd.get_context().get_stage()
         robot_joint_prim_root = stage.GetPrimAtPath(f"/World/envs/env_0/{robot.name}/joints")  # 你的机器人joints路径
         if robot_joint_prim_root and robot_joint_prim_root.IsValid():
@@ -847,7 +842,24 @@ class IsaacsimHandler(BaseSimHandler):
         else:
             print(f"Robot prim not found at: /World/envs/env_0/{robot.name}")
         # print("Joints found:", joint_list)
-        print("=" * 100)
+        # print("=" * 100)
+        # prim_path = "/World/envs/env_0/vega/R_ff_l2/R_ff_tip"
+        # from isaacsim.core.utils.prims import get_prim_at_path
+
+        # prim = get_prim_at_path(prim_path)
+        # # rb_api = UsdPhysics.RigidBodyAPI.Get(stage, prim.GetPath())
+
+        # # 把 attribute 及其当前值都打印一下
+        # print("=== attributes & values ===")
+        # for attr in prim.GetAttributes():
+        #     print(attr.GetName(), "=", attr.Get())
+        # print("=== property names ===")
+        # a = rb_api.GetKinematicEnabledAttr().Get()
+        # # rb_api = UsdPhysics.RigidBodyAPI.Apply(prim)
+        # rb_api.CreateKinematicEnabledAttr(True)
+        # # # 列出所有 property 名字
+        # for name in prim.GetPropertyNames():
+        #     print(name)
 
     @property
     def none_static_joint_idx_original(self) -> list[int]:
@@ -869,21 +881,22 @@ class IsaacsimHandler(BaseSimHandler):
                     none_static_joint_idx_original.append(i)
             self._none_static_joint_idx_original = none_static_joint_idx_original
 
-            # 
+            #
             none_static_joint_names_sorted = sorted(none_static_joint_names)
             none_static_joint_idx_reindexed = [origin_joint_names.index(jn) for jn in none_static_joint_names_sorted]
             self._none_static_joint_idx_reindexed = none_static_joint_idx_reindexed
-      
+
             static_static_joint_idx_original = []
             for i, joint_name in enumerate(origin_joint_names):
                 if joint_name in stattic_joint_names:
                     static_static_joint_idx_original.append(i)
 
             self.scene.articulations[self.robots[0].name].set_joint_position_target(
-                self._joint_pos_buffer[:, static_static_joint_idx_original], joint_ids=static_static_joint_idx_original, env_ids=torch.arange(self.num_envs, device=self.device)
+                self._joint_pos_buffer[:, static_static_joint_idx_original],
+                joint_ids=static_static_joint_idx_original,
+                env_ids=torch.arange(self.num_envs, device=self.device),
             )
         return self._none_static_joint_idx_original
-
 
     def _add_object(self, obj: BaseObjCfg) -> None:
         """Add an object to the scene."""
@@ -912,7 +925,10 @@ class IsaacsimHandler(BaseSimHandler):
             return
 
         if obj.fix_base_link:
-            rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True,)
+            rigid_props = sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=True,
+                kinematic_enabled=True,
+            )
         else:
             rigid_props = sim_utils.RigidBodyPropertiesCfg()
         if obj.collision_enabled:
@@ -934,7 +950,7 @@ class IsaacsimHandler(BaseSimHandler):
                         ),
                         physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=2.0),
                         # physics_material=sim_utils.RigidBodyMaterialCfg(
-                            # static_friction=2.0,
+                        # static_friction=2.0,
                         # ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
@@ -1591,7 +1607,7 @@ class IsaacsimHandler(BaseSimHandler):
                 horizontal_aperture=camera.horizontal_aperture,
                 clipping_range=camera.clipping_range,
             )
-         
+
         camera_inst = TiledCamera(
             TiledCameraCfg(
                 # update_period
@@ -1786,4 +1802,3 @@ class IsaacsimHandler(BaseSimHandler):
             obj_inst.root_physx_view.set_material_properties(materials, torch.tensor(env_ids, device=device))
         else:
             raise ValueError(f"Object {obj_name} not found")
-
