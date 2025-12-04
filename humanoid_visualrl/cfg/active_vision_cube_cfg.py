@@ -267,7 +267,7 @@ class BaseTableHumanoidTaskCfg:
             usd_path="roboverse_data/scenes/tritable.usd",
             fix_base_link=True,
             # default_position=(0.0, 0.0, 0.65),
-            default_position=(0.20, 0.0, 0.85),
+            default_position=(0.20, 0.0, 0.50),
             # default_orientation=(0.7071, 0.7071, 0.0000, 0.0000),
             default_orientation=(1.0, 0.0, 0.0, 0.0),
             # default_orientation=(0.7071, 0.0, 0.0, -0.7071),
@@ -364,7 +364,7 @@ class BaseTableHumanoidTaskCfg:
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.52, 0.0, 0.85 + 0.07 / 2 + 0.01]),
+                    "pos": torch.tensor([0.52, 0.0, 0.50 + 0.07 / 2 + 0.01]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
