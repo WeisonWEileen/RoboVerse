@@ -378,6 +378,7 @@ class BaseTableHumanoidTaskCfg:
 
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 1.4,
+        "finger_close_to_object": 3.0,
         # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
@@ -514,6 +515,7 @@ class BaseTableHumanoidTaskCfg:
                 # "energy_consumption": -1e-7,
                 "finger_close_to_object": 3.0,
                 "right_arm_default_joint_pos": -0.17,
+                
                 
             }
             if self.enable_grasp:

@@ -772,15 +772,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             )
 
     def _reward_grasp_binary(self, tensor_state, robot_name, cfg):
-        wrist_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :7][
-            :, 0, :3
-        ]
-        obj_pos = self.object_pose_buf[:, :3]
+        finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]
+        # get mean
+        dist = torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
 
-        dist = torch.norm(wrist_pos - obj_pos, dim=1)
+        
         close = (dist < self.cfg.reward_lift_object_z).float()  # e.g. 0.06 m
 
-        lift = obj_pos[:, 2] - self.init_states.objects["object"].root_state[:, 2]
+        lift = self.object_pose_buf[:, 2] - self.init_states.objects["object"].root_state[:, 2]
         lifted = (lift > self.cfg.reward_lift_object_z).float()  # e.g. 0.10 m
 
         reward = self.see_flag_float * close * lifted * self.cfg.reward_lift_object_z  # e.g. 10.0
