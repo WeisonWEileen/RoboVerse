@@ -64,7 +64,7 @@ def play(args):
     # get task cfg from cfg.py in load_path
     # breakpoint()
     task_cfg_cls = load_task_cfg(args)
-    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class, occlude_cube=args.eval_occlu)
+    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class, finetune=args.resume, occlude_cube=args.eval_occlu)
 
     assert args.num_envs % N_DIVIDE == 0, f"num_envs must be divisible by {N_DIVIDE} for batch evaluation, but got {args.num_envs}"
     N_interval_envs = args.num_envs // N_DIVIDE
@@ -128,7 +128,7 @@ def play(args):
     scenario.env_spacing = task_cfg.env_spacing
     
     task_cfg.randomization = False
-    scenario.filter_pairs = task_cfg.filter_pairs
+    scenario.filter_pairs = task_cfg.filter_pairs if hasattr(task_cfg, "filter_pairs") else []
     
     # log_dir = get_log_dir(args, scenario)
     from humanoid_visualrl.wrapper.active_vision_cube_wrapper import ActiveVisionWrapper
@@ -165,7 +165,7 @@ def play(args):
         # log_dir=log_dir,  
         use_vision=task_cfg.use_vision,
     )
-    ppo_runner.load(load_path, device=device)
+    ppo_runner.load(load_path,load_optimizer=False, device=device)
     policy = ppo_runner.get_inference_policy(device=env_wrapper.device)
 
     # export policy as a jit module (used to run it from C++)

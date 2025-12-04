@@ -48,7 +48,7 @@ if __name__ == "__main__":
     task_cfg_cls = get_task_cfg_class(args.task)
 
     task_cfg = task_cfg_cls(
-        finetune=args.resume, actor_critic_class=args.actor_critic_class
+        finetune=args.resume, actor_critic_class=args.actor_critic_class, enable_grasp=args.enable_grasp
     )
 
     if hasattr(task_cfg, "randomize_material"):
@@ -154,7 +154,7 @@ if __name__ == "__main__":
         if not os.path.exists(resume_path):
             raise FileNotFoundError(f"Resume path {resume_path} does not exist")
         log.info(f"Loading model from: {resume_path}")
-        ppo_runner.load(resume_path)
+        ppo_runner.load(resume_path, load_optimizer=False)
 
 ppo_runner.learn(num_learning_iterations=args.num_learning_iterations, run_name=f"{args.run_name}_{now}")
 

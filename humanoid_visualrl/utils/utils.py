@@ -339,6 +339,7 @@ def get_args():
         eval_randomize_material_train: bool = False
         eval_reaching: bool = False
         seed: int = -1
+        enable_grasp: bool = False
         
         """Random seed for reproducibility. -1 means random seed."""
 

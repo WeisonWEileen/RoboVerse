@@ -62,9 +62,28 @@ class VegaCfg(RobotCfg):
         "R_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
         # "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.1, stiffness=260, damping=20),
     }
+    action_scale={
+        "base_yaw_joint": 0.25,
+        "head_j2": 0.25,
+        "head_j3": 0.25,
+        "R_arm_j1": 0.25,
+        "R_arm_j2": 0.25,
+        "R_arm_j3": 0.25,
+        "R_arm_j4": 0.25,
+        "R_arm_j5": 0.25,
+        "R_arm_j6": 0.25,
+        "R_arm_j7": 0.25,
+        "R_ff_j1": 0.05,
+        "R_lf_j1": 0.05,
+        "R_mf_j1": 0.05,
+        "R_rf_j1": 0.05,
+        "R_th_j0": 0.05,
+        "R_th_j1": 0.05,
+    }
+    assert len(action_scale) == len(actuators), f"action_scale: {action_scale} != len(actuators): {len(actuators)}"
 
     # five mimic joints in the finger
-    mimic_joints: dict[str] = {"R_ff_j2", "R_lf_j2", "R_mf_j2", "R_rf_j2", "R_th_j2"}
+    mimic_joints: dict[str] = {"R_ff_j2", "R_lf_j·2", "R_mf_j2", "R_rf_j2", "R_th_j2"}
 
     # ==================== Joint Limits ====================
     # Joint angle limits from URDF (in radians)
@@ -352,3 +371,13 @@ class VegaCfg(RobotCfg):
     assert num_joints_all == len(default_joint_positions), (
         f"num_joints_all: {num_joints_all} != len(default_joint_positions): {len(default_joint_positions)}"
     )
+
+    right_arm_joints = {
+        "R_arm_j1",
+        "R_arm_j2",
+        "R_arm_j3",
+        "R_arm_j4",
+        "R_arm_j5",
+        "R_arm_j6",
+        "R_arm_j7",
+    }

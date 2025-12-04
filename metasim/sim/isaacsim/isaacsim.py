@@ -898,7 +898,10 @@ class IsaacsimHandler(BaseSimHandler):
             self.scene.articulations[obj.name] = Articulation(
                 ArticulationCfg(
                     prim_path=prim_path,
-                    spawn=sim_utils.UsdFileCfg(usd_path=obj.usd_path, scale=obj.scale),
+                    spawn=sim_utils.UsdFileCfg(
+                        usd_path=obj.usd_path,
+                        scale=obj.scale,
+                    ),
                     actuators={},
                     init_state=ArticulationCfg.InitialStateCfg(
                         pos=obj.default_position,
@@ -909,7 +912,7 @@ class IsaacsimHandler(BaseSimHandler):
             return
 
         if obj.fix_base_link:
-            rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True)
+            rigid_props = sim_utils.RigidBodyPropertiesCfg(disable_gravity=True, kinematic_enabled=True,)
         else:
             rigid_props = sim_utils.RigidBodyPropertiesCfg()
         if obj.collision_enabled:
@@ -929,6 +932,10 @@ class IsaacsimHandler(BaseSimHandler):
                         visual_material=sim_utils.PreviewSurfaceCfg(
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),
+                        physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=2.0),
+                        # physics_material=sim_utils.RigidBodyMaterialCfg(
+                            # static_friction=2.0,
+                        # ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
                         semantic_tags=semantic_tags,
@@ -1015,6 +1022,9 @@ class IsaacsimHandler(BaseSimHandler):
                 semantic_tags=semantic_tags,
                 scale=obj.scale,
                 mass_props=sim_utils.MassPropertiesCfg(density=obj.mass_density),
+                # physics_material=sim_utils.RigidBodyMaterialCfg(
+                #     static_friction=2.0,
+                # ),
                 # fix_base_link=obj.fix_base_link,
             )
             # usd_file_cfg = sim_utils.UsdFileCfg(

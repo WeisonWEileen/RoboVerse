@@ -203,9 +203,13 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._p_gains = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         self._d_gains = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         self._torque_limits = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
-        self._action_scale = 1.0 * torch.ones(
+        self._action_scale =  torch.ones(
             self.num_envs, self.num_actions, device=self.device, requires_grad=False
         )
+        i = 0
+        for dof_name in sorted(self.robot.actuators.keys()):
+            self._action_scale[:, i] = self.robot.action_scale[dof_name]
+            i += 1
         dof_names = self.env.get_joint_names(self.robot.name)
 
         self._pv_gains = 100.0 * torch.ones(self.num_envs, 2, device=self.device, requires_grad=False)
@@ -592,7 +596,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5 * self.wrap_to_pi(self.commands[:, 3] - heading), -1.0, 1.0)
 
-        # self._randomize()
         self._update_curriculum()
 
     def _update_curriculum(self):

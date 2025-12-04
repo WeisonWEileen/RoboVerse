@@ -40,7 +40,6 @@ class LeggedRobotRunnerCfg:
         rnn_hidden_dim = 256
         # vision_height = 240
         # vision_width = 320
-        masking_all = True
         # action_masking = False
         # masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
@@ -70,6 +69,9 @@ class LeggedRobotRunnerCfg:
         max_grad_norm = 1.0
         kl_clip_thres = 0.2
         class_name = "PPO"
+        learning_rate_mlp = 1e-3
+        learning_rate_rnn = 1e-4
+        learning_rate_cnn = 5e-5
 
         # mask = True
         # masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
@@ -291,7 +293,7 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.07 / 2 + 0.01),
-            mass=0.2,  # 增加质量以确保更好的物理行为
+            mass=1.0,  # 增加质量以确保更好的物理行为
         ),
         # ArticulationObjCfg(
         #     name="box_base",
@@ -362,7 +364,7 @@ class BaseTableHumanoidTaskCfg:
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.70, 0.0, 0.85 + 0.07 / 2 + 0.01]),
+                    "pos": torch.tensor([0.52, 0.0, 0.85 + 0.07 / 2 + 0.01]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -376,7 +378,7 @@ class BaseTableHumanoidTaskCfg:
 
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 1.4,
-        "energy_consumption": -1e-7,
+        # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
         # "wrist_close_to_object_and_grasp": 1.0,
@@ -446,6 +448,7 @@ class BaseTableHumanoidTaskCfg:
 
     randomization = True
     finetune = False
+    enable_grasp = False
 
     mask_joint_names = [
         "left_elbow_joint",
@@ -471,6 +474,7 @@ class BaseTableHumanoidTaskCfg:
     reward_wrist_close_to_object_exp_sharpness = 4.0
     reward_pixel_norm_at_object_exp_sharpness = 50.0
     reward_improvement_ratio_threshold = 0.15
+
 
     randomize_material = False
     randomize_cfg = {
@@ -505,19 +509,34 @@ class BaseTableHumanoidTaskCfg:
         self.randomize_object_curriculum = True
         self.randomize_add_scale = 0.005
 
+        self.see_flag_his_win_length = 1000
+        self.time_range_increase_curriculum = 0.01
+        self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
+        # self.randomize_object_radius_range = 0.0
+        self.randomize_object_radius_range = 0.17
+
         if self.finetune:
             # for finetuning, use less frequent curriculum update and less yaw range
             # self.update_curriculum_iteration = 100
             # self.randomize_object_yaw_range = 1.8
             # self.randomize_object_yaw_range = 1.8
-            self.randomize_object_yaw_range = 1.57
+            self.randomize_object_yaw_range = 0.57
             self.curriculum_object_yaw = False
 
             self.reward_weights = {
                 "pixel_norm_at_object": 1.0,
-                "energy_consumption": -1e-7,
-                "wrist_close_to_object": 1.0,
+                # "energy_consumption": -1e-7,
+                "wrist_close_to_object": 3.0,
+                "right_arm_default_joint_pos": -0.17,
+                
             }
+            if self.enable_grasp:
+                self.reward_weights["grasp_binary"] = 5.0
+                # reduce randomize
+                self.randomize_object_radius_range = 0.05
+                self.randomize_object_radius = self.randomize_object_radius - 0.04
+
+        
         else:
             # self.update_curriculum_iteration = 400
             # self.randomize_object_yaw_range = 2.3
@@ -532,11 +551,6 @@ class BaseTableHumanoidTaskCfg:
             self.curriculum_avg_thres_lower = 0.85
             self.curriculum_randomize_iteration_interval = 200
 
-        self.see_flag_his_win_length = 1000
-        self.time_range_increase_curriculum = 0.01
-        self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
-        # self.randomize_object_radius_range = 0.0
-        self.randomize_object_radius_range = 0.17
 
         # self.randomize_object_radius = 0.85  # max
         # self.randomize_object_radius = 0.55
@@ -578,15 +592,19 @@ class BaseTableHumanoidTaskCfg:
         # breakpoint()
         if "wrist_close_to_object" in self.reward_weights:
             self.ppo_cfg.policy.masking_all = False
-            if self.robot == "vega":
+
+
+        else:
+            self.ppo_cfg.policy.masking_all = True
+        
+        if self.robot == "vega":
+            if "wrist_close_to_object" in self.reward_weights and self.enable_grasp:
                 self.mask_joint_names = [
-                    # "R_arm_j1",
-                    # "R_arm_j2",
-                    # "R_arm_j3",
-                    # "R_arm_j4",
-                    # "R_arm_j5",
-                    # "R_arm_j6",
-                    # "R_arm_j7",
+
+                ]
+            elif "wrist_close_to_object" in self.reward_weights and not self.enable_grasp:
+                # mask hand
+                self.mask_joint_names = [
                     "R_th_j0",
                     "R_th_j1",
                     "R_ff_j1",
@@ -595,16 +613,7 @@ class BaseTableHumanoidTaskCfg:
                     "R_lf_j1",
                 ]
             else:
-                self.mask_joint_names = [
-                    "right_elbow_joint",
-                    "right_shoulder_pitch_joint",
-                    "right_shoulder_roll_joint",
-                    "right_shoulder_yaw_joint",
-                ]
-        else:
-            self.ppo_cfg.policy.masking_all = True
-            self.mask_joint_names = [
-                "R_arm_j1",
+                self.mask_joint_names = [                "R_arm_j1",
                 "R_arm_j2",
                 "R_arm_j3",
                 "R_arm_j4",
@@ -617,7 +626,7 @@ class BaseTableHumanoidTaskCfg:
                 "R_mf_j1",
                 "R_rf_j1",
                 "R_lf_j1",
-            ]
+                ]
 
         if self.robot in ["g1_static_dex1"]:
             self.init_states[0]["robots"] = {
@@ -807,9 +816,9 @@ class BaseTableHumanoidTaskCfg:
 
         self.seed = self.ppo_cfg.seed
 
-        self.filter_pairs = [
-            (self.robot, "object"),
-        ]
+        # self.filter_pairs = [
+        #     (self.robot, "object"),
+        # ]
 
         # randomize occlude cube material
         from metasim.randomization.presets.scene_presets import SceneMaterialCollections

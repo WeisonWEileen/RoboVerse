@@ -33,6 +33,9 @@ class PPO:
         value_loss_coef=1.0,
         entropy_coef=0.0,
         learning_rate=1e-3,
+        learning_rate_mlp: float | None = None,
+        learning_rate_rnn: float | None = None,
+        learning_rate_cnn: float | None = None,
         max_grad_norm=1.0,
         use_clipped_value_loss=True,
         schedule="fixed",
@@ -95,15 +98,53 @@ class PPO:
         # PPO components
         self.policy = policy
         self.policy.to(self.device)
-        # Create optimizer
+        # Create optimizer with parameter groups to support different learning rates
+        # Gather parameter groups by module type if present
+        group_specs = []
+        seen_param_ids = set()
+
+        # Helper to add a param list to group_specs while tracking seen ids
+        def add_group(params_iterable, lr_value, group_name):
+            params_list = [p for p in params_iterable if p is not None]
+            if not params_list:
+                return
+            for p in params_list:
+                seen_param_ids.add(id(p))
+            group_specs.append({"params": params_list, "lr": lr_value, "initial_lr": lr_value, "name": group_name})
+
+        # Select group LRs (fallback to global learning_rate if not provided)
+        lr_mlp = learning_rate_mlp if learning_rate_mlp is not None else learning_rate
+        lr_rnn = learning_rate_rnn if learning_rate_rnn is not None else learning_rate
+        lr_cnn = learning_rate_cnn if learning_rate_cnn is not None else learning_rate
+
+        # MLP: actor + critic heads
+        if hasattr(self.policy, "actor"):
+            add_group(self.policy.actor.parameters(), lr_mlp, "mlp_actor")
+        if hasattr(self.policy, "critic"):
+            add_group(self.policy.critic.parameters(), lr_mlp, "mlp_critic")
+
+        # RNN: memory modules (if recurrent)
+        if hasattr(self.policy, "memory_a"):
+            add_group(self.policy.memory_a.parameters(), lr_rnn, "rnn_actor")
+        if hasattr(self.policy, "memory_c"):
+            add_group(self.policy.memory_c.parameters(), lr_rnn, "rnn_critic")
+
+        # CNN: vision encoder (if present)
+        if hasattr(self.policy, "vision_encoder"):
+            add_group(self.policy.vision_encoder.parameters(), lr_cnn, "cnn")
+
+        # Any remaining parameters (e.g., std/log_std or other auxiliary params) -> default to MLP LR
+        remaining_params = [p for p in self.policy.parameters() if id(p) not in seen_param_ids]
+        add_group(remaining_params, lr_mlp, "misc")
+
+        # Create optimizer with the constructed parameter groups
         if schedule == "momentum":
-            self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate, betas=(0.9, 0.999))
+            self.optimizer = optim.Adam(group_specs, betas=(0.9, 0.999))
         else:
-            self.optimizer = optim.Adam(
-                self.policy.parameters(),
-                lr=learning_rate,
-              
-            )
+            self.optimizer = optim.Adam(group_specs)
+
+        # Store base/global LR and initial group LRs for adaptive scheduling
+        self.base_learning_rate = learning_rate
         # Create rollout storage
         self.storage: RolloutStorage = None  # type: ignore
         self.transition = RolloutStorage.Transition()
@@ -290,7 +331,7 @@ class PPO:
             entropy_batch = self.policy.entropy[:original_batch_size]
 
             # KL
-            
+
             with torch.inference_mode():
                 kl = torch.sum(
                     torch.log(sigma_batch / old_sigma_batch + 1.0e-5)
@@ -324,11 +365,12 @@ class PPO:
                         torch.distributed.broadcast(lr_tensor, src=0)
                         self.learning_rate = lr_tensor.item()
 
-                    # Update the learning rate for all parameter groups
+                    # Update the learning rate for all parameter groups while preserving their relative scales.
+                    # We scale each group's initial_lr by a common factor derived from the global LR change.
+                    lr_scale = self.learning_rate / self.base_learning_rate if self.base_learning_rate > 0 else 1.0
                     for param_group in self.optimizer.param_groups:
-                        param_group["lr"] = self.learning_rate
-
-                    
+                        initial_lr = param_group.get("initial_lr", self.learning_rate)
+                        param_group["lr"] = initial_lr * lr_scale
 
                     mean_kl += kl_mean.item()
             # Surrogate loss

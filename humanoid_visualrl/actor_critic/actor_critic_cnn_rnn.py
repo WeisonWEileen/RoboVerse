@@ -28,7 +28,6 @@ class ActorCritic(nn.Module):
         activation="elu",
         init_noise_std=1.0,
         noise_std_type: str = "scalar",
-        masking_all: bool = False,
         **kwargs,
     ):
         if kwargs:
@@ -228,7 +227,6 @@ class ActorCriticCNNRecurrent(ActorCritic):
         init_noise_std=1.0,
         vision_height=96,
         vision_width=128,
-        masking_all=False,
         **kwargs,
     ):
         if "rnn_hidden_size" in kwargs:
@@ -253,7 +251,6 @@ class ActorCriticCNNRecurrent(ActorCritic):
             critic_hidden_dims=critic_hidden_dims,
             activation=activation,
             init_noise_std=init_noise_std,
-            masking_all=masking_all,
         )
 
         activation = resolve_nn_activation(activation)
