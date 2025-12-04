@@ -378,7 +378,9 @@ class BaseTableHumanoidTaskCfg:
 
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 1.4,
-        "finger_close_to_object": 3.0,
+        "finger_close_to_object": 5.0,
+        "grasp_binary": 50.0,
+        "right_arm_default_joint_pos": 0.17,
         # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
@@ -533,7 +535,7 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 2.14
             self.curriculum_object_yaw = False
             self.curriculum_initial_object_yaw_range = 0.7
-            self.randomize_object_yaw_range = 2.2
+            self.randomize_object_yaw_range = 0.57
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
             self.curriculum_avg_thres_higher = 0.93
             self.curriculum_avg_thres_lower = 0.85
@@ -578,7 +580,7 @@ class BaseTableHumanoidTaskCfg:
         self.use_vision = True
         self.use_fixed_gazing = True
         # breakpoint()
-        if "wrist_close_to_object" in self.reward_weights:
+        if "finger_close_to_object" in self.reward_weights:
             self.ppo_cfg.policy.masking_all = False
 
 
@@ -586,11 +588,11 @@ class BaseTableHumanoidTaskCfg:
             self.ppo_cfg.policy.masking_all = True
         
         if self.robot == "vega":
-            if "wrist_close_to_object" in self.reward_weights and self.enable_grasp:
+            if "finger_close_to_object" in self.reward_weights and self.enable_grasp:
                 self.mask_joint_names = [
 
                 ]
-            elif "wrist_close_to_object" in self.reward_weights and not self.enable_grasp:
+            elif "finger_close_to_object" in self.reward_weights and not self.enable_grasp:
                 # mask hand
                 self.mask_joint_names = [
                     "R_th_j0",
