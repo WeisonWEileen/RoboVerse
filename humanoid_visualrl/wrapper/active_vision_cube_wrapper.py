@@ -173,20 +173,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self._ema_reward = 0.05
         self.last_curriculum_update_step = 0
 
-        # wheel joint names
-        # wheel_joint_names = self.robot.velocity_joints
-        # original_joint_names = self.env._get_joint_names(self.robot.name, sort=False, only_valid=False)
-
-        # self._wheel_idx_original = [original_joint_names.index(jn) for jn in wheel_joint_names]
-
-        if "finger_close_to_object" in self.cfg.reward_weights and self.robot.name == "vega":
-            finger_tip_links = sorted(self.robot.tip_offset.keys())
-            body_link_names = self.env._get_body_names(self.robot.name, sort=True)
-            self.finger_tip_transform_offset = torch.zeros(len(finger_tip_links), 3, device=self.device)
-            self.finger_tip_indices = torch.zeros(len(finger_tip_links), device=self.device, dtype=torch.int32)
-            for i, link in enumerate(finger_tip_links):
-                self.finger_tip_transform_offset[i] = self.robot.tip_offset[link]
-                self.finger_tip_indices[i] = body_link_names.index(link)
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
