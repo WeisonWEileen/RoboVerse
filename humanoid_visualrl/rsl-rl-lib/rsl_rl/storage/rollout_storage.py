@@ -54,7 +54,7 @@ class RolloutStorage:
         # Core
         self.observations = torch.zeros(num_transitions_per_env, num_envs, *obs_shape, device=self.device)
         self.observations_vision = (
-            torch.zeros(num_transitions_per_env, num_envs, *obs_vision_shape, device=self.device)
+            torch.zeros(num_transitions_per_env, num_envs, *obs_vision_shape, device=self.device, dtype=torch.uint8)
             if obs_vision_shape is not None
             else None
         )
@@ -101,6 +101,7 @@ class RolloutStorage:
         if isinstance(transition.observations, tuple) and self.observations_vision is not None:
             state_obs, vision_obs = transition.observations
             self.observations[self.step].copy_(state_obs)
+            # actor vision obs and privileged vision obs are the same, so we do not need to copy the privileged vision obs
             self.observations_vision[self.step].copy_(vision_obs)
         else:
             self.observations[self.step].copy_(transition.observations)

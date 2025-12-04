@@ -39,7 +39,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.image_center_x = self.cfg.cameras[0].width / 2
         self.image_center_y = self.cfg.cameras[0].height / 2
         self.done_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
-        self.feature_extractor = Reset18Extractor(device=self.device)
+        # self.feature_extractor = Reset18Extractor(device=self.device)
 
         self.pixel_reward_offset = torch.exp(
             -torch.sqrt(
@@ -260,15 +260,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # ======update vision rgb and seg======
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
-        vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb 
+        # vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb 
         # TODO: normalize it to get better results?
         # # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
         # vision_rgb -= 0.5
 
         # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
 
-
-        self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
+        # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
+        self.vision_rgb_buf = tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2)
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg
         if self.semantic_seg:
@@ -441,38 +441,17 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos
         dq = self.dof_vel * self.cfg.normalization.obs_scales.dof_vel
-
-        # visual_features = self.resnet_features
-        # object_pose_obs = self.object_pose_buf
-
-        self.privileged_obs_buf = torch.cat(
+        obs = torch.cat(
             (
-                q,  
-                dq,  
-                self.actions,  
-            ),
-            dim=-1,
-        )
-
-        obs_buf = torch.cat(
-            (
-                q,  
-                dq,  
+                q,
+                dq,
                 self.actions,
             ),
             dim=-1,
         )
-
-        obs_now = obs_buf.clone()
-        self.obs_history.append(obs_now)
-        self.critic_history.append(self.privileged_obs_buf)
-        self.obs_buf = obs_now.reshape(self.num_envs, -1)
-        self.privileged_obs_buf = torch.cat([self.critic_history[i] for i in range(self.cfg.c_frame_stack)], dim=1)
-        self.privileged_obs_buf = torch.clip(
-            self.privileged_obs_buf, -self.cfg.normalization.clip_observations, self.cfg.normalization.clip_observations
-        )
-
-        self.obs_buf = (self.obs_buf, self.vision_rgb_buf)
+        self.obs_buf_state = obs
+        self.privileged_obs_buf = obs
+        self.obs_buf = (self.obs_buf_state, self.vision_rgb_buf)
         self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
 
     def _pre_reset_hook(self, env_ids=None):
