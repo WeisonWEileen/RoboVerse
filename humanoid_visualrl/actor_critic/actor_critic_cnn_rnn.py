@@ -256,35 +256,8 @@ class ActorCriticCNNRecurrent(ActorCritic):
         activation = resolve_nn_activation(activation)
 
         h, w = 96, 128
-        filter_sizes = [16, 32, 64, 128]
         kernel_sizes = [8, 4, 3, 3]
         h, w = conv_output_size((h, w), kernel_size=kernel_sizes[0], stride=4, pad=0)
-        layer1_norm_shape = [filter_sizes[0], h, w]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[1], stride=2, pad=0)
-        layer2_norm_shape = [filter_sizes[1], h, w]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[2], stride=1, pad=0)
-        layer3_norm_shape = [filter_sizes[2], h, w]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[3], stride=1, pad=0)
-        layer4_norm_shape = [filter_sizes[3], h, w]
-
-        #  hisotry version 128 × 96
-        # self.vision_encoder = nn.Sequential(
-        #     nn.Conv2d(3, filter_sizes[0], kernel_size=kernel_sizes[0], stride=4, padding=0),
-        #     nn.ReLU(inplace=True),
-        #     nn.LayerNorm(layer1_norm_shape),
-        #     nn.Conv2d(filter_sizes[0], filter_sizes[1], kernel_size=kernel_sizes[1], stride=2, padding=0),
-        #     nn.ReLU(inplace=True),
-        #     nn.LayerNorm(layer2_norm_shape),
-        #     nn.Conv2d(filter_sizes[1], filter_sizes[2], kernel_size=kernel_sizes[2], stride=1, padding=0),
-        #     nn.LayerNorm(layer3_norm_shape),
-        #     nn.Conv2d(filter_sizes[2], filter_sizes[3], kernel_size=kernel_sizes[3], stride=1, padding=0),
-        #     nn.LayerNorm(layer4_norm_shape),
-        #     nn.ReLU(inplace=True),
-        #     nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=filter_sizes[3]
-        #     nn.Flatten(),  # (B, filter_sizes[3])
-        #     nn.Linear(filter_sizes[3], 32),  # 压缩 / 投影到 32 维
-        #     nn.ReLU(inplace=True),
-        # )
 
         self.vision_encoder = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
@@ -326,7 +299,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
             with torch.no_grad():
-                vision_fea_flat = self.vision_encoder(vision_flat)
+                vision_fea_flat = self.vision_encoder(self.preprocess_image(vision_flat))
             # 重新组织成 [time, batch, features]
             vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
@@ -336,7 +309,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
             self.update_distribution(inputs)
         else:  # [batch, features] - 来自推理时
             with torch.no_grad():
-                vision_fea = self.vision_encoder(vision)
+                vision_fea = self.vision_encoder(self.preprocess_image(vision))
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             inputs = self.memory_a(concat_inputs, masks, hidden_states)
             self.update_distribution(inputs.squeeze(0))
@@ -349,7 +322,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
     def act_inference(self, observations):
         state, vision = observations
         with torch.no_grad():
-            vision_fea = self.vision_encoder(vision)
+            vision_fea = self.vision_encoder(self.preprocess_image(vision))
         concat_inputs = torch.cat([state, vision_fea], dim=-1)
         inputs = self.memory_a(concat_inputs)
         # self.update_distribution(inputs.squeeze(0))
@@ -367,7 +340,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
             
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
-            vision_fea_flat = self.vision_encoder(vision_flat)
+            vision_fea_flat = self.vision_encoder(self.preprocess_image(vision_flat))
             # 重新组织成 [time, batch, features]
             vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
@@ -376,7 +349,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
             # input_c 已经是展平的，所以不需要 squeeze(0)
             value = self.critic(input_c)
         else:  # [batch, features] - 来自推理时
-            vision_fea = self.vision_encoder(vision)
+            vision_fea = self.vision_encoder(self.preprocess_image(vision))
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             input_c = self.memory_c(concat_inputs, masks, hidden_states)
             value = self.critic(input_c.squeeze(0))
@@ -385,3 +358,9 @@ class ActorCriticCNNRecurrent(ActorCritic):
 
     def get_hidden_states(self):
         return self.memory_a.hidden_states, self.memory_c.hidden_states
+
+    def preprocess_image(self, image):
+        """Input: image: torch.Tensor.int8, shape (B, 3, H, W). Output: image: torch.Tensor.float, shape (B, 3, H, W)."""
+        # image = image.to(torch.int8)
+        image = image / 255.0 - 0.5
+        return image

@@ -225,7 +225,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         super()._init_buffers()
         self.obs_buf_state = torch.zeros(self.num_envs, self.cfg.num_observations, device=self.device)
         self.vision_rgb_buf = torch.zeros(
-            self.num_envs, 3, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device
+            self.num_envs, 3, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.uint8
         )
         self.obs_buf = (self.obs_buf_state, self.vision_rgb_buf)
         # self.wrist_pose = torch.zeros(self.num_envs, 2, 7, device=self.device)
@@ -260,10 +260,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # ======update vision rgb and seg======
         # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
         # Convert from uint8 to float and normalize to [0, 1]
-        vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb / 255.0
+        vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb 
         # TODO: normalize it to get better results?
         # # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
-        vision_rgb -= 0.5
+        # vision_rgb -= 0.5
 
         # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
 
@@ -362,9 +362,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # if specific env draw
         if self.env._render_viewport and self.enable_opencv_display:
-            rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.5
+            rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] 
 
-            rgb_image = torch.clamp(rgb_image, 0, 1)
+            # rgb_image = torch.clamp(rgb_image, 0, 1)
             rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
             env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
             # 确保图像是uint8格式
@@ -384,8 +384,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 center_x = int(self.center_x[env_pos].item())
                 center_y = int(self.center_y[env_pos].item())
 
-                if rgb_image.dtype != np.uint8:
-                    rgb_image = (rgb_image * 255).astype(np.uint8)
+                # if rgb_image.dtype != np.uint8:
+                #     rgb_image = (rgb_image * 255).astype(np.uint8)
 
                 cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
 
@@ -524,7 +524,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.env.scene.sensors["camera_first_person"].update(dt=0)
         self.env.sim.render()
         camera_data = self.env.scene.sensors["camera_first_person"].data.output
-        self.vision_rgb_buf[env_ids] = camera_data["rgb"][env_ids].permute(0, 3, 1, 2).float() / 255.0 - 0.5
+        self.vision_rgb_buf[env_ids] = camera_data["rgb"][env_ids].permute(0, 3, 1, 2)
         if self.semantic_seg:
             # 添加分割数据的更新
             self.vision_seg_buf[env_ids] = camera_data["semantic_segmentation"].squeeze(-1)[env_ids]
