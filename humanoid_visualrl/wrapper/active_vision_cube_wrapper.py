@@ -791,22 +791,3 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         joint_pos = tensor_state.robots[robot_name].joint_pos
         return torch.norm((joint_pos - self.default_joint_pd_target)[:, self.right_arm_joints_indices], dim=1)
 
-    # reward funsion. when close to the object, the reward of wrist_close_to_object go up
-    # r = r1 + r1 * r2reference: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10806624
-    # def _reward_fuse_wrist_close_to_object_and_grasp(
-    #     self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
-    # ):
-    #     right_wrist_pos = tensor_state.robots[robot_name].body_state[:, self.right_index_intermediate_link_indices, :7]
-    #     # self._update_marker_viz(right_wrist_pos[:,0, :3], right_wrist_pos[:,0, 3:7], right_wrist_pos[:,0, :3] - self.object_pose_buf[:, :3])
-    #     dist = torch.norm(right_wrist_pos[:, 0, :3] - self.object_pose_buf[:, :3], dim=1)
-    #     wrist_close_to_object_reward = self.see_flag_float * torch.exp(
-    #         -self.cfg.reward_wrist_close_to_object_exp_sharpness * dist
-    #     )
-    #     dist_squared = self.see_flag_float * torch.norm(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
-
-    #     # when the right wrist is close to the object, the reward of wrist_close_to_object_and_grasp go up
-
-    #     reward = wrist_close_to_object_reward + wrist_close_to_object_reward * torch.exp(
-    #         -self.cfg.reward_lift_object_exp_shapeness * dist_squared
-    #     )
-    #     return reward

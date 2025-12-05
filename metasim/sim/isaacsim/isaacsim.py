@@ -982,6 +982,8 @@ class IsaacsimHandler(BaseSimHandler):
             )
             return
         if isinstance(obj, PrimitiveCylinderCfg):
+            semantic_tags = [("class", "object")] if obj.name == "object" else None
+
             self.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
                     prim_path=prim_path,
@@ -989,11 +991,13 @@ class IsaacsimHandler(BaseSimHandler):
                         radius=obj.radius,
                         height=obj.height,
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
+                        physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=2.0),
                         visual_material=sim_utils.PreviewSurfaceCfg(
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
+                        semantic_tags=semantic_tags,
                     ),
                 )
             )

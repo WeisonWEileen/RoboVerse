@@ -8,7 +8,7 @@ from typing import Callable, Literal
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveCubeCfg
+from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveCylinderCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.types import TensorState
@@ -285,15 +285,24 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=False,
             enable_gyroscopic_forces=False,
         ),
-        PrimitiveCubeCfg(
+        # PrimitiveCubeCfg(
+        #     name="object",
+        #     size=(0.06, 0.06, 0.06),
+        #     color=[1.0, 0.0, 0.0],
+        #     physics=PhysicStateType.RIGIDBODY,
+        #     collision_enabled=True,
+        #     fix_base_link=False,
+        #     default_position=(0.55, 0.1, 0.9 + 0.07 / 2 + 0.01),
+        #     mass=1.0,  # 增加质量以确保更好的物理行为
+        # ),
+        PrimitiveCylinderCfg(
             name="object",
-            size=(0.06, 0.06, 0.06),
+            radius=0.025,
+            height=0.08,
             color=[1.0, 0.0, 0.0],
-            physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
-            fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.07 / 2 + 0.01),
-            mass=1.0,  # 增加质量以确保更好的物理行为
+            mass=1.0,
         ),
         # ArticulationObjCfg(
         #     name="box_base",
@@ -364,7 +373,7 @@ class BaseTableHumanoidTaskCfg:
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.52, 0.0, 0.50 + 0.07 / 2 + 0.01]),
+                    "pos": torch.tensor([0.52, 0.0, 0.50 + 0.08 / 2 + 0.008]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -502,7 +511,7 @@ class BaseTableHumanoidTaskCfg:
         self.time_range_increase_curriculum = 0.01
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
         # self.randomize_object_radius_range = 0.0
-        self.randomize_object_radius_range = 0.17
+        self.randomize_object_radius_range = 0.0
 
         if self.finetune:
             # for finetuning, use less frequent curriculum update and less yaw range
@@ -513,12 +522,10 @@ class BaseTableHumanoidTaskCfg:
             self.curriculum_object_yaw = False
 
             self.reward_weights = {
-                "pixel_norm_at_object": 1.0,
-                # "energy_consumption": -1e-7,
-                "finger_close_to_object": 3.0,
-                "right_arm_default_joint_pos": -0.17,
-                
-                
+                "pixel_norm_at_object": 1.4,
+                "finger_close_to_object": 5.0,
+                "grasp_binary": 50.0,
+                "right_arm_default_joint_pos": 0.17,
             }
             if self.enable_grasp:
                 self.reward_weights["grasp_binary"] = 5.0
@@ -535,7 +542,7 @@ class BaseTableHumanoidTaskCfg:
             # self.randomize_object_yaw_range = 2.14
             self.curriculum_object_yaw = False
             self.curriculum_initial_object_yaw_range = 0.7
-            self.randomize_object_yaw_range = 0.57
+            self.randomize_object_yaw_range = 0.0
             self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
             self.curriculum_avg_thres_higher = 0.93
             self.curriculum_avg_thres_lower = 0.85
@@ -753,9 +760,9 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j1": -2.06,
                         "R_arm_j2": -0.21,
                         "R_arm_j3": -0.13,
-                        "R_arm_j4": -2.65,
-                        "R_arm_j5": -0.36,
-                        "R_arm_j6": 0.4,
+                        "R_arm_j4": -2.59,
+                        "R_arm_j5": -0.02,
+                        "R_arm_j6": 0.05,
                         "R_arm_j7": 0.0,
                         # Right hand - open
                         "R_th_j0": 0.0,
