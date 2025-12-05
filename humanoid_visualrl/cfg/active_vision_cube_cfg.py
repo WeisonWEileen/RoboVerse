@@ -351,6 +351,7 @@ class BaseTableHumanoidTaskCfg:
     max_episode_length: int = 2400
     randomize_obj_material: bool = False
     update_obj_material_step_interval: int = 96 * 100
+    fall_down_threshold = 0.5397
 
     @configclass
     class HumanoidExtraCfg:
@@ -390,6 +391,7 @@ class BaseTableHumanoidTaskCfg:
         "finger_close_to_object": 5.0,
         "grasp_binary": 50.0,
         "right_arm_default_joint_pos": 0.17,
+        "wrist_lower_than_table": 0.1,
         # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
@@ -513,40 +515,40 @@ class BaseTableHumanoidTaskCfg:
         # self.randomize_object_radius_range = 0.0
         self.randomize_object_radius_range = 0.0
 
-        if self.finetune:
-            # for finetuning, use less frequent curriculum update and less yaw range
-            # self.update_curriculum_iteration = 100
-            # self.randomize_object_yaw_range = 1.8
-            # self.randomize_object_yaw_range = 1.8
-            self.randomize_object_yaw_range = 0.57
-            self.curriculum_object_yaw = False
+        # if self.finetune:
+        #     # for finetuning, use less frequent curriculum update and less yaw range
+        #     # self.update_curriculum_iteration = 100
+        #     # self.randomize_object_yaw_range = 1.8
+        #     # self.randomize_object_yaw_range = 1.8
+        #     self.randomize_object_yaw_range = 0.57
+        #     self.curriculum_object_yaw = False
 
-            self.reward_weights = {
-                "pixel_norm_at_object": 1.4,
-                "finger_close_to_object": 5.0,
-                "grasp_binary": 50.0,
-                "right_arm_default_joint_pos": 0.17,
-            }
-            if self.enable_grasp:
-                self.reward_weights["grasp_binary"] = 5.0
-                # reduce randomize
-                self.randomize_object_radius_range = 0.05
-                self.randomize_object_radius = self.randomize_object_radius - 0.04
+        #     self.reward_weights = {
+        #         "pixel_norm_at_object": 1.4,
+        #         "finger_close_to_object": 5.0,
+        #         "grasp_binary": 50.0,
+        #         "right_arm_default_joint_pos": 0.17,
+        #     }
+        #     if self.enable_grasp:
+        #         self.reward_weights["grasp_binary"] = 5.0
+        #         # reduce randomize
+        #         self.randomize_object_radius_range = 0.05
+        #         self.randomize_object_radius = self.randomize_object_radius - 0.04
 
         
-        else:
+        # else:
             # self.update_curriculum_iteration = 400
             # self.randomize_object_yaw_range = 2.3
             # self.randomize_object_yaw_range = 3.14
             # self.randomize_object_yaw_range = 3.06
             # self.randomize_object_yaw_range = 2.14
-            self.curriculum_object_yaw = False
-            self.curriculum_initial_object_yaw_range = 0.7
-            self.randomize_object_yaw_range = 0.0
-            self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
-            self.curriculum_avg_thres_higher = 0.93
-            self.curriculum_avg_thres_lower = 0.85
-            self.curriculum_randomize_iteration_interval = 200
+        self.curriculum_object_yaw = False
+        self.curriculum_initial_object_yaw_range = 0.7
+        self.randomize_object_yaw_range = 0.0
+        self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
+        self.curriculum_avg_thres_higher = 0.93
+        self.curriculum_avg_thres_lower = 0.85
+        self.curriculum_randomize_iteration_interval = 200
 
 
         # self.randomize_object_radius = 0.85  # max

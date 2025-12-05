@@ -383,3 +383,5 @@ class VegaCfg(RobotCfg):
     }
 
     tip_link_names = {"R_ff_tip", "R_lf_tip", "R_mf_tip", "R_rf_tip", "R_th_tip"}
+
+    right_palm_link = ["R_mf_l1"]

@@ -173,7 +173,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self._ema_reward = 0.05
         self.last_curriculum_update_step = 0
 
-
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
         if self.robot.name == "g1_static_dex1":
@@ -196,6 +195,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.env,
                 self.robot.name,
                 self.robot.tip_link_names,
+                device=self.device,
+            )
+
+            # use middle finger to palm pose
+            self.right_palm_index = get_body_reindexed_indices_from_substring(
+                self.env,
+                self.robot.name,
+                self.robot.right_palm_link,
                 device=self.device,
             )
 
@@ -502,7 +509,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.1
         too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
         # self.reset_buf = self.timeout_buf
-        self.reset_buf = self.timeout_buf | terminate | too_far
+        too_low = self.object_pose_buf[:, 2] < self.cfg.fall_down_threshold
+        self.reset_buf = self.timeout_buf | terminate | too_far | too_low
         return self.reset_buf
 
     def _reward_pixel_norm_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
@@ -586,7 +594,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]
         # get mean
         dist = torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
-
 
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
         return reward
@@ -776,7 +783,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # get mean
         dist = torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
 
-        
         close = (dist < self.cfg.reward_lift_object_z).float()  # e.g. 0.06 m
 
         lift = self.object_pose_buf[:, 2] - self.init_states.objects["object"].root_state[:, 2]
@@ -791,3 +797,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         joint_pos = tensor_state.robots[robot_name].joint_pos
         return torch.norm((joint_pos - self.default_joint_pd_target)[:, self.right_arm_joints_indices], dim=1)
 
+    def _reward_wrist_lower_than_table(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        below_distance = torch.clamp(
+            tensor_state.robots[robot_name].body_state[:, self.right_palm_index, 2]
+            - self.cfg.objects[0].default_position[2],
+            max=0.0,
+        )
+        return below_distance.squeeze(1)
