@@ -308,7 +308,6 @@ class IsaacsimHandler(BaseSimHandler):
         self._is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         a = self.none_static_joint_idx_original
 
-
     # for ac
     @property
     def valid_joint_names(self):
@@ -1190,11 +1189,14 @@ class IsaacsimHandler(BaseSimHandler):
         from isaaclab.sensors import ContactSensor, ContactSensorCfg
 
         contact_sensor_config: ContactSensorCfg = ContactSensorCfg(
-            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/.*",
+            # path like R_rf_tip, R_th_tip, R_ff_tip, R_lf_tip, R_mf_tip
+            # Use regex pattern to match all finger links: R_rf_l2, R_th_l2, R_ff_l2, R_lf_l2, R_mf_l2
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_(rf|th|ff|lf|mf)_l2",
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
-            track_pose=True,
+            # track_pose=True,
+            filter_prim_paths_expr=[f"/World/envs/env_.*/{self.robots[0].name}/object"],
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)
         self.scene.sensors["contact_sensor"] = self.contact_sensor

@@ -157,7 +157,7 @@ class BaseTableHumanoidTaskCfg:
         """soft torque limit"""
 
     reward_cfg: RewardCfg = RewardCfg()
-    active_contact_sensor: bool = False
+    active_contact_sensor: bool = True
 
     @configclass
     class CommandsConfig:
@@ -302,7 +302,7 @@ class BaseTableHumanoidTaskCfg:
             color=[1.0, 0.0, 0.0],
             collision_enabled=True,
             default_position=(0.55, 0.1, 0.9 + 0.07 / 2 + 0.01),
-            mass=1.0,
+            mass=100.0,
         ),
         # ArticulationObjCfg(
         #     name="box_base",
@@ -392,6 +392,7 @@ class BaseTableHumanoidTaskCfg:
         "grasp_binary": 50.0,
         "right_arm_default_joint_pos": 0.17,
         "wrist_lower_than_table": 0.1,
+        "contact_force": 0.1,
         # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
@@ -767,7 +768,7 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j6": 0.05,
                         "R_arm_j7": 0.0,
                         # Right hand - open
-                        "R_th_j0": 0.0,
+                        "R_th_j0": 1.47,
                         "R_th_j1": 0.0,
                         # "R_th_j2": 0.0,
                         "R_ff_j1": 0.0,

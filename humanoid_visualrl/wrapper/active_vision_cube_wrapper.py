@@ -610,6 +610,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # when the right wrist is close to the object, this reward go up
         dist_squared = self.see_flag_float * torch.square(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
         return torch.exp(-self.cfg.reward_lift_object_exp_shapeness * dist_squared)
+    
+    def _reward_contact_force(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        contact_force = self.env.contact_sensor.data.net_forces_w
+        return torch.sum(torch.norm(contact_force, dim=2), dim=1)
 
     # def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
     #     # TODO: define curl pose
