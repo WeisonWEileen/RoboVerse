@@ -158,4 +158,4 @@ if __name__ == "__main__":
 
 ppo_runner.learn(num_learning_iterations=args.num_learning_iterations, run_name=f"{args.run_name}_{now}")
 
-ppo_runner.env.simulation_app.close()
+ppo_runner.env.env.simulation_app.close()

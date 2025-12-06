@@ -26,7 +26,7 @@ class VegaCfg(RobotCfg):
     # Asset paths
     # urdf_path: str = "roboverse_pack/robots/robots_vega/humanoid/vega_1/vega.urdf"
     # usd_path: str = "roboverse_data/robots/vega/vega.usd"
-    usd_path: str = "roboverse_data/robots/vega/vega_root_rot_finger_tip.usd"
+    usd_path: str = "roboverse_data/robots/vega/vega_root_rot_finger_tip_flattened.usd"
     # Physical properties
     enabled_gravity: bool = True  # Disable gravity for default setup
 
