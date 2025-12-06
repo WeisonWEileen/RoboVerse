@@ -997,6 +997,7 @@ class IsaacsimHandler(BaseSimHandler):
                         rigid_props=rigid_props,
                         collision_props=collision_props,
                         semantic_tags=semantic_tags,
+                        activate_contact_sensors=True,
                     ),
                 )
             )

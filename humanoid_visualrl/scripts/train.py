@@ -118,7 +118,7 @@ if __name__ == "__main__":
         # do not log, faster reset
 
         log_dir = None
-        task_cfg.max_episode_length_s = 1
+        task_cfg.max_episode_length_s = 3
         scenario.num_envs = 8
         
 

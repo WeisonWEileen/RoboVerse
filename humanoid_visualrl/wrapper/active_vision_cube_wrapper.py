@@ -613,7 +613,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     
     def _reward_contact_force(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         contact_force = self.env.contact_sensor.data.force_matrix_w.squeeze(2)
-        return torch.sum(torch.norm(contact_force, dim=2), dim=1)
+        contact_force_sum = torch.sum(torch.norm(contact_force, dim=2), dim=1)
+        print(contact_force_sum[0])
+        return contact_force_sum 
 
     # def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
     #     # TODO: define curl pose
