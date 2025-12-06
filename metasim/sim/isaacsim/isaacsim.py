@@ -1196,13 +1196,12 @@ class IsaacsimHandler(BaseSimHandler):
             update_period=self.physics_dt,
             track_air_time=False,
             # track_pose=True,
-            # Match one object per finger link per env to satisfy expected counts
             filter_prim_paths_expr=[
                 "/World/envs/env_.*/object",
-                "/World/envs/env_.*/object",
-                "/World/envs/env_.*/object",
-                "/World/envs/env_.*/object",
-                "/World/envs/env_.*/object",
+                # "/World/envs/env_.*/object",
+                # "/World/envs/env_.*/object",
+                # "/World/envs/env_.*/object",
+                # "/World/envs/env_.*/object",
             ],
         )
         self.contact_sensor = ContactSensor(contact_sensor_config)
