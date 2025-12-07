@@ -392,7 +392,7 @@ class BaseTableHumanoidTaskCfg:
         "grasp_binary": 50.0,
         "right_arm_default_joint_pos": 0.17,
         "wrist_lower_than_table": 0.1,
-        "contact_force": 0.1,
+        "contact_force": 1.0,
         # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
