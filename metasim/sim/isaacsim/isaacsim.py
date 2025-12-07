@@ -259,8 +259,6 @@ class IsaacsimHandler(BaseSimHandler):
         # filter collisions before cloning environments
         for pair in self.scenario.filter_pairs:
             self.filter_collisions(pair[0], pair[1])
-        if self.scenario.task.active_contact_sensor:
-            self._load_sensors()
 
         # activate contact
 
@@ -270,6 +268,8 @@ class IsaacsimHandler(BaseSimHandler):
 
         # self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
+        if self.scenario.task.active_contact_sensor:
+            self._load_sensors()
         self._set_perspective_camera_pose()
         self.scene.filter_collisions(global_prim_paths=["/World/ground"])
         # self.filter_collisions(self.robots[0].name, "object")
@@ -731,7 +731,7 @@ class IsaacsimHandler(BaseSimHandler):
                     solver_position_iteration_count=4,
                     solver_velocity_iteration_count=0,
                 ),
-                collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=False),
+                collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
             ),
             # actuators={
             #     # jn: ImplicitActuatorCfg(
@@ -1189,24 +1189,68 @@ class IsaacsimHandler(BaseSimHandler):
     def _load_sensors(self) -> None:
         from isaaclab.sensors import ContactSensor, ContactSensorCfg
 
-        contact_sensor_config: ContactSensorCfg = ContactSensorCfg(
-            # path like R_rf_tip, R_th_tip, R_ff_tip, R_lf_tip, R_mf_tip
-            # Use regex pattern to match all finger links: R_rf_l2, R_th_l2, R_ff_l2, R_lf_l2, R_mf_l2
-            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_(rf|th|ff|lf|mf)_l2",
+        # contact_sensor_config: ContactSensorCfg = ContactSensorCfg(
+        #     # path like R_rf_tip, R_th_tip, R_ff_tip, R_lf_tip, R_mf_tip
+        #     # Use regex pattern to match all finger links: R_rf_l2, R_th_l2, R_ff_l2, R_lf_l2, R_mf_l2
+        #     prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_(rf|th|ff|lf|mf)_l2",
+        #     history_length=3,
+        #     update_period=self.physics_dt,
+        #     track_air_time=False,
+        #     # track_pose=True,
+        #     filter_prim_paths_expr=[
+        #         "/World/envs/env_.*/object",
+        #         # "/World/envs/env_.*/object",
+        #         # "/World/envs/env_.*/object",
+        #         # "/World/envs/env_.*/object",
+        #         # "/World/envs/env_.*/object",
+        #     ],
+        # )
+        contact_sensor_config_1: ContactSensorCfg = ContactSensorCfg(
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_rf_l2",
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
-            # track_pose=True,
-            filter_prim_paths_expr=[
-                "/World/envs/env_.*/object",
-                # "/World/envs/env_.*/object",
-                # "/World/envs/env_.*/object",
-                # "/World/envs/env_.*/object",
-                # "/World/envs/env_.*/object",
-            ],
+            filter_prim_paths_expr=["/World/envs/env_.*/object"],  
         )
-        self.contact_sensor = ContactSensor(contact_sensor_config)
-        self.scene.sensors["contact_sensor"] = self.contact_sensor
+        contact_sensor_config_2: ContactSensorCfg = ContactSensorCfg(
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_th_l2",
+            history_length=3,
+            update_period=self.physics_dt,
+            track_air_time=False,
+            filter_prim_paths_expr=["/World/envs/env_.*/object"], 
+        )
+        contact_sensor_config_3: ContactSensorCfg = ContactSensorCfg(
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_ff_l2",
+            history_length=3,
+            update_period=self.physics_dt,
+            track_air_time=False,
+            filter_prim_paths_expr=["/World/envs/env_.*/object"], 
+        )
+        contact_sensor_config_4: ContactSensorCfg = ContactSensorCfg(
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_lf_l2",
+            history_length=3,
+            update_period=self.physics_dt,
+            track_air_time=False,
+            filter_prim_paths_expr=["/World/envs/env_.*/object"],  
+        )
+        contact_sensor_config_5: ContactSensorCfg = ContactSensorCfg(
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_mf_l2",
+            history_length=3,
+            update_period=self.physics_dt,
+            track_air_time=False,
+            filter_prim_paths_expr=["/World/envs/env_.*/object"], 
+        )
+        self.contact_sensor_1 = ContactSensor(contact_sensor_config_1)
+        self.contact_sensor_2 = ContactSensor(contact_sensor_config_2)
+        self.contact_sensor_3 = ContactSensor(contact_sensor_config_3)
+        self.contact_sensor_4 = ContactSensor(contact_sensor_config_4)
+        self.contact_sensor_5 = ContactSensor(contact_sensor_config_5)
+        self.scene.sensors["contact_sensor_1"] = self.contact_sensor_1
+        self.scene.sensors["contact_sensor_2"] = self.contact_sensor_2
+        self.scene.sensors["contact_sensor_3"] = self.contact_sensor_3
+        self.scene.sensors["contact_sensor_4"] = self.contact_sensor_4
+        self.scene.sensors["contact_sensor_5"] = self.contact_sensor_5
+
 
     def _load_contact_sensor_idx(self) -> None:
         # return

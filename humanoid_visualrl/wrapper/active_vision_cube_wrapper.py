@@ -610,12 +610,22 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # when the right wrist is close to the object, this reward go up
         dist_squared = self.see_flag_float * torch.square(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
         return torch.exp(-self.cfg.reward_lift_object_exp_shapeness * dist_squared)
-    
+
     def _reward_contact_force(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        contact_force = self.env.contact_sensor.data.force_matrix_w.squeeze(2)
-        contact_force_sum = torch.sum(torch.norm(contact_force, dim=2), dim=1)
-        print(contact_force_sum[0])
-        return contact_force_sum 
+        contact_force_1 = self.env.contact_sensor_1.data.force_matrix_w.squeeze(2)
+        contact_force_2 = self.env.contact_sensor_2.data.force_matrix_w.squeeze(2)
+        contact_force_3 = self.env.contact_sensor_3.data.force_matrix_w.squeeze(2)
+        contact_force_4 = self.env.contact_sensor_4.data.force_matrix_w.squeeze(2)
+        contact_force_5 = self.env.contact_sensor_5.data.force_matrix_w.squeeze(2)
+        contact_force_matrix_sum = (
+            (torch.sum(torch.norm(contact_force_1, dim=2), dim=1) > 0.0).float()
+            + (torch.sum(torch.norm(contact_force_2, dim=2), dim=1) > 0.0).float()
+            + (torch.sum(torch.norm(contact_force_3, dim=2), dim=1) > 0.0).float()
+            + (torch.sum(torch.norm(contact_force_4, dim=2), dim=1) > 0.0).float()
+            + (torch.sum(torch.norm(contact_force_5, dim=2), dim=1) > 0.0).float()
+        )
+        print(contact_force_matrix_sum[0])
+        return contact_force_matrix_sum
 
     # def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
     #     # TODO: define curl pose
