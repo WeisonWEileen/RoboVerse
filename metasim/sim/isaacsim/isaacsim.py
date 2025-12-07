@@ -1213,7 +1213,7 @@ class IsaacsimHandler(BaseSimHandler):
             filter_prim_paths_expr=["/World/envs/env_.*/object"],  
         )
         contact_sensor_config_2: ContactSensorCfg = ContactSensorCfg(
-            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_th_l2",
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_mf_l2",
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
@@ -1234,7 +1234,7 @@ class IsaacsimHandler(BaseSimHandler):
             filter_prim_paths_expr=["/World/envs/env_.*/object"],  
         )
         contact_sensor_config_5: ContactSensorCfg = ContactSensorCfg(
-            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_mf_l2",
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_th_l2",
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,

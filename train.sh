@@ -25,10 +25,10 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --wandb \
     --enable_opencv_display \
     --enable_grasp \
-    # --resume \
-    # --load_run "2025_1205_062347" \
-    # --checkpoint 200 \
-    # --resume \
+    --resume \
+    --load_run "2025_1207_053428" \
+    --checkpoint 400 \
+
 
 
     # --schedule "momentum" 

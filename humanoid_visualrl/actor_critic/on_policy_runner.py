@@ -248,7 +248,7 @@ class OnPolicyRunner:
         record_video = False
         for it in range(start_iter, tot_iter):
             if self.record_video and it % 100 == 0:
-                record_video = True 
+                record_video = False 
                 images = []    
             start = time.time()
             # Rollout

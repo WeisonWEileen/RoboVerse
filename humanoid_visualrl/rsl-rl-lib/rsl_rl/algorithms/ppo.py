@@ -371,8 +371,9 @@ class PPO:
                     for param_group in self.optimizer.param_groups:
                         initial_lr = param_group.get("initial_lr", self.learning_rate)
                         param_group["lr"] = initial_lr * lr_scale
-
-                    mean_kl += kl_mean.item()
+                # Always accumulate KL and keep the current batch KL for clipping check
+                current_kl = kl_mean.item()
+                mean_kl += current_kl
             # Surrogate loss
             ratio = torch.exp(actions_log_prob_batch - torch.squeeze(old_actions_log_prob_batch))
             surrogate = -torch.squeeze(advantages_batch) * ratio
@@ -441,14 +442,14 @@ class PPO:
             # Compute the gradients
             # -- For PPO
             self.optimizer.zero_grad()
-            if mean_kl > self.kl_clip_thres:
+            if current_kl > self.kl_clip_thres:
                 #  abort this iteration and return the losses. reference: https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/ppo/ppo.py
                 self.storage.clear()
                 return_dict = {
                     "value_function": (mean_value_loss + value_loss.item()) / idx_batch,
                     "surrogate": (mean_surrogate_loss + surrogate_loss.item()) / idx_batch,
                     "entropy": (mean_entropy + entropy_batch.mean().item()) / idx_batch,
-                    "kl": kl_mean / idx_batch,
+                    "kl": mean_kl / idx_batch,
                 }
                 return return_dict
 

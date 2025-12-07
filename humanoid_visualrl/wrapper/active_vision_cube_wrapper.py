@@ -612,6 +612,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         return torch.exp(-self.cfg.reward_lift_object_exp_shapeness * dist_squared)
 
     def _reward_contact_force(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        """Reward for contact. thums 5 times important than other 4, encourage 5 fingers simultaneously contact the object."""
         contact_force_1 = self.env.contact_sensor_1.data.force_matrix_w.squeeze(2)
         contact_force_2 = self.env.contact_sensor_2.data.force_matrix_w.squeeze(2)
         contact_force_3 = self.env.contact_sensor_3.data.force_matrix_w.squeeze(2)
@@ -622,7 +623,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             + (torch.sum(torch.norm(contact_force_2, dim=2), dim=1) > 0.0).float()
             + (torch.sum(torch.norm(contact_force_3, dim=2), dim=1) > 0.0).float()
             + (torch.sum(torch.norm(contact_force_4, dim=2), dim=1) > 0.0).float()
-            + (torch.sum(torch.norm(contact_force_5, dim=2), dim=1) > 0.0).float()
+            + 4* (torch.sum(torch.norm(contact_force_5, dim=2), dim=1) > 0.0).float()
         )
         # print(contact_force_matrix_sum[0])
         return contact_force_matrix_sum
