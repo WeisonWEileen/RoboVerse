@@ -147,6 +147,14 @@ class HumanoidBaseWrapper(RslRlWrapper):
             torch.tensor(sorted_joint_pos, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
         )
         actuator_keys = sorted(scenario.robots[0].actuators.keys())
+        
+        # assert default joint position and init state not the same
+        for name in actuator_keys:
+            a = scenario.robots[0].default_joint_positions[name]
+            b = self.cfg.init_states[0]["robots"][self.robot.name]["dof_pos"][name]
+            # all are float32
+            import math
+            assert math.isclose(a, b), f"Default joint position and init state not the same for {name}"
 
         self.actuated_index = [sorted_joint_names.index(name) for name in actuator_keys]
         # self.actuated_index = torch.tensor(actuated_index, device=self.device)

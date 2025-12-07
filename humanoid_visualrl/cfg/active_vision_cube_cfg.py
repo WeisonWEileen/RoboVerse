@@ -388,11 +388,11 @@ class BaseTableHumanoidTaskCfg:
 
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 1.4,
-        "finger_close_to_object": 5.0,
-        "grasp_binary": 50.0,
+        "finger_close_to_object": 1.0,
+        "lift_object": 50.0,
         "right_arm_default_joint_pos": 0.17,
         "wrist_lower_than_table": 0.1,
-        "contact_force": 1.0,
+        "contact_force": 3.0,
         # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
@@ -769,7 +769,7 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j7": 0.0,
                         # Right hand - open
                         "R_th_j0": 1.47,
-                        "R_th_j1": 0.0,
+                        "R_th_j1": -0.08,
                         # "R_th_j2": 0.0,
                         "R_ff_j1": 0.0,
                         # "R_ff_j2": 0.0,

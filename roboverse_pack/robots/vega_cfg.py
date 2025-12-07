@@ -62,7 +62,7 @@ class VegaCfg(RobotCfg):
         "R_th_j1": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.4, stiffness=300, damping=22),
         # "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.1, stiffness=260, damping=20),
     }
-    action_scale={
+    action_scale = {
         "base_yaw_joint": 0.25,
         "head_j2": 0.25,
         "head_j3": 0.25,
@@ -77,8 +77,8 @@ class VegaCfg(RobotCfg):
         "R_lf_j1": 0.05,
         "R_mf_j1": 0.05,
         "R_rf_j1": 0.05,
-        "R_th_j0": 0.05,
-        "R_th_j1": 0.05,
+        "R_th_j0": 0.15,
+        "R_th_j1": 0.80,
     }
     assert len(action_scale) == len(actuators), f"action_scale: {action_scale} != len(actuators): {len(actuators)}"
 
@@ -255,7 +255,7 @@ class VegaCfg(RobotCfg):
         "R_mf_j1": 0.0,
         "R_rf_j1": 0.0,
         "R_th_j0": 1.47,
-        "R_th_j1": 0.17,
+        "R_th_j1": -0.08,
 
         # tight initial pose
         "L_arm_j1": 3.06,

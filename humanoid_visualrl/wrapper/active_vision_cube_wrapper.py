@@ -618,12 +618,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         contact_force_3 = self.env.contact_sensor_3.data.force_matrix_w.squeeze(2)
         contact_force_4 = self.env.contact_sensor_4.data.force_matrix_w.squeeze(2)
         contact_force_5 = self.env.contact_sensor_5.data.force_matrix_w.squeeze(2)
+        contact_force_6 = self.env.contact_sensor_6.data.force_matrix_w.squeeze(2)
         contact_force_matrix_sum = (
             (torch.sum(torch.norm(contact_force_1, dim=2), dim=1) > 0.0).float()
             + (torch.sum(torch.norm(contact_force_2, dim=2), dim=1) > 0.0).float()
             + (torch.sum(torch.norm(contact_force_3, dim=2), dim=1) > 0.0).float()
             + (torch.sum(torch.norm(contact_force_4, dim=2), dim=1) > 0.0).float()
-            + 4* (torch.sum(torch.norm(contact_force_5, dim=2), dim=1) > 0.0).float()
+            + 3* (torch.sum(torch.norm(contact_force_5, dim=2), dim=1) > 0.0).float()
+            + 3* (torch.sum(torch.norm(contact_force_6, dim=2), dim=1) > 0.0).float()
         )
         # print(contact_force_matrix_sum[0])
         return contact_force_matrix_sum
@@ -712,6 +714,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _update_curriculum(self):
         self._update_obj_material()
         self._update_curriculum_object_yaw_range()
+        # self._update_curriculum_object_mass()
 
     def _update_obj_material(self):
         if (
@@ -795,7 +798,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 env_ids=too_close_env_ids,
             )
 
-    def _reward_grasp_binary(self, tensor_state, robot_name, cfg):
+    def _reward_lift_object(self, tensor_state, robot_name, cfg):
         finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]
         # get mean
         dist = torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
@@ -821,3 +824,5 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             max=0.0,
         )
         return below_distance.squeeze(1)
+
+    # def _update_curriculum_object_mass(self):

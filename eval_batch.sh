@@ -30,13 +30,14 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_batch.py \
     --task "active_vision" \
     --device "cuda:0" \
     --resume \
-    --load_run "2025_1203_062508" \
-    --checkpoint 3600 \
+    --load_run "2025_1207_115006" \
+    --checkpoint 1200 \
     --num_envs 50 \
     --evaluation_round 10 \
     --randomize_material \
     --eval_randomize_material_train \
     --enable_opencv_display \
+    --enable_grasp \
     # --eval_occlu \
     # --eval_occlu \
     # --occlude_cube

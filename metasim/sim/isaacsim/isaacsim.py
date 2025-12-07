@@ -1240,16 +1240,25 @@ class IsaacsimHandler(BaseSimHandler):
             track_air_time=False,
             filter_prim_paths_expr=["/World/envs/env_.*/object"], 
         )
+        contact_sensor_config_6: ContactSensorCfg = ContactSensorCfg(
+            prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_th_l2",
+            history_length=3,
+            update_period=self.physics_dt,
+            track_air_time=False,
+            filter_prim_paths_expr=["/World/envs/env_.*/object"], 
+        )
         self.contact_sensor_1 = ContactSensor(contact_sensor_config_1)
         self.contact_sensor_2 = ContactSensor(contact_sensor_config_2)
         self.contact_sensor_3 = ContactSensor(contact_sensor_config_3)
         self.contact_sensor_4 = ContactSensor(contact_sensor_config_4)
         self.contact_sensor_5 = ContactSensor(contact_sensor_config_5)
+        self.contact_sensor_6 = ContactSensor(contact_sensor_config_6)
         self.scene.sensors["contact_sensor_1"] = self.contact_sensor_1
         self.scene.sensors["contact_sensor_2"] = self.contact_sensor_2
         self.scene.sensors["contact_sensor_3"] = self.contact_sensor_3
         self.scene.sensors["contact_sensor_4"] = self.contact_sensor_4
         self.scene.sensors["contact_sensor_5"] = self.contact_sensor_5
+        self.scene.sensors["contact_sensor_6"] = self.contact_sensor_6
 
 
     def _load_contact_sensor_idx(self) -> None:

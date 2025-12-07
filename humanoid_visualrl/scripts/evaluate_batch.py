@@ -64,7 +64,7 @@ def play(args):
     # get task cfg from cfg.py in load_path
     # breakpoint()
     task_cfg_cls = load_task_cfg(args)
-    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class, finetune=args.resume, occlude_cube=args.eval_occlu)
+    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class, finetune=args.resume, occlude_cube=args.eval_occlu, enable_grasp=args.enable_grasp)
 
     assert args.num_envs % N_DIVIDE == 0, f"num_envs must be divisible by {N_DIVIDE} for batch evaluation, but got {args.num_envs}"
     N_interval_envs = args.num_envs // N_DIVIDE
