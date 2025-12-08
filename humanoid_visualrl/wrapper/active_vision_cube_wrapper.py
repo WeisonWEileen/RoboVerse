@@ -764,18 +764,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 env_ids=too_close_env_ids,
             )
 
-    def _reward_lift_object(self, tensor_state, robot_name, cfg):
-        finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]
-        # get mean
-        dist = torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
+    # def _reward_lift_object(self, tensor_state, robot_name, cfg):
+    #     finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]
+    #     # get mean
+    #     dist = torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
 
-        close = (dist < self.cfg.reward_lift_object_z).float()  # e.g. 0.06 m
+    #     close = (dist < self.cfg.reward_lift_object_z).float()  # e.g. 0.06 m
 
-        lift = self.object_pose_buf[:, 2] - self.init_states.objects["object"].root_state[:, 2]
-        lifted = (lift > self.cfg.reward_lift_object_z).float()  # e.g. 0.10 m
+    #     lift = self.object_pose_buf[:, 2] - self.init_states.objects["object"].root_state[:, 2]
+    #     lifted = (lift > self.cfg.reward_lift_object_z).float()  # e.g. 0.10 m
 
-        reward = self.see_flag_float * close * lifted * self.cfg.reward_lift_object_z  # e.g. 10.0
-        return reward
+    #     reward = self.see_flag_float * close * lifted * self.cfg.reward_lift_object_z  # e.g. 10.0
+    #     return reward
 
     def _reward_right_arm_default_joint_pos(
         self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg

@@ -27,7 +27,7 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --resume \
     --load_run "2025_1207_115006" \
     --checkpoint 1400 \
-    # --enable_opencv_display \
+    --enable_opencv_display \
 
 
 

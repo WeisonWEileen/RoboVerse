@@ -470,7 +470,7 @@ class BaseTableHumanoidTaskCfg:
 
     reward_hand_object_dist_exp_sharpness = 10.0
     reward_lift_object_z = init_states[0]["objects"]["object"]["pos"][2] + 0.2
-    reward_lift_object_exp_shapeness = 4.0
+    reward_lift_object_exp_shapeness = 10.0
     reward_object2goal_exp_shapeness = 15
     reward_wrist_close_to_object_exp_sharpness = 4.0
     reward_pixel_norm_at_object_exp_sharpness = 50.0
