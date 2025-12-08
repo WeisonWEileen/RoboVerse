@@ -16,18 +16,18 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 64 \
+    --num_envs 128 \
     --task "active_vision" \
     --run_name "benchmark_random_material_bppt_48_grasping" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn" \
     --randomize_material \
     --wandb \
-    --enable_opencv_display \
     --enable_grasp \
     --resume \
-    --load_run "2025_1207_055832" \
-    --checkpoint 100 \
+    --load_run "2025_1207_115006" \
+    --checkpoint 1400 \
+    # --enable_opencv_display \
 
 
 

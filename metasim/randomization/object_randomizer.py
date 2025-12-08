@@ -233,13 +233,14 @@ class ObjectRandomizer(BaseRandomizerType):
                 masses[env_ids, body_idx] = mass
             else:
                 masses[env_ids, :] = mass
-
             obj_inst.root_physx_view.set_masses(masses, torch.tensor(env_ids))
         elif obj_name in self.handler.scene.rigid_objects:
             obj_inst = self.handler.scene.rigid_objects[obj_name]
             masses = obj_inst.root_physx_view.get_masses()
             masses[env_ids] = mass
             obj_inst.root_physx_view.set_masses(masses, torch.tensor(env_ids))
+            # ratios = masses[env_ids[:, None], body_ids] / self.asset.data.default_mass[env_ids[:, None], body_ids]
+
         else:
             raise ValueError(f"Object {obj_name} not found")
 

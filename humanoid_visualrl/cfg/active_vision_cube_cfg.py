@@ -351,7 +351,7 @@ class BaseTableHumanoidTaskCfg:
     max_episode_length: int = 2400
     randomize_obj_material: bool = False
     update_obj_material_step_interval: int = 96 * 100
-    fall_down_threshold = 0.5397
+    reset_fall_down_threshold = 0.54
 
     @configclass
     class HumanoidExtraCfg:
@@ -390,9 +390,9 @@ class BaseTableHumanoidTaskCfg:
         "pixel_norm_at_object": 1.4,
         "finger_close_to_object": 1.0,
         "lift_object": 50.0,
-        "right_arm_default_joint_pos": 0.17,
+        "right_arm_default_joint_pos": 0.1,
         "wrist_lower_than_table": 0.1,
-        "contact_force": 3.0,
+        "contact_force": 1.0,
         # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
@@ -469,13 +469,12 @@ class BaseTableHumanoidTaskCfg:
     ]
 
     reward_hand_object_dist_exp_sharpness = 10.0
-    reward_lift_object_z = init_states[0]["objects"]["object"]["pos"][2] + 0.10
+    reward_lift_object_z = init_states[0]["objects"]["object"]["pos"][2] + 0.2
     reward_lift_object_exp_shapeness = 4.0
     reward_object2goal_exp_shapeness = 15
     reward_wrist_close_to_object_exp_sharpness = 4.0
     reward_pixel_norm_at_object_exp_sharpness = 50.0
     reward_improvement_ratio_threshold = 0.15
-
 
     randomize_material = False
     randomize_cfg = {
@@ -503,6 +502,14 @@ class BaseTableHumanoidTaskCfg:
     mode: Literal["train", "test"] = "train"
     occlude_cube = False
     occlude_cube_yaw_range = 0.8
+    
+
+    # initially give large mass to encourage contact, and then linearly decrease to 0.05
+    curriculum_object_mass_flag = True
+    curriculum_object_mass_range = (0.05, 100.0)
+    curriculum_object_mass_begin_iter = 2
+    curriculum_object_mass_end_iter = 80
+
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
@@ -513,7 +520,6 @@ class BaseTableHumanoidTaskCfg:
         self.see_flag_his_win_length = 1000
         self.time_range_increase_curriculum = 0.01
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
-        # self.randomize_object_radius_range = 0.0
         self.randomize_object_radius_range = 0.0
 
         # if self.finetune:
@@ -536,21 +542,19 @@ class BaseTableHumanoidTaskCfg:
         #         self.randomize_object_radius_range = 0.05
         #         self.randomize_object_radius = self.randomize_object_radius - 0.04
 
-        
         # else:
-            # self.update_curriculum_iteration = 400
-            # self.randomize_object_yaw_range = 2.3
-            # self.randomize_object_yaw_range = 3.14
-            # self.randomize_object_yaw_range = 3.06
-            # self.randomize_object_yaw_range = 2.14
+        # self.update_curriculum_iteration = 400
+        # self.randomize_object_yaw_range = 2.3
+        # self.randomize_object_yaw_range = 3.14
+        # self.randomize_object_yaw_range = 3.06
+        # self.randomize_object_yaw_range = 2.14
         self.curriculum_object_yaw = False
         self.curriculum_initial_object_yaw_range = 0.7
         self.randomize_object_yaw_range = 0.0
         self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
         self.curriculum_avg_thres_higher = 0.93
         self.curriculum_avg_thres_lower = 0.85
-        self.curriculum_randomize_iteration_interval = 200
-
+        self.curriculum_randomize_iteration_interval = 100
 
         # self.randomize_object_radius = 0.85  # max
         # self.randomize_object_radius = 0.55
@@ -593,15 +597,12 @@ class BaseTableHumanoidTaskCfg:
         if "finger_close_to_object" in self.reward_weights:
             self.ppo_cfg.policy.masking_all = False
 
-
         else:
             self.ppo_cfg.policy.masking_all = True
-        
+
         if self.robot == "vega":
             if "finger_close_to_object" in self.reward_weights and self.enable_grasp:
-                self.mask_joint_names = [
-
-                ]
+                self.mask_joint_names = []
             elif "finger_close_to_object" in self.reward_weights and not self.enable_grasp:
                 # mask hand
                 self.mask_joint_names = [
@@ -613,19 +614,20 @@ class BaseTableHumanoidTaskCfg:
                     "R_lf_j1",
                 ]
             else:
-                self.mask_joint_names = [                "R_arm_j1",
-                "R_arm_j2",
-                "R_arm_j3",
-                "R_arm_j4",
-                "R_arm_j5",
-                "R_arm_j6",
-                "R_arm_j7",
-                "R_th_j0",
-                "R_th_j1",
-                "R_ff_j1",
-                "R_mf_j1",
-                "R_rf_j1",
-                "R_lf_j1",
+                self.mask_joint_names = [
+                    "R_arm_j1",
+                    "R_arm_j2",
+                    "R_arm_j3",
+                    "R_arm_j4",
+                    "R_arm_j5",
+                    "R_arm_j6",
+                    "R_arm_j7",
+                    "R_th_j0",
+                    "R_th_j1",
+                    "R_ff_j1",
+                    "R_mf_j1",
+                    "R_rf_j1",
+                    "R_lf_j1",
                 ]
 
         if self.robot in ["g1_static_dex1"]:
@@ -769,7 +771,7 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j7": 0.0,
                         # Right hand - open
                         "R_th_j0": 1.47,
-                        "R_th_j1": -0.08,
+                        "R_th_j1": 0.05,
                         # "R_th_j2": 0.0,
                         "R_ff_j1": 0.0,
                         # "R_ff_j2": 0.0,

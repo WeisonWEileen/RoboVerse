@@ -173,6 +173,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self._ema_reward = 0.05
         self.last_curriculum_update_step = 0
 
+        # obj randomizer
+        from metasim.randomization.object_randomizer import ObjectRandomizer,  ObjectRandomCfg
+        self.obj_randomizer = ObjectRandomizer(cfg=ObjectRandomCfg(obj_name="object"), device=self.device)
+        self.obj_randomizer.bind_handler(self.env)
+
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
         if self.robot.name == "g1_static_dex1":
@@ -509,7 +514,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.1
         too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
         # self.reset_buf = self.timeout_buf
-        too_low = self.object_pose_buf[:, 2] < self.cfg.fall_down_threshold
+        too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
+        # two far from reset_point
+        too_far = torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.3
+
         self.reset_buf = self.timeout_buf | terminate | too_far | too_low
         return self.reset_buf
 
@@ -624,8 +632,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             + (torch.sum(torch.norm(contact_force_2, dim=2), dim=1) > 0.0).float()
             + (torch.sum(torch.norm(contact_force_3, dim=2), dim=1) > 0.0).float()
             + (torch.sum(torch.norm(contact_force_4, dim=2), dim=1) > 0.0).float()
-            + 3* (torch.sum(torch.norm(contact_force_5, dim=2), dim=1) > 0.0).float()
-            + 3* (torch.sum(torch.norm(contact_force_6, dim=2), dim=1) > 0.0).float()
+            + 3 * (torch.sum(torch.norm(contact_force_5, dim=2), dim=1) > 0.0).float()
+            + 3 * (torch.sum(torch.norm(contact_force_6, dim=2), dim=1) > 0.0).float()
         )
         # print(contact_force_matrix_sum[0])
         return contact_force_matrix_sum
@@ -711,51 +719,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)
 
-    def _update_curriculum(self):
-        self._update_obj_material()
-        self._update_curriculum_object_yaw_range()
-        # self._update_curriculum_object_mass()
-
-    def _update_obj_material(self):
-        if (
-            self.cfg.randomize_obj_material
-            and self.common_step_counter % self.cfg.update_obj_material_step_interval == 0
-        ):
-            self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
-            log.info("Updated object material")
-
-    def _update_curriculum_object_yaw_range(self):
-        if self.cfg.curriculum_object_yaw:
-            current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
-
-            # Only check and log once per 100 iterations, and only at the exact iteration boundary
-            if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
-                reward = self.episode_sums["pixel_norm_at_object"].mean()
-                # Always update last_reward to track current performance
-                reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)
-                self.last_reward = reward
-
-                iterations_since_last_update = current_iteration - (
-                    self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
-                )
-
-                if self._ema_reward > self.cfg.ema_reward_threshold:
-                    if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
-                        self._ema_reward = 0
-                        log.info(f"RESET ema_reward: {self._ema_reward}")
-                        self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
-                        self.last_curriculum_update_step = self.common_step_counter
-                        log.info(
-                            f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
-                        )
-                    else:
-                        log.info(
-                            f"FULL RANGE! NOT UPDATE ema_reward: {self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE! ema_reward_threshold: {self.cfg.ema_reward_threshold}"
-                        )
-                else:
-                    log.info(
-                        f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
-                    )
+ 
 
     def _randomize_occlusion_cube(self, object_state, sample_object_yaw):
         # in front and around the object, random the yaw.
@@ -825,4 +789,72 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         return below_distance.squeeze(1)
 
-    # def _update_curriculum_object_mass(self):
+
+    def _update_curriculum(self):
+        current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
+        self._update_obj_material()
+        if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
+            self._update_curriculum_object_yaw_range(current_iteration)
+            self._update_curriculum_object_mass(current_iteration)
+
+    def _update_obj_material(self):
+        if (
+            self.cfg.randomize_obj_material
+            and self.common_step_counter % self.cfg.update_obj_material_step_interval == 0
+        ):
+            self.env.randomize_obj_material(list(range(self.num_envs)), self.obj)
+            log.info("Updated object material")
+
+    def _update_curriculum_object_yaw_range(self, current_iteration):
+        if self.cfg.curriculum_object_yaw:
+
+            # Only check and log once per 100 iterations, and only at the exact iteration boundary
+            # if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
+            reward = self.episode_sums["pixel_norm_at_object"].mean()
+            # Always update last_reward to track current performance
+            reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)
+            self.last_reward = reward
+
+            iterations_since_last_update = current_iteration - (
+                self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
+            )
+
+            if self._ema_reward > self.cfg.ema_reward_threshold:
+                if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
+                    self._ema_reward = 0
+                    log.info(f"RESET ema_reward: {self._ema_reward}")
+                    self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
+                    self.last_curriculum_update_step = self.common_step_counter
+                    log.info(
+                        f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                    )
+                else:
+                    log.info(
+                        f"FULL RANGE! NOT UPDATE ema_reward: {self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE! ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                    )
+            else:
+                log.info(
+                    f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                    )
+
+    def _update_curriculum_object_mass(self, current_iteration):
+        if self.cfg.curriculum_object_mass_flag:
+            # set the upper bound of mass, to encourage contact
+            if current_iteration == 0:
+                mass = self.cfg.curriculum_object_mass_range[1] * torch.ones((self.num_envs, 1), device='cpu')
+                log.info(f"UPDATE curriculum_object_mass: {self.cfg.curriculum_object_mass_range[1]}")
+                self.obj_randomizer.set_mass("object", mass, env_ids=list(range(self.num_envs)))
+
+            elif current_iteration > self.cfg.curriculum_object_mass_end_iter:
+                return
+            
+            elif current_iteration > self.cfg.curriculum_object_mass_begin_iter:
+                # linearly decrease to 0.05
+                mass = self.cfg.curriculum_object_mass_range[1] + (self.cfg.curriculum_object_mass_range[1] - self.cfg.curriculum_object_mass_range[0]) * (self.cfg.curriculum_object_mass_begin_iter - current_iteration) / (self.cfg.curriculum_object_mass_end_iter - self.cfg.curriculum_object_mass_begin_iter)
+
+                log.info(f"UPDATE curriculum_object_mass: {mass}")
+                # randomize around the mass
+                mass = mass + (torch.rand((self.num_envs, 1), device='cpu') - 0.5) * 0.05
+                self.obj_randomizer.set_mass("object", mass, env_ids=list(range(self.num_envs)))
+
+

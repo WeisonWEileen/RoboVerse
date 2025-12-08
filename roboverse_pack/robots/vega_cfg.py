@@ -255,7 +255,7 @@ class VegaCfg(RobotCfg):
         "R_mf_j1": 0.0,
         "R_rf_j1": 0.0,
         "R_th_j0": 1.47,
-        "R_th_j1": -0.08,
+        "R_th_j1": 0.05,
 
         # tight initial pose
         "L_arm_j1": 3.06,
