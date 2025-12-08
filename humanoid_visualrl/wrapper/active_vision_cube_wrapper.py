@@ -192,7 +192,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.right_hand_palm_indices = get_body_reindexed_indices_from_substring(
                 self.env, self.robot.name, self.robot.right_hand_palm_links, device=self.device
             )
-            self.right_index_intermediate_link_indices = get_body_reindexed_indices_from_substring(
+            self.right_index_intermediate_link_indices = get_body_cyreindexed_indices_from_substring(
                 self.env, self.robot.name, self.robot.right_index_intermediate_link, device=self.device
             )
         elif self.robot.name == "vega":
@@ -514,11 +514,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.1
         too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
         # self.reset_buf = self.timeout_buf
-        too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
+        # too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
         # two far from reset_point
-        too_far = torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.3
+        too_far = torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.4
 
-        self.reset_buf = self.timeout_buf | terminate | too_far | too_low
+        self.reset_buf = self.timeout_buf | terminate | too_far
         return self.reset_buf
 
     def _reward_pixel_norm_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):

@@ -53,7 +53,7 @@ class LeggedRobotRunnerCfg:
         """Use clipped value loss."""
         clip_param = 0.2
         """Clipping parameter for PPO."""
-        entropy_coef = 0.001
+        entropy_coef = 0.0001
         """Entropy coefficient."""
         num_learning_epochs = 5
         """Number of learning epochs."""
@@ -285,25 +285,25 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=False,
             enable_gyroscopic_forces=False,
         ),
-        # PrimitiveCubeCfg(
-        #     name="object",
-        #     size=(0.06, 0.06, 0.06),
-        #     color=[1.0, 0.0, 0.0],
-        #     physics=PhysicStateType.RIGIDBODY,
-        #     collision_enabled=True,
-        #     fix_base_link=False,
-        #     default_position=(0.55, 0.1, 0.9 + 0.07 / 2 + 0.01),
-        #     mass=1.0,  # 增加质量以确保更好的物理行为
-        # ),
-        PrimitiveCylinderCfg(
+        PrimitiveCubeCfg(
             name="object",
-            radius=0.025,
-            height=0.08,
+            size=(0.04, 0.04, 0.04),
             color=[1.0, 0.0, 0.0],
+            physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,
-            default_position=(0.55, 0.1, 0.9 + 0.07 / 2 + 0.01),
-            mass=100.0,
+            fix_base_link=False,
+            default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
+            mass=1.0,  # 增加质量以确保更好的物理行为
         ),
+        # PrimitiveCylinderCfg(
+        #     name="object",
+        #     radius=0.025,
+        #     height=0.05,
+        #     color=[1.0, 0.0, 0.0],
+        #     collision_enabled=True,
+        #     default_position=(0.55, 0.1, 0.9 + 0.05 / 2 + 0.01),
+        #     mass=20.0,
+        # ),
         # ArticulationObjCfg(
         #     name="box_base",
         #     fix_base_link=True,
@@ -351,7 +351,7 @@ class BaseTableHumanoidTaskCfg:
     max_episode_length: int = 2400
     randomize_obj_material: bool = False
     update_obj_material_step_interval: int = 96 * 100
-    reset_fall_down_threshold = 0.54
+    reset_fall_down_threshold = 0.54 - 0.04 / 2 # 0.54 is for height 0.8
 
     @configclass
     class HumanoidExtraCfg:
@@ -368,13 +368,13 @@ class BaseTableHumanoidTaskCfg:
         resample_on_env_reset: bool = True
 
     humanoid_extra_cfg: HumanoidExtraCfg = HumanoidExtraCfg()
-
+#  0.9 + 0.06 / 2 + 0.01
     init_states = [
         {
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.52, 0.0, 0.50 + 0.08 / 2 + 0.008]),
+                    "pos": torch.tensor([0.52, 0.0, 0.50 +  0.06 / 2 + 0.01]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -506,7 +506,7 @@ class BaseTableHumanoidTaskCfg:
 
     # initially give large mass to encourage contact, and then linearly decrease to 0.05
     curriculum_object_mass_flag = True
-    curriculum_object_mass_range = (0.05, 100.0)
+    curriculum_object_mass_range = (0.05, 20)
     curriculum_object_mass_begin_iter = 2
     curriculum_object_mass_end_iter = 80
 
@@ -772,15 +772,10 @@ class BaseTableHumanoidTaskCfg:
                         # Right hand - open
                         "R_th_j0": 1.47,
                         "R_th_j1": 0.05,
-                        # "R_th_j2": 0.0,
                         "R_ff_j1": 0.0,
-                        # "R_ff_j2": 0.0,
                         "R_mf_j1": 0.0,
-                        # "R_mf_j2": 0.0,
                         "R_rf_j1": 0.0,
-                        # "R_rf_j2": 0.0,
                         "R_lf_j1": 0.0,
-                        # "R_lf_j2": 0.0,
                         "R_ff_j2": 0.0,
                         "R_lf_j2": 0.0,
                         "R_mf_j2": 0.0,
