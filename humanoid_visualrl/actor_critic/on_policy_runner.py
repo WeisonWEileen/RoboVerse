@@ -313,7 +313,7 @@ class OnPolicyRunner:
                         if record_video:
                             rgb_frame = self.env.env._get_offscreen_viewport_render() 
                             
-                            egocentric_frame = ((self.env.vision_rgb_buf[0].permute(1, 2, 0) +0.5)* 255.0).cpu().numpy()
+                            egocentric_frame = (self.env.vision_rgb_buf[0].permute(1, 2, 0)).cpu().numpy()
                             egocentric_frame = egocentric_frame.astype(np.uint8)
                             egocentric_frame = cv2.resize(egocentric_frame, (374, 374))
 

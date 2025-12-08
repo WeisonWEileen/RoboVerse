@@ -287,7 +287,7 @@ class BaseTableHumanoidTaskCfg:
         ),
         PrimitiveCubeCfg(
             name="object",
-            size=(0.04, 0.04, 0.04),
+            size=(0.05, 0.05, 0.05),
             color=[1.0, 0.0, 0.0],
             physics=PhysicStateType.RIGIDBODY,
             collision_enabled=True,

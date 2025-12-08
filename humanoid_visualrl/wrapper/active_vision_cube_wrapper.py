@@ -174,7 +174,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.last_curriculum_update_step = 0
 
         # obj randomizer
-        from metasim.randomization.object_randomizer import ObjectRandomizer,  ObjectRandomCfg
+        from metasim.randomization.object_randomizer import ObjectRandomizer, ObjectRandomCfg
+
         self.obj_randomizer = ObjectRandomizer(cfg=ObjectRandomCfg(obj_name="object"), device=self.device)
         self.obj_randomizer.bind_handler(self.env)
 
@@ -263,7 +264,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
 
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
-        self.vision_rgb_buf = tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2)
+        self.vision_rgb_buf = tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2).clone()
+        # self.vision_rgb_buf.copy_(tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2))
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg
         if self.semantic_seg:
@@ -516,7 +518,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # self.reset_buf = self.timeout_buf
         # too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
         # two far from reset_point
-        too_far = torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.4
+        too_far = (
+            torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.4
+        )
 
         self.reset_buf = self.timeout_buf | terminate | too_far
         return self.reset_buf
@@ -719,8 +723,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.env._marker_viz.visualize(all_pos, all_ori, marker_indices=all_idx)
 
- 
-
     def _randomize_occlusion_cube(self, object_state, sample_object_yaw):
         # in front and around the object, random the yaw.
         occlusion_cube_radius = torch.ones(self.num_envs, device=self.device) * (
@@ -789,7 +791,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         return below_distance.squeeze(1)
 
-
     def _update_curriculum(self):
         current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
         self._update_obj_material()
@@ -807,7 +808,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _update_curriculum_object_yaw_range(self, current_iteration):
         if self.cfg.curriculum_object_yaw:
-
             # Only check and log once per 100 iterations, and only at the exact iteration boundary
             # if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
             reward = self.episode_sums["pixel_norm_at_object"].mean()
@@ -835,26 +835,28 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             else:
                 log.info(
                     f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
-                    )
+                )
 
     def _update_curriculum_object_mass(self, current_iteration):
         if self.cfg.curriculum_object_mass_flag:
             # set the upper bound of mass, to encourage contact
             if current_iteration == 0:
-                mass = self.cfg.curriculum_object_mass_range[1] * torch.ones((self.num_envs, 1), device='cpu')
+                mass = self.cfg.curriculum_object_mass_range[1] * torch.ones((self.num_envs, 1), device="cpu")
                 log.info(f"UPDATE curriculum_object_mass: {self.cfg.curriculum_object_mass_range[1]}")
                 self.obj_randomizer.set_mass("object", mass, env_ids=list(range(self.num_envs)))
 
             elif current_iteration > self.cfg.curriculum_object_mass_end_iter:
                 return
-            
+
             elif current_iteration > self.cfg.curriculum_object_mass_begin_iter:
                 # linearly decrease to 0.05
-                mass = self.cfg.curriculum_object_mass_range[1] + (self.cfg.curriculum_object_mass_range[1] - self.cfg.curriculum_object_mass_range[0]) * (self.cfg.curriculum_object_mass_begin_iter - current_iteration) / (self.cfg.curriculum_object_mass_end_iter - self.cfg.curriculum_object_mass_begin_iter)
+                mass = self.cfg.curriculum_object_mass_range[1] + (
+                    self.cfg.curriculum_object_mass_range[1] - self.cfg.curriculum_object_mass_range[0]
+                ) * (self.cfg.curriculum_object_mass_begin_iter - current_iteration) / (
+                    self.cfg.curriculum_object_mass_end_iter - self.cfg.curriculum_object_mass_begin_iter
+                )
 
                 log.info(f"UPDATE curriculum_object_mass: {mass}")
                 # randomize around the mass
-                mass = mass + (torch.rand((self.num_envs, 1), device='cpu') - 0.5) * 0.05
+                mass = mass + (torch.rand((self.num_envs, 1), device="cpu") - 0.5) * 0.05
                 self.obj_randomizer.set_mass("object", mass, env_ids=list(range(self.num_envs)))
-
-
