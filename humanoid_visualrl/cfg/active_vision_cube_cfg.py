@@ -389,7 +389,7 @@ class BaseTableHumanoidTaskCfg:
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 1.4,
         "finger_close_to_object": 1.0,
-        "lift_object": 50.0,
+        "lift_object": 5.0,
         "right_arm_default_joint_pos": 0.1,
         "wrist_lower_than_table": 0.1,
         "contact_force": 1.0,
@@ -469,7 +469,8 @@ class BaseTableHumanoidTaskCfg:
     ]
 
     reward_hand_object_dist_exp_sharpness = 10.0
-    reward_lift_object_z = init_states[0]["objects"]["object"]["pos"][2] + 0.2
+    reward_lift_offset = 0.2
+    reward_lift_object_z = init_states[0]["objects"]["object"]["pos"][2] + reward_lift_offset
     reward_lift_object_exp_shapeness = 10.0
     reward_object2goal_exp_shapeness = 15
     reward_wrist_close_to_object_exp_sharpness = 4.0
