@@ -69,7 +69,7 @@ class LeggedRobotRunnerCfg:
         max_grad_norm = 1.0
         kl_clip_thres = 0.2
         class_name = "PPO"
-        learning_rate_mlp = 1e-4
+        learning_rate_mlp = 1e-3
         learning_rate_rnn = 1e-4
         learning_rate_cnn = 5e-5
 
@@ -388,7 +388,7 @@ class BaseTableHumanoidTaskCfg:
 
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 1.4,
-        "finger_close_to_object": 1.0,
+        "finger_close_to_object": 3.0,
         "lift_object": 5.0,
         "right_arm_default_joint_pos": 0.1,
         "wrist_lower_than_table": 0.1,
@@ -511,7 +511,7 @@ class BaseTableHumanoidTaskCfg:
     curriculum_object_mass_range = (0.05, 20)
     curriculum_object_mass_begin_iter = 2
     curriculum_object_mass_end_iter = 80
-    stage_finger_close_to_object_change_thres = 0.085
+    stage_finger_close_to_object_change_thres = 0.045
 
 
     def __post_init__(self):
