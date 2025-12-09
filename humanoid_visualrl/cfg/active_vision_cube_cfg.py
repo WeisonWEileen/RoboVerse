@@ -69,7 +69,7 @@ class LeggedRobotRunnerCfg:
         max_grad_norm = 1.0
         kl_clip_thres = 0.2
         class_name = "PPO"
-        learning_rate_mlp = 1e-3
+        learning_rate_mlp = 1e-4
         learning_rate_rnn = 1e-4
         learning_rate_cnn = 5e-5
 
@@ -293,7 +293,7 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
-            mass=1.0,  # 增加质量以确保更好的物理行为
+            mass=20.0,  # 增加质量以确保更好的物理行为
         ),
         # PrimitiveCylinderCfg(
         #     name="object",
@@ -392,7 +392,8 @@ class BaseTableHumanoidTaskCfg:
         "lift_object": 5.0,
         "right_arm_default_joint_pos": 0.1,
         "wrist_lower_than_table": 0.1,
-        "contact_force": 1.0,
+        "contact_force": 2.0,
+        "stage": 1.0,
         # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,
@@ -510,6 +511,7 @@ class BaseTableHumanoidTaskCfg:
     curriculum_object_mass_range = (0.05, 20)
     curriculum_object_mass_begin_iter = 2
     curriculum_object_mass_end_iter = 80
+    stage_finger_close_to_object_change_thres = 0.085
 
 
     def __post_init__(self):

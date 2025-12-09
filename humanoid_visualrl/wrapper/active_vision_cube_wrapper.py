@@ -66,6 +66,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")
         # exit()
         self.see_flag_float = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
+        self.stage = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
+
 
         for obj in self.cfg.objects:
             if obj.name == "object":
@@ -181,6 +183,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.obj_randomizer = ObjectRandomizer(cfg=ObjectRandomCfg(obj_name="object"), device=self.device)
         self.obj_randomizer.bind_handler(self.env)
+
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -500,6 +503,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.init_states.objects["object"].root_state[env_ids, 3:7] = quat
 
     def _post_reset_hook(self, env_ids):
+        self.stage[env_ids] = 0
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
         self.env.sim.render()
@@ -522,7 +526,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
         # two far from reset_point
         too_far = (
-            torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.4
+            torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.2
         )
 
         self.reset_buf = self.timeout_buf | terminate | too_far
@@ -611,7 +615,16 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         dist = torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
 
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
-        return reward
+
+        dist_close_to_object = dist < self.cfg.stage_finger_close_to_object_change_thres
+        # assign those both are stage 0 and dist_close_to_object to stage 1
+        self.stage[dist_close_to_object] = 1
+        return reward * ~self.stage
+    
+
+
+    def _reward_stage(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        return self.stage
 
     def _reward_energy_consumption(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         torque = tensor_state.robots[robot_name].joint_effort[:, self.actuated_index] * self.action_masking
@@ -761,7 +774,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             #     torch.zeros(too_close_env_ids.shape[0], device=env_wrapper.device),
             #     torch.zeros(too_close_env_ids.shape[0], device=env_wrapper.device),
             #     yaw_too_close,
-            # )
+            # 
             self.env._set_object_pose(
                 self.cfg.objects[3],
                 occlusion_cube_state[too_close_env_ids, :3],
@@ -786,7 +799,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
     ):
         joint_pos = tensor_state.robots[robot_name].joint_pos
-        return torch.norm((joint_pos - self.default_joint_pd_target)[:, self.right_arm_joints_indices], dim=1)
+        return torch.norm((joint_pos - self.default_joint_pd_target)[:, self.right_arm_joints_indices], dim=1) * ~self.stage
 
     def _reward_wrist_lower_than_table(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         below_distance = torch.clamp(
@@ -794,7 +807,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             - self.cfg.objects[0].default_position[2],
             max=0.0,
         )
-        return below_distance.squeeze(1)
+        return below_distance.squeeze(1) * ~self.stage
 
     def _update_curriculum(self):
         current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)

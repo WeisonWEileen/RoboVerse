@@ -24,10 +24,10 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --randomize_material \
     --wandb \
     --enable_grasp \
+    --enable_opencv_display \
     --resume \
     --load_run "2025_1207_115006" \
     --checkpoint 1400 \
-    --enable_opencv_display \
 
 
 
