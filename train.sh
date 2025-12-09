@@ -25,9 +25,9 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --wandb \
     --enable_grasp \
     --enable_opencv_display \
-    --resume \
-    --load_run "2025_1207_115006" \
-    --checkpoint 1400 \
+    # --resume \
+    # --load_run "2025_1207_115006" \
+    # --checkpoint 1400 \
 
 
 
