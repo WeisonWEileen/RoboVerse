@@ -293,7 +293,7 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
-            mass=20.0,  # 增加质量以确保更好的物理行为
+            mass=80.0,  # 增加质量以确保更好的物理行为
         ),
         # PrimitiveCylinderCfg(
         #     name="object",
@@ -508,9 +508,9 @@ class BaseTableHumanoidTaskCfg:
 
     # initially give large mass to encourage contact, and then linearly decrease to 0.05
     curriculum_object_mass_flag = True
-    curriculum_object_mass_range = (0.05, 20)
-    curriculum_object_mass_begin_iter = 2
-    curriculum_object_mass_end_iter = 80
+    curriculum_object_mass_range = (0.05, 80)
+    curriculum_object_mass_begin_iter = 100
+    curriculum_object_mass_end_iter = 800
     stage_finger_close_to_object_change_thres = 0.045
 
 
@@ -769,7 +769,7 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j2": -0.21,
                         "R_arm_j3": -0.13,
                         "R_arm_j4": -2.59,
-                        "R_arm_j5": -0.02,
+                        "R_arm_j5": -0.3,
                         "R_arm_j6": 0.05,
                         "R_arm_j7": 0.0,
                         # Right hand - open
