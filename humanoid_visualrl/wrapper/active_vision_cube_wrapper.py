@@ -583,17 +583,17 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
 
     def _reward_finger_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]
+        finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]  
+        
         # get mean
-        dist = torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
+        dist = torch.square( torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1) - 0.015 * torch.ones(self.num_envs, device=self.device) ) # cube offset
 
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
 
-        dist_close_to_object = dist < self.cfg.stage_finger_close_to_object_change_thres
+        # dist_close_to_object = dist < self.cfg.stage_finger_close_to_object_change_thres
         # assign those both are stage 0 and dist_close_to_object to stage 1
-        self.stage[dist_close_to_object] = 1
-        return reward * (self.stage == 0)
-
+        # self.stage[dist_close_to_object] = 1
+        return reward 
     def _reward_stage(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         return self.stage
 
