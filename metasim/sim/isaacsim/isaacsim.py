@@ -731,7 +731,7 @@ class IsaacsimHandler(BaseSimHandler):
                     solver_position_iteration_count=4,
                     solver_velocity_iteration_count=0,
                 ),
-                collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
+                collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True,contact_offset=0.01, rest_offset=0.0),
             ),
             # actuators={
             #     # jn: ImplicitActuatorCfg(
@@ -1264,6 +1264,15 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.sensors["contact_sensor_4"] = self.contact_sensor_4
         self.scene.sensors["contact_sensor_5"] = self.contact_sensor_5
         self.scene.sensors["contact_sensor_6"] = self.contact_sensor_6
+
+        # contact_sensor_config_total: ContactSensorCfg = ContactSensorCfg(
+        #     prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_th_l2",
+        #     history_length=3,
+        #     update_period=self.physics_dt,
+        #     track_air_time=False,
+        #     filter_prim_paths_expr=["/World/envs/env_.*/object"],
+        # )
+        # self.contact_sensor_1_data = self.contact_sensor_1.data
 
 
     def _load_contact_sensor_idx(self) -> None:

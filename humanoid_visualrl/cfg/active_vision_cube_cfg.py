@@ -72,6 +72,7 @@ class LeggedRobotRunnerCfg:
         learning_rate_mlp = 5e-4
         learning_rate_rnn = 1e-4
         learning_rate_cnn = 5e-5
+        # normalize_advantage_per_mini_batch = False
 
         # mask = True
         # masks_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
@@ -385,16 +386,19 @@ class BaseTableHumanoidTaskCfg:
     command_dim = 14
     num_actions = 17 - 6
     torque_limit_scale = 1.0
-
+    scale = 0.5
     reward_weights: dict[str, float] = {
-        "pixel_norm_at_object": 1.4,
-        "finger_close_to_object": 3.0,
+        "pixel_norm_at_object": 1.4 * scale,
+        "finger_close_to_object": 3.0 * scale,
         "lift_object": 10.0,
-        "right_arm_default_joint_pos": 0.1,
-        "wrist_lower_than_table": 0.1,
-        "contact_force": 2.0,
-        "stage": 1.0,
-        "action_smoothness": -0.1,
+        "right_arm_default_joint_pos": 0.1 * scale,
+        "wrist_lower_than_table": 0.1 * scale,
+        "contact_force": 2.0 * scale,
+        # note that this should be behind contact_force, otherwise it will be not update
+        "contact_force_upward": 0.25 * scale,
+        "stage": 1.0 * scale,
+        "action_smoothness": -0.1 * scale,
+        # "contact_force_two_much_penalty": -1.0,
         # "energy_consumption": -1e-7,
         # "see_object": 0.20,
         # "hand_to_object_dist": 1.0,

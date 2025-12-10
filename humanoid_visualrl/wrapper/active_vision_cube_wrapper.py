@@ -583,17 +583,21 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
 
     def _reward_finger_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]  
-        
+        finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]
+
         # get mean
-        dist = torch.square( torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1) - 0.015 * torch.ones(self.num_envs, device=self.device) ) # cube offset
+        dist = torch.square(
+            torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
+            - 0.015 * torch.ones(self.num_envs, device=self.device)
+        )  # cube offset
 
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
 
-        # dist_close_to_object = dist < self.cfg.stage_finger_close_to_object_change_thres
+        dist_close_to_object = dist < self.cfg.stage_finger_close_to_object_change_thres
         # assign those both are stage 0 and dist_close_to_object to stage 1
-        # self.stage[dist_close_to_object] = 1
-        return reward 
+        self.stage[dist_close_to_object] = 1
+        return reward
+
     def _reward_stage(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         return self.stage
 
@@ -614,22 +618,46 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _reward_contact_force(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for contact. thums 5 times important than other 4, encourage 5 fingers simultaneously contact the object."""
-        contact_force_1 = self.env.contact_sensor_1.data.force_matrix_w.squeeze(2)
-        contact_force_2 = self.env.contact_sensor_2.data.force_matrix_w.squeeze(2)
-        contact_force_3 = self.env.contact_sensor_3.data.force_matrix_w.squeeze(2)
-        contact_force_4 = self.env.contact_sensor_4.data.force_matrix_w.squeeze(2)
-        contact_force_5 = self.env.contact_sensor_5.data.force_matrix_w.squeeze(2)
-        contact_force_6 = self.env.contact_sensor_6.data.force_matrix_w.squeeze(2)
+        contact_force_1 = self.env.contact_sensor_1.data.force_matrix_w.squeeze(1).squeeze(1)
+        contact_force_2 = self.env.contact_sensor_2.data.force_matrix_w.squeeze(1).squeeze(1)
+        contact_force_3 = self.env.contact_sensor_3.data.force_matrix_w.squeeze(1).squeeze(1)
+        contact_force_4 = self.env.contact_sensor_4.data.force_matrix_w.squeeze(1).squeeze(1)
+        contact_force_5 = self.env.contact_sensor_5.data.force_matrix_w.squeeze(1).squeeze(1)
+        contact_force_6 = self.env.contact_sensor_6.data.force_matrix_w.squeeze(1).squeeze(1)
         contact_force_matrix_sum = (
-            (torch.sum(torch.norm(contact_force_1, dim=2), dim=1) > 0.0).float()
-            + (torch.sum(torch.norm(contact_force_2, dim=2), dim=1) > 0.0).float()
-            + (torch.sum(torch.norm(contact_force_3, dim=2), dim=1) > 0.0).float()
-            + (torch.sum(torch.norm(contact_force_4, dim=2), dim=1) > 0.0).float()
-            + 3 * (torch.sum(torch.norm(contact_force_5, dim=2), dim=1) > 0.0).float()
-            + 3 * (torch.sum(torch.norm(contact_force_6, dim=2), dim=1) > 0.0).float()
+            (torch.norm(contact_force_1, dim=1) > 0.0).float()
+            + (torch.norm(contact_force_2, dim=1) > 0.0).float()
+            + (torch.norm(contact_force_3, dim=1) > 0.0).float()
+            + (torch.norm(contact_force_4, dim=1) > 0.0).float()
+            + 2.5 * (torch.norm(contact_force_5, dim=1) > 0.0).float()
+            + 2.5 * (torch.norm(contact_force_6, dim=1) > 0.0).float()
+        )
+
+        # z axis force downward
+        self.upward_force = (
+            contact_force_1[:, 2]
+            + contact_force_2[:, 2]
+            + contact_force_3[:, 2]
+            + contact_force_4[:, 2]
+            + 2.5 * contact_force_5[:, 2]
+            + 2.5 * contact_force_6[:, 2]
         )
         # print(contact_for≤ce_matrix_sum[0])
         return contact_force_matrix_sum
+    
+    def _reward_contact_force_upward(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        #  if > 0 penalty, if < 0 reward 
+        return -torch.clamp(self.upward_force, min=-25.0, max=0.0)
+        # return self.upward_force
+    # def _reward_contact_force_two_much_penalty(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    #     contact_force_1 = self.env.contact_sensor_1.data.net_forces_w
+    #     contact_force_2 = self.env.contact_sensor_2.data.net_forces_w
+    #     contact_force_3 = self.env.contact_sensor_3.data.net_forces_w
+    #     contact_force_4 = self.env.contact_sensor_4.data.net_forces_w
+    #     contact_force_5 = self.env.contact_sensor_5.data.net_forces_w
+    #     contact_force_6 = self.env.contact_sensor_6.data.net_forces_w
+    #     # contact_force_matrix_sum = torch.sum
+    #     return 1
 
     # def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
     #     # TODO: define curl pose
@@ -637,7 +665,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _reward_action_smoothness(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         action_smoothness = torch.sum(torch.square(self.last_actions - self.actions), dim=1)
         return action_smoothness
-
 
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
         # cupdate

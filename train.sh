@@ -26,8 +26,8 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --enable_grasp \
     --enable_opencv_display \
     --resume \
-    --checkpoint 400 \
-    --load_run "2025_1209_100908" \
+    --checkpoint 800 \
+    --load_run "2025_1210_062958" \
     # --debug
 
 
