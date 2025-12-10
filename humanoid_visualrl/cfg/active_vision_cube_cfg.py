@@ -390,7 +390,7 @@ class BaseTableHumanoidTaskCfg:
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 1.4 * scale,
         "finger_close_to_object": 3.0 * scale,
-        "lift_object": 10.0,
+        "lift_object": 30.0,
         "right_arm_default_joint_pos": 0.1 * scale,
         "wrist_lower_than_table": 0.1 * scale,
         "contact_force": 2.0 * scale,

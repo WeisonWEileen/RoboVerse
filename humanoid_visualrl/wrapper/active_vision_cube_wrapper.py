@@ -130,7 +130,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.pixel_counts = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
         self.right_wrist_indice = self.wrist_indices[1]
         self.lift_offset = torch.exp(
-            -torch.tensor(self.cfg.reward_lift_object_exp_shapeness * self.cfg.reward_lift_offset, device=self.device)
+            -torch.tensor(self.cfg.reward_lift_object_exp_shapeness * self.cfg.reward_lift_offset ** 2, device=self.device)
         )
 
         if "pixel_norm_at_object" in self.cfg.reward_weights:
@@ -613,7 +613,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # offset
 
         # when the right wrist is close to the object, this reward go up
-        dist = torch.abs(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
+        dist = torch.square(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
         return self.see_flag_float * (torch.exp(-self.cfg.reward_lift_object_exp_shapeness * dist) - self.lift_offset)
 
     def _reward_contact_force(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):

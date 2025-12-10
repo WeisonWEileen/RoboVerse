@@ -730,8 +730,12 @@ class IsaacsimHandler(BaseSimHandler):
                     enabled_self_collisions=False,
                     solver_position_iteration_count=4,
                     solver_velocity_iteration_count=0,
+                    sleep_threshold=0.005,  # 休眠阈值
+                    stabilization_threshold=0.0005,  # 稳定化阈值
                 ),
-                collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True,contact_offset=0.01, rest_offset=0.0),
+                collision_props=sim_utils.CollisionPropertiesCfg(
+                    collision_enabled=True, contact_offset=0.01, rest_offset=0.0
+                ),
             ),
             # actuators={
             #     # jn: ImplicitActuatorCfg(
