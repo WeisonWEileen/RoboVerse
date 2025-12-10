@@ -947,7 +947,7 @@ class IsaacsimHandler(BaseSimHandler):
                         visual_material=sim_utils.PreviewSurfaceCfg(
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),
-                        physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=2.0),
+                        physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=5.0),
                         # physics_material=sim_utils.RigidBodyMaterialCfg(
                         # static_friction=2.0,
                         # ),
@@ -973,6 +973,7 @@ class IsaacsimHandler(BaseSimHandler):
                         visual_material=sim_utils.PreviewSurfaceCfg(
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),
+                        physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=4.0),
                         rigid_props=rigid_props,
                         semantic_tags=semantic_tags,
                         collision_props=collision_props,
@@ -990,7 +991,7 @@ class IsaacsimHandler(BaseSimHandler):
                         radius=obj.radius,
                         height=obj.height,
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
-                        physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=2.0),
+                        physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=4.0),
                         visual_material=sim_utils.PreviewSurfaceCfg(
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),

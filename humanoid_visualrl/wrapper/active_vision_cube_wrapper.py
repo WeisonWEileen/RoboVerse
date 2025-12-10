@@ -659,6 +659,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     # def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
     #     # TODO: define curl pose
     #     pass
+    def _reward_action_smoothness(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        action_smoothness = torch.sum(torch.square(self.last_actions - self.actions), dim=1)
+        return action_smoothness
+
 
     def _update_marker_viz(self, position: torch.Tensor, orientation: torch.Tensor, direction_vec: torch.Tensor):
         # cupdate
