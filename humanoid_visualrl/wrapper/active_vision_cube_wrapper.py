@@ -321,31 +321,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.robot_yaw_buffer[:, 0] = robot_yaw_buffer
 
     def _compute_pixel_distance(self):
-        # target_id = next(k for k, v in self.vision_seg_info.items() if "object" in v)
-        # turn it into float
-
-        # rgb_image = self.vision_rgb_buf[0].permute(1, 2, 0).cpu().numpy()
-
-        # print(f"rewards: {rewards[0]}")
-
-        # 在env 0的图像上绘制坐标点
-        # if self.env._render_viewport:
-        # 找到env 0在valid_envs中的索引
-
-        # 更新显示缓冲区
-        # self.vision_rgb_buf[0] = torch.from_numpy(rgb_image).to(self.device)
-
-        # distance_0 = distance[env_0_pos].item()
-        # distance_text = f"Distance: {distance_0:.1f} px"
-        # font = cv2.FONT_HERSHEY_SIMPLEX
-        # font_scale = 0.6
-        # font_color = (255, 255, 255)  # 白色文字
-        # font_thickness = 2
-        # text_x, text_y = 10, 25
-
-        # cv2.putText(rgb_image, distance_text, (text_x, text_y),
-        #           font, font_scale, font_color, font_thickness)
-
         if self.see_flag.any():
             # 计算加权中心点
             weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
@@ -653,7 +628,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             + 3 * (torch.sum(torch.norm(contact_force_5, dim=2), dim=1) > 0.0).float()
             + 3 * (torch.sum(torch.norm(contact_force_6, dim=2), dim=1) > 0.0).float()
         )
-        # print(contact_force_matrix_sum[0])
+        # print(contact_for≤ce_matrix_sum[0])
         return contact_force_matrix_sum
 
     # def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):

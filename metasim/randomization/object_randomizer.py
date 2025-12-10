@@ -239,7 +239,14 @@ class ObjectRandomizer(BaseRandomizerType):
             masses = obj_inst.root_physx_view.get_masses()
             masses[env_ids] = mass
             obj_inst.root_physx_view.set_masses(masses, torch.tensor(env_ids))
-            # ratios = masses[env_ids[:, None], body_ids] / self.asset.data.default_mass[env_ids[:, None], body_ids]
+
+            ratios = masses[env_ids, 0] / obj_inst.data.default_mass[env_ids, 0]
+            # scale the inertia tensors by the the ratios
+            # since mass randomization is done on default values, we can use the default inertia tensors
+            inertias = obj_inst.root_physx_view.get_inertias()
+            inertias[env_ids, 0] = obj_inst.data.default_inertia[env_ids, 0] * ratios
+            # set the inertia tensors into the physics simulation
+            obj_inst.root_physx_view.set_inertias(inertias, torch.tensor(env_ids))
 
         else:
             raise ValueError(f"Object {obj_name} not found")

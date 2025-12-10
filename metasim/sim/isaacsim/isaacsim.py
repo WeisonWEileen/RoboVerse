@@ -931,7 +931,11 @@ class IsaacsimHandler(BaseSimHandler):
         else:
             rigid_props = sim_utils.RigidBodyPropertiesCfg()
         if obj.collision_enabled:
-            collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+            collision_props = sim_utils.CollisionPropertiesCfg(
+                collision_enabled=True,
+                contact_offset=0.01,
+                rest_offset=0.0,
+            )
         else:
             collision_props = sim_utils.CollisionPropertiesCfg(collision_enabled=False)
 
