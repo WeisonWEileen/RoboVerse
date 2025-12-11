@@ -728,7 +728,7 @@ class IsaacsimHandler(BaseSimHandler):
                     fix_root_link=robot.fix_base_link,
                     # enabled_self_collisions=robot.enabled_self_collisions,
                     enabled_self_collisions=False,
-                    solver_position_iteration_count=4,
+                    solver_position_iteration_count=8,
                     solver_velocity_iteration_count=0,
                     sleep_threshold=0.005,  # 休眠阈值
                     stabilization_threshold=0.0005,  # 稳定化阈值

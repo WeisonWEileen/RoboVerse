@@ -124,7 +124,7 @@ class BaseTableHumanoidTaskCfg:
     penalised_contact_indices: indices of the contact joints
     """
 
-    decimation: int = 3
+    # decimation: int = 3
     episode_length: int = MISSING
     reward_functions: list[callable[[list[TensorState], str | None], torch.FloatTensor]] = MISSING
     reward_weights: list[float] = MISSING
@@ -226,7 +226,7 @@ class BaseTableHumanoidTaskCfg:
     """PPO config."""
     normalization = Normalization()
     """Normalization config."""
-    decimation: int = 5
+    decimation: int = 2
     """Decimation pd control loop."""
     num_obs: int = 124
     """Number of observations."""
@@ -245,12 +245,12 @@ class BaseTableHumanoidTaskCfg:
     termination_contact_indices: torch.Tensor = MISSING
     """termination contact indices for reward computation"""
     sim_params = SimParamCfg(
-        dt=0.005,
+        dt=1 / 120,
         contact_offset=0.01,
-        num_position_iterations=4,
+        num_position_iterations=8,
         num_velocity_iterations=0,
         bounce_threshold_velocity=0.5,
-        replace_cylinder_with_capsule=True,
+        # replace_cylinder_with_capsule=True,
         friction_offset_threshold=0.04,
         num_threads=10,
     )
@@ -339,7 +339,7 @@ class BaseTableHumanoidTaskCfg:
     """path to the trajectory file"""
     # TODO read form max_episode_length_s and divide s
     # max_episode_length_s: int = 6
-    max_episode_length_s: int = 10
+    max_episode_length_s: int = 7
     """maximum episode length in seconds"""
     episode_length: int = 2400
     """episode length in steps"""
@@ -388,15 +388,15 @@ class BaseTableHumanoidTaskCfg:
     torque_limit_scale = 1.0
     scale = 0.5
     reward_weights: dict[str, float] = {
-        "pixel_norm_at_object": 1.4 * scale,
-        "finger_close_to_object": 3.0 * scale,
-        "lift_object": 30.0,
-        "right_arm_default_joint_pos": 0.1 * scale,
+        "pixel_norm_at_object": 0.4 * scale,
+        "finger_close_to_object": 1.0 * scale,
+        # "lift_object": 30.0,
+        # "right_arm_default_joint_pos": 0.1 * scale,
         "wrist_lower_than_table": 0.1 * scale,
-        "contact_force": 2.0 * scale,
+        # "contact_force": 2.0 * scale,
         # note that this should be behind contact_force, otherwise it will be not update
-        "contact_force_upward": 0.25 * scale,
-        "stage": 1.0 * scale,
+        # "contact_force_upward": 0.25 * scale,
+        # "stage": 1.0 * scale,
         "action_smoothness": -0.1 * scale,
         # "contact_force_two_much_penalty": -1.0,
         # "energy_consumption": -1e-7,
@@ -514,8 +514,8 @@ class BaseTableHumanoidTaskCfg:
     # initially give large mass to encourage contact, and then linearly decrease to 0.05
     curriculum_object_mass_flag = True
     curriculum_object_mass_range = (0.1, objects[2].mass)
-    curriculum_object_mass_begin_iter = 0
-    curriculum_object_mass_end_iter = 100
+    curriculum_object_mass_begin_iter = 150
+    curriculum_object_mass_end_iter = 400
     stage_finger_close_to_object_change_thres = 0.045
 
 
@@ -738,12 +738,12 @@ class BaseTableHumanoidTaskCfg:
             self.cameras[0].height = int(600 / SCALE_FACTOR)
             self.cameras[0].focal_length = 0.2112011909484863
             self.cameras[0].intrinsics = [
-                365.5782165527344 / SCALE_FACTOR,
+                365.5782165527344 / (SCALE_FACTOR * 0.5),
                 0.0,
-                494.15985107421875 / SCALE_FACTOR,
+                494.15985107421875 / (SCALE_FACTOR * 0.5),
                 0.0,
-                365.5782165527344 / SCALE_FACTOR,
-                301.70770263671875 / SCALE_FACTOR,
+                365.5782165527344 / (SCALE_FACTOR * 0.5),
+                301.70770263671875 / (SCALE_FACTOR * 0.5),
                 0.0,
                 0.0,
                 1.0,
@@ -779,7 +779,7 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j7": 0.0,
                         # Right hand - open
                         "R_th_j0": 1.47,
-                        "R_th_j1": 0.05,
+                        "R_th_j1": -0.10,
                         "R_ff_j1": 0.0,
                         "R_mf_j1": 0.0,
                         "R_rf_j1": 0.0,

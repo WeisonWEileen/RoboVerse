@@ -16,7 +16,7 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 128 \
+    --num_envs 256 \
     --task "active_vision" \
     --run_name "benchmark_random_material_bppt_48_grasping" \
     --device "cuda:0" \
@@ -25,9 +25,9 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --wandb \
     --enable_grasp \
     --enable_opencv_display \
-    --resume \
-    --checkpoint 800 \
-    --load_run "2025_1210_062958" \
+    # --resume \
+    # --checkpoint 500 \
+    # --load_run "2025_1211_073716" \
     # --debug
 
 
