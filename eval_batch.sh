@@ -30,8 +30,8 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_batch.py \
     --task "active_vision" \
     --device "cuda:0" \
     --resume \
-    --load_run "2025_1210_062958" \
-    --checkpoint 800 \
+    --load_run "2025_1211_125600" \
+    --checkpoint 1600 \
     --num_envs 50 \
     --evaluation_round 10 \
     --randomize_material \

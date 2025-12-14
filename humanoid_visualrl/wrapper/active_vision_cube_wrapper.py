@@ -107,6 +107,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.last_robot_yaw_buffer = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.float)
         self.robot_yaw_buffer_action = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.float)
 
+        self.mass_curriculum_trigger = False
+        self.mass_curriculum_trigger_count = 0
+
         self._reset(list(range(self.num_envs)))
 
         self._update_camera_pose = False
@@ -592,6 +595,16 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )  # cube offset
 
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
+        if not self.mass_curriculum_trigger:
+            if dist.mean() < self.cfg.stage_finger_close_to_object_change_thres + 0.01:
+
+                self.mass_curriculum_trigger_count += 1
+                log.info(f"mass_curriculum_trigger_count: {self.mass_curriculum_trigger_count}")
+                if self.mass_curriculum_trigger_count > 30:
+                    self.start_mass_curriculum_iter = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
+                    self.end_mass_curriculum_iter = self.start_mass_curriculum_iter + self.cfg.curriculum_object_mass_update_interval
+                    self.mass_curriculum_trigger = True
+                    log.info(f"UPDATE curriculum_object_mass: start_mass_curriculum_iter: {self.start_mass_curriculum_iter}, end_mass_curriculum_iter: {self.end_mass_curriculum_iter}")
 
         dist_close_to_object = dist < self.cfg.stage_finger_close_to_object_change_thres
         # assign those both are stage 0 and dist_close_to_object to stage 1
@@ -629,8 +642,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             + (torch.norm(contact_force_2, dim=1) > 0.0).float()
             + (torch.norm(contact_force_3, dim=1) > 0.0).float()
             + (torch.norm(contact_force_4, dim=1) > 0.0).float()
-            + 2.5 * (torch.norm(contact_force_5, dim=1) > 0.0).float()
-            + 2.5 * (torch.norm(contact_force_6, dim=1) > 0.0).float()
+            + 3.0 * (torch.norm(contact_force_5, dim=1) > 0.0).float()
+            + 3.0 * (torch.norm(contact_force_6, dim=1) > 0.0).float()
         )
 
         # z axis force downward
@@ -860,22 +873,22 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 )
 
     def _update_curriculum_object_mass(self, current_iteration):
-        if self.cfg.curriculum_object_mass_flag:
+        if self.cfg.curriculum_object_mass_flag and self.mass_curriculum_trigger:
             # set the upper bound of mass, to encourage contact
             if current_iteration == 0:
                 mass = self.cfg.curriculum_object_mass_range[1] * torch.ones((self.num_envs, 1), device="cpu")
                 log.info(f"UPDATE curriculum_object_mass: {self.cfg.curriculum_object_mass_range[1]}")
                 self.obj_randomizer.set_mass("object", mass, env_ids=list(range(self.num_envs)))
 
-            elif current_iteration > self.cfg.curriculum_object_mass_end_iter:
+            elif current_iteration > self.end_mass_curriculum_iter:
                 return
 
-            elif current_iteration > self.cfg.curriculum_object_mass_begin_iter:
+            elif current_iteration > self.start_mass_curriculum_iter:
                 # linearly decrease to 0.05
                 mass = self.cfg.curriculum_object_mass_range[1] + (
                     self.cfg.curriculum_object_mass_range[1] - self.cfg.curriculum_object_mass_range[0]
-                ) * (self.cfg.curriculum_object_mass_begin_iter - current_iteration) / (
-                    self.cfg.curriculum_object_mass_end_iter - self.cfg.curriculum_object_mass_begin_iter
+                ) * (self.start_mass_curriculum_iter - current_iteration) / (
+                    self.cfg.curriculum_object_mass_update_interval
                 )
 
                 log.info(f"UPDATE curriculum_object_mass: {mass}")

@@ -26,7 +26,7 @@ class VegaCfg(RobotCfg):
     # Asset paths
     # urdf_path: str = "roboverse_pack/robots/robots_vega/humanoid/vega_1/vega.urdf"
     # usd_path: str = "roboverse_data/robots/vega/vega.usd"
-    usd_path: str = "roboverse_data/robots/vega/vega_root_rot_finger_tip_flattened.usd"
+    usd_path: str = "roboverse_data/robots/vega/vega_root_rot_finger_tip_flattened_mimic_enhanced.usd"
     # Physical properties
     enabled_gravity: bool = True  # Disable gravity for default setup
 
@@ -73,11 +73,19 @@ class VegaCfg(RobotCfg):
         "R_arm_j5": 0.25,
         "R_arm_j6": 0.05,
         "R_arm_j7": 0.20,
-        "R_ff_j1": 0.15,
-        "R_lf_j1": 0.15,
-        "R_mf_j1": 0.15,
-        "R_rf_j1": 0.15,
-        "R_th_j0": 0.15,
+        # "R_arm_j1": 0.0,
+        # "R_arm_j2": 0.0,
+        # "R_arm_j3": 0.0,
+        # "R_arm_j4": 0.0,
+        # "R_arm_j5": 0.0,
+        # "R_arm_j6": 0.0,
+        # "R_arm_j7": 0.0,
+
+        "R_ff_j1": 0.35,
+        "R_lf_j1": 0.35,
+        "R_mf_j1": 0.35,
+        "R_rf_j1": 0.35,
+        "R_th_j0": 0.35,
         "R_th_j1": 0.80,
     }
     assert len(action_scale) == len(actuators), f"action_scale: {action_scale} != len(actuators): {len(actuators)}"

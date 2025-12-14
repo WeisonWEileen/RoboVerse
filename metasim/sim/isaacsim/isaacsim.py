@@ -728,13 +728,13 @@ class IsaacsimHandler(BaseSimHandler):
                     fix_root_link=robot.fix_base_link,
                     # enabled_self_collisions=robot.enabled_self_collisions,
                     enabled_self_collisions=False,
-                    solver_position_iteration_count=8,
+                    solver_position_iteration_count=32,
                     solver_velocity_iteration_count=0,
                     sleep_threshold=0.005,  # 休眠阈值
                     stabilization_threshold=0.0005,  # 稳定化阈值
                 ),
                 collision_props=sim_utils.CollisionPropertiesCfg(
-                    collision_enabled=True, contact_offset=0.01, rest_offset=0.0
+                    collision_enabled=True, contact_offset=0.02, rest_offset=0.0
                 ),
             ),
             # actuators={
@@ -801,7 +801,7 @@ class IsaacsimHandler(BaseSimHandler):
         # get indices for obs_joints
         # if robot have mimic joints attribute, and the joint name is in the mimic joints attribute, then skip
 
-        from pxr import Usd, UsdPhysics
+        from pxr import Usd, UsdPhysics, PhysxSchema, Tf
         import omni.usd
 
         stage = omni.usd.get_context().get_stage()
@@ -809,9 +809,26 @@ class IsaacsimHandler(BaseSimHandler):
         if robot_joint_prim_root and robot_joint_prim_root.IsValid():
             for prim in robot_joint_prim_root.GetChildren():
                 joint_name = prim.GetName()
+                # for mimic joint adjust joint attribute
+                prim_type = prim.GetTypeName()
+
+                # fail to set mimic joint attribute
+                # if prim_type == "PhysicsRevoluteJoint":
+                #     joint_name = prim.GetName()
+                #     if hasattr(robot, "mimic_joints") and joint_name in robot.mimic_joints:
+                #         # from pxr import Usd, UsdGeom, UsdPhysics, Gf, PhysxSchema, Sdf
+                #         for s in prim.GetAppliedSchemas():
+                #             if s.startswith("PhysxMimicJointAPI:"):
+                #                 inst = s.split(":", 1)[1]  # "rotY"
+                #                 if inst == "rotY":
+                #                     mimicJointAPI = PhysxSchema.PhysxMimicJointAPI(prim, UsdPhysics.Tokens.rotY)
+                #                     mimicJointAPI.GetNaturalFrequencyAttr().Set(100.0)
+                #                     mimicJointAPI.GetDampingRatioAttr().Set(1.2)
+                #                 else:
+                #                     raise ValueError(f"Mimic joint {joint_name} is not supported")
+                #         continue
                 if joint_name in robot.default_joint_positions.keys():
                     continue
-                prim_type = prim.GetTypeName()
                 if prim_type == "PhysicsRevoluteJoint" or prim_type == "PhysicsPrismaticJoint":
                     joint_name = prim.GetName()
                     if hasattr(robot, "mimic_joints") and joint_name in robot.mimic_joints:
@@ -901,6 +918,14 @@ class IsaacsimHandler(BaseSimHandler):
             )
         return self._none_static_joint_idx_original
 
+    def set_rigid_body_solver_position_iteration_count(self,prim_path, count):
+        from isaacsim.core.utils.prims import get_prim_at_path
+        from pxr import PhysxSchema
+        prim = get_prim_at_path(prim_path)
+        rigid_body = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
+        rigid_body.CreateSolverPositionIterationCountAttr().Set(count)
+        return prim
+
     def _add_object(self, obj: BaseObjCfg) -> None:
         """Add an object to the scene."""
         import isaaclab.sim as sim_utils
@@ -908,6 +933,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         assert isinstance(obj, BaseObjCfg)
         prim_path = f"/World/envs/env_.*/{obj.name}"
+
 
         ## Articulation object
         if isinstance(obj, ArticulationObjCfg):
@@ -937,7 +963,7 @@ class IsaacsimHandler(BaseSimHandler):
         if obj.collision_enabled:
             collision_props = sim_utils.CollisionPropertiesCfg(
                 collision_enabled=True,
-                contact_offset=0.01,
+                contact_offset=0.02,
                 rest_offset=0.0,
             )
         else:
@@ -945,6 +971,7 @@ class IsaacsimHandler(BaseSimHandler):
 
         ## Primitive object
         if isinstance(obj, PrimitiveCubeCfg):
+
             semantic_tags = [("class", "object")] if obj.name == "object" else None
             self.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
@@ -968,7 +995,10 @@ class IsaacsimHandler(BaseSimHandler):
                     ),
                 )
             )
+            self.set_rigid_body_solver_position_iteration_count('/World/envs/env_0/object', 32)
+
             return
+            
         if isinstance(obj, PrimitiveSphereCfg):
             semantic_tags = [("class", "ball")] if obj.name == "ball" else None
 
@@ -1219,42 +1249,42 @@ class IsaacsimHandler(BaseSimHandler):
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
-            filter_prim_paths_expr=["/World/envs/env_.*/object"],  
+            filter_prim_paths_expr=["/World/envs/env_.*/object"],
         )
         contact_sensor_config_2: ContactSensorCfg = ContactSensorCfg(
             prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_mf_l2",
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
-            filter_prim_paths_expr=["/World/envs/env_.*/object"], 
+            filter_prim_paths_expr=["/World/envs/env_.*/object"],
         )
         contact_sensor_config_3: ContactSensorCfg = ContactSensorCfg(
             prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_ff_l2",
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
-            filter_prim_paths_expr=["/World/envs/env_.*/object"], 
+            filter_prim_paths_expr=["/World/envs/env_.*/object"],
         )
         contact_sensor_config_4: ContactSensorCfg = ContactSensorCfg(
             prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_lf_l2",
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
-            filter_prim_paths_expr=["/World/envs/env_.*/object"],  
+            filter_prim_paths_expr=["/World/envs/env_.*/object"],
         )
         contact_sensor_config_5: ContactSensorCfg = ContactSensorCfg(
             prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_th_l2",
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
-            filter_prim_paths_expr=["/World/envs/env_.*/object"], 
+            filter_prim_paths_expr=["/World/envs/env_.*/object"],
         )
         contact_sensor_config_6: ContactSensorCfg = ContactSensorCfg(
             prim_path=f"/World/envs/env_.*/{self.robots[0].name}/R_th_l2",
             history_length=3,
             update_period=self.physics_dt,
             track_air_time=False,
-            filter_prim_paths_expr=["/World/envs/env_.*/object"], 
+            filter_prim_paths_expr=["/World/envs/env_.*/object"],
         )
         self.contact_sensor_1 = ContactSensor(contact_sensor_config_1)
         self.contact_sensor_2 = ContactSensor(contact_sensor_config_2)
@@ -1277,7 +1307,6 @@ class IsaacsimHandler(BaseSimHandler):
         #     filter_prim_paths_expr=["/World/envs/env_.*/object"],
         # )
         # self.contact_sensor_1_data = self.contact_sensor_1.data
-
 
     def _load_contact_sensor_idx(self) -> None:
         # return

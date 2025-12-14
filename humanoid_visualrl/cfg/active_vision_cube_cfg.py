@@ -69,9 +69,15 @@ class LeggedRobotRunnerCfg:
         max_grad_norm = 1.0
         kl_clip_thres = 0.2
         class_name = "PPO"
-        learning_rate_mlp = 5e-4
+        # good schime for touching
+        # learning_rate_mlp = 1e-3
+        # learning_rate_rnn = 1e-4
+        # learning_rate_cnn = 5e-5
+
+        # good schime for lifting
+        learning_rate_mlp = 3e-4
         learning_rate_rnn = 1e-4
-        learning_rate_cnn = 5e-5
+        learning_rate_cnn = 7e-5
         # normalize_advantage_per_mini_batch = False
 
         # mask = True
@@ -226,7 +232,7 @@ class BaseTableHumanoidTaskCfg:
     """PPO config."""
     normalization = Normalization()
     """Normalization config."""
-    decimation: int = 2
+    decimation: int = 5
     """Decimation pd control loop."""
     num_obs: int = 124
     """Number of observations."""
@@ -245,9 +251,9 @@ class BaseTableHumanoidTaskCfg:
     termination_contact_indices: torch.Tensor = MISSING
     """termination contact indices for reward computation"""
     sim_params = SimParamCfg(
-        dt=1 / 120,
+        dt=0.005,
         contact_offset=0.01,
-        num_position_iterations=8,
+        num_position_iterations=4,
         num_velocity_iterations=0,
         bounce_threshold_velocity=0.5,
         # replace_cylinder_with_capsule=True,
@@ -276,16 +282,16 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        RigidObjCfg(
-            name="wall",
-            scale=(4.0, 4.0, 1.8),
-            physics=PhysicStateType.GEOM,
-            usd_path="roboverse_data/wall.usd",
-            fix_base_link=True,
-            default_position=(0.0, 0.0, 0.3),
-            collision_enabled=False,
-            enable_gyroscopic_forces=False,
-        ),
+        # RigidObjCfg(
+        #     name="wall",
+        #     scale=(4.0, 4.0, 1.8),
+        #     physics=PhysicStateType.GEOM,
+        #     usd_path="roboverse_data/wall.usd",
+        #     fix_base_link=True,
+        #     default_position=(0.0, 0.0, 0.3),
+        #     collision_enabled=False,
+        #     enable_gyroscopic_forces=False,
+        # ),
         PrimitiveCubeCfg(
             name="object",
             size=(0.05, 0.05, 0.05),
@@ -294,7 +300,7 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
-            mass=10.0,  # 增加质量以确保更好的物理行为
+            mass=20,  # 增加质量以确保更好的物理行为
         ),
         # PrimitiveCylinderCfg(
         #     name="object",
@@ -389,13 +395,13 @@ class BaseTableHumanoidTaskCfg:
     scale = 0.5
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 0.4 * scale,
-        "finger_close_to_object": 1.0 * scale,
-        # "lift_object": 30.0,
+        "finger_close_to_object": 1.3 * scale,
+        "lift_object": 50.0,
         # "right_arm_default_joint_pos": 0.1 * scale,
         "wrist_lower_than_table": 0.1 * scale,
-        # "contact_force": 2.0 * scale,
+        "contact_force": 1.0 * scale,
         # note that this should be behind contact_force, otherwise it will be not update
-        # "contact_force_upward": 0.25 * scale,
+        "contact_force_upward": 0.25 * scale,
         # "stage": 1.0 * scale,
         "action_smoothness": -0.1 * scale,
         # "contact_force_two_much_penalty": -1.0,
@@ -449,7 +455,7 @@ class BaseTableHumanoidTaskCfg:
             mount_quat=(0.5, -0.5, 0.5, -0.5),
             focal_length=7.6,
             horizontal_aperture=20.0,
-            # clipping_range=(0.05, 2.),
+            clipping_range=(0.05, 3.),
         )
     ]
 
@@ -513,10 +519,12 @@ class BaseTableHumanoidTaskCfg:
 
     # initially give large mass to encourage contact, and then linearly decrease to 0.05
     curriculum_object_mass_flag = True
-    curriculum_object_mass_range = (0.1, objects[2].mass)
-    curriculum_object_mass_begin_iter = 150
-    curriculum_object_mass_end_iter = 400
+    curriculum_object_mass_range = (0.1, objects[1].mass)
+    curriculum_object_mass_begin_iter = 0
+    curriculum_object_mass_end_iter = 200
+    curriculum_object_mass_update_interval = 200
     stage_finger_close_to_object_change_thres = 0.045
+
 
 
     def __post_init__(self):

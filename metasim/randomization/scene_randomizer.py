@@ -214,7 +214,7 @@ class SceneRandomizer(BaseRandomizerType):
 
         # Create/randomize walls
         # if self.cfg.walls is not None and self.cfg.walls.enabled:
-        self._update_wall(env_prim_path, env_id)
+        # self._update_wall(env_prim_path, env_id)
 
         # Create/randomize ceiling
         if self.cfg.ceiling is not None and self.cfg.ceiling.enabled:
