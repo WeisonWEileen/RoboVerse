@@ -282,7 +282,7 @@ def play(args):
             # )
 
         env_wrapper.env._set_object_pose(
-            env_wrapper.cfg.objects[2], object_state[:, :3], object_state[:, 3:7], env_ids=list(range(env_wrapper.num_envs))
+            env_wrapper.cfg.objects[1], object_state[:, :3], object_state[:, 3:7], env_ids=list(range(env_wrapper.num_envs))
         )
         env_wrapper._compute_observations()
 

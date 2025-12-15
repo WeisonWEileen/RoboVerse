@@ -596,10 +596,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
         if not self.mass_curriculum_trigger:
-            if dist.mean() < self.cfg.stage_finger_close_to_object_change_thres + 0.01:
+            dist_mean = dist.mean()
+            if dist_mean < self.cfg.stage_finger_close_to_object_change_thres :
 
                 self.mass_curriculum_trigger_count += 1
-                log.info(f"mass_curriculum_trigger_count: {self.mass_curriculum_trigger_count}")
+                log.info(f"mass_curriculum_trigger_count: {self.mass_curriculum_trigger_count}, dist_mean: {dist_mean}")
                 if self.mass_curriculum_trigger_count > 30:
                     self.start_mass_curriculum_iter = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
                     self.end_mass_curriculum_iter = self.start_mass_curriculum_iter + self.cfg.curriculum_object_mass_update_interval

@@ -75,9 +75,9 @@ class LeggedRobotRunnerCfg:
         # learning_rate_cnn = 5e-5
 
         # good schime for lifting
-        learning_rate_mlp = 3e-4
+        learning_rate_mlp = 1e-4
         learning_rate_rnn = 1e-4
-        learning_rate_cnn = 7e-5
+        learning_rate_cnn = 4e-5
         # normalize_advantage_per_mini_batch = False
 
         # mask = True
@@ -300,7 +300,7 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
-            mass=20,  # 增加质量以确保更好的物理行为
+            mass=0.1,  # 增加质量以确保更好的物理行为
         ),
         # PrimitiveCylinderCfg(
         #     name="object",
@@ -564,9 +564,9 @@ class BaseTableHumanoidTaskCfg:
         # self.randomize_object_yaw_range = 3.14
         # self.randomize_object_yaw_range = 3.06
         # self.randomize_object_yaw_range = 2.14
-        self.curriculum_object_yaw = False
-        self.curriculum_initial_object_yaw_range = 0.7
-        self.randomize_object_yaw_range = 0.0
+        self.curriculum_object_yaw = True
+        self.curriculum_initial_object_yaw_range = 0.3
+        self.randomize_object_yaw_range = 0.7
         self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
         self.curriculum_avg_thres_higher = 0.93
         self.curriculum_avg_thres_lower = 0.85

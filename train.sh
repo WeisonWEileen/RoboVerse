@@ -8,7 +8,7 @@ if [ "$USER_NAME" = "balen" ]; then
     PYTHON_PATH="/home/balen/conda/envs/metasim/bin/python"
     echo "Using balen's python path"
 elif [ "$USER_NAME" = "ghr" ]; then
-    PYTHON_PATH="/datasets/v2p/current/pw-workspace/conda/isaaclab211/bin/python"
+    PYTHON_PATH="/datasets/v2p/current/pw-workspace/conda/isaaclapb211/bin/python"
     echo "Using ghr's python path"
 else
     PYTHON_PATH="python3"
@@ -26,8 +26,8 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --enable_opencv_display \
     --randomize_material \
     --resume \
-    --checkpoint 600 \
-    --load_run "2025_1214_152702" \
+    --checkpoint 2300 \
+    --load_run "2025_1214_185450" \
     # --debug
 
 

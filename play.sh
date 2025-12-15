@@ -29,8 +29,8 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_see_occlusion.py \
     --task "active_vision" \
     --resume \
-    --load_run "2025_1112_143657" \
-    --checkpoint 1400 \
+    --load_run "2025_1214_185450" \
+    --checkpoint 2300 \
     --enable_opencv_display 
     # --device "cuda:0" \
     # --headless \
