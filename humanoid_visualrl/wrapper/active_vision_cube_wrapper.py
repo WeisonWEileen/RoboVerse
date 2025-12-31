@@ -390,6 +390,33 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     1,
                 )
 
+            # 在图像正中间绘制红色方框（高度50，宽度80）
+            # box_width = 80
+            # box_height = 50
+            # top_left = (int(self.image_center_x - box_width / 2), int(self.image_center_y - box_height / 2))
+            # bottom_right = (int(self.image_center_x + box_width / 2), int(self.image_center_y + box_height / 2))
+            # cv2.rectangle(rgb_image, top_left, bottom_right, (0, 0, 255), 2)  # 红色方框，线宽2
+
+            # # 在图像正中间绘制红色方框（高度25，宽度40）
+            # box_width2 = 40
+            # box_height2 = 25
+            # top_left2 = (int(self.image_center_x - box_width2 / 2), int(self.image_center_y - box_height2 / 2))
+            # bottom_right2 = (int(self.image_center_x + box_width2 / 2), int(self.image_center_y + box_height2 / 2))
+            # cv2.rectangle(rgb_image, top_left2, bottom_right2, (0, 232, 99), 2)  # 红色方框，线宽2
+
+            # # 在图像正中间绘制红色方框（高度25，宽度40）
+            # box_width2 = 120
+            # box_height2 = 75
+            # top_left2 = (int(self.image_center_x - box_width2 / 2), int(self.image_center_y - box_height2 / 2))
+            # bottom_right2 = (int(self.image_center_x + box_width2 / 2), int(self.image_center_y + box_height2 / 2))
+            # cv2.rectangle(rgb_image, top_left2, bottom_right2, (0, 155, 255), 2)  # 红色方框，线宽2
+
+            # box_width2 = 160
+            # box_height2 = 100
+            # top_left2 = (int(self.image_center_x - box_width2 / 2), int(self.image_center_y - box_height2 / 2))
+            # bottom_right2 = (int(self.image_center_x + box_width2 / 2), int(self.image_center_y + box_height2 / 2))
+            # cv2.rectangle(rgb_image, top_left2, bottom_right2, (155, 0, 255), 2)  # 红色方框，线宽2
+
             window_open = self.opencv_renderer.display(rgb_image)
 
             if not window_open:
@@ -658,11 +685,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         # print(contact_for≤ce_matrix_sum[0])
         return contact_force_matrix_sum
-    
+
     def _reward_contact_force_upward(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        #  if > 0 penalty, if < 0 reward 
+        #  if > 0 penalty, if < 0 reward
         return -torch.clamp(self.upward_force, min=-25.0, max=0.0)
         # return self.upward_force
+
     # def _reward_contact_force_two_much_penalty(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
     #     contact_force_1 = self.env.contact_sensor_1.data.net_forces_w
     #     contact_force_2 = self.env.contact_sensor_2.data.net_forces_w

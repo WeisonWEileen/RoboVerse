@@ -592,7 +592,7 @@ class BaseTableHumanoidTaskCfg:
         if self.actor_critic_class == "use_rnn":
             self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrent"
         if self.actor_critic_class == "use_rnn_foveated":
-            self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrentFoveated"
+            self.ppo_cfg.policy.class_name = "ActorCriticCNNRAM"
         if self.actor_critic_class == "use_vit_rnn":
             self.ppo_cfg.policy.class_name = "ActorCriticViTRecurrent"
 
