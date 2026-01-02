@@ -111,7 +111,7 @@ if __name__ == "__main__":
     # task assign and override
     scenario.sim_params = task_cfg.sim_params
     scenario.decimation = task_cfg.decimation
-    scenario.render_interval = scenario.decimation
+    scenario.render_interval = scenario.decimation 
     scenario.task = task_cfg
     if hasattr(task_cfg, "filter_pairs"):
         scenario.filter_pairs = task_cfg.filter_pairs

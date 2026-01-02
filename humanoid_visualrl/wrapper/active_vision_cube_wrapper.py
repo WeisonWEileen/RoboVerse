@@ -133,7 +133,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.pixel_counts = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
         self.right_wrist_indice = self.wrist_indices[1]
         self.lift_offset = torch.exp(
-            -torch.tensor(self.cfg.reward_lift_object_exp_shapeness * self.cfg.reward_lift_offset ** 2, device=self.device)
+            -torch.tensor(
+                self.cfg.reward_lift_object_exp_shapeness * self.cfg.reward_lift_offset**2, device=self.device
+            )
         )
 
         if "pixel_norm_at_object" in self.cfg.reward_weights:
@@ -272,7 +274,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
 
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
-        self.vision_rgb_buf = tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2).clone()
+        # if self.common_step_counte
+        if self.common_step_counter % self.cfg.vision_slow_down_scale == 0:
+            self.vision_rgb_buf = tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2).clone()
+        # else:
+        #     self.vision_rgb_buf = torch.zeros(self.num_envs, 3, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.uint8)
         # self.vision_rgb_buf.copy_(tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2))
         # self.resnet_features = self.feature_extractor.extract_visual_features(vision_rgb)
         # vision_seg = tensor_state.cameras[self.cfg.cameras[0].name].instance_id_seg
@@ -345,7 +351,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx]
 
             # rgb_image = torch.clamp(rgb_image, 0, 1)
-            rgb_image = rgb_image.permute(1, 2, 0).cpu().numpy()
+            # 确保转换为可写的、连续的 numpy 数组，以便 OpenCV 可以修改
+            rgb_image = rgb_image.permute(1, 2, 0).contiguous().cpu().numpy().copy()
             env_idx = torch.where(self.see_flag)[0] == self.opencv_render_env_idx
             # 确保图像是uint8格式
             # rgb_image = self.vision_rgb_buf[self.opencv_render_env_idx] + 0.3
@@ -625,15 +632,18 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
         if not self.mass_curriculum_trigger:
             dist_mean = dist.mean()
-            if dist_mean < self.cfg.stage_finger_close_to_object_change_thres :
-
+            if dist_mean < self.cfg.stage_finger_close_to_object_change_thres:
                 self.mass_curriculum_trigger_count += 1
                 log.info(f"mass_curriculum_trigger_count: {self.mass_curriculum_trigger_count}, dist_mean: {dist_mean}")
                 if self.mass_curriculum_trigger_count > 30:
                     self.start_mass_curriculum_iter = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
-                    self.end_mass_curriculum_iter = self.start_mass_curriculum_iter + self.cfg.curriculum_object_mass_update_interval
+                    self.end_mass_curriculum_iter = (
+                        self.start_mass_curriculum_iter + self.cfg.curriculum_object_mass_update_interval
+                    )
                     self.mass_curriculum_trigger = True
-                    log.info(f"UPDATE curriculum_object_mass: start_mass_curriculum_iter: {self.start_mass_curriculum_iter}, end_mass_curriculum_iter: {self.end_mass_curriculum_iter}")
+                    log.info(
+                        f"UPDATE curriculum_object_mass: start_mass_curriculum_iter: {self.start_mass_curriculum_iter}, end_mass_curriculum_iter: {self.end_mass_curriculum_iter}"
+                    )
 
         dist_close_to_object = dist < self.cfg.stage_finger_close_to_object_change_thres
         # assign those both are stage 0 and dist_close_to_object to stage 1
@@ -686,9 +696,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         # print(contact_for≤ce_matrix_sum[0])
         return contact_force_matrix_sum
-    
+
     def _reward_contact_force_upward(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        #  if > 0 penalty, if < 0 reward 
+        #  if > 0 penalty, if < 0 reward
         return -torch.clamp(self.upward_force, min=-25.0, max=0.0)
         # return self.upward_force
 

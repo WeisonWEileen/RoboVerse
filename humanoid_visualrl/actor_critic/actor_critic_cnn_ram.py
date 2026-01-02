@@ -454,7 +454,6 @@ class CNNGlimpseEncoder(nn.Module):
         phi_out = torch.cat([phi_1, phi_2, phi_3], dim=1)
         return phi_out
 
-
 class ActorCriticCNNRAM(ActorCriticCNNRecurrent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

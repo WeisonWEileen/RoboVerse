@@ -28,8 +28,8 @@ from metasim.sim import BaseSimHandler
 from metasim.types import DictEnvState
 from metasim.utils.dict import deep_get
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState
-import omni
 import weakref
+import typing
 from typing import Literal
 from isaaclab.app import AppLauncher
 
@@ -83,6 +83,7 @@ class IsaacsimHandler(BaseSimHandler):
 
     def _init_keyboard(self) -> None:
         import carb
+        import omni
 
         self._appwindow = omni.appwindow.get_default_app_window()
         self._input = carb.input.acquire_input_interface()
@@ -344,6 +345,7 @@ class IsaacsimHandler(BaseSimHandler):
         # if self.headless:
         #     return
         from pxr import Usd, UsdGeom, Gf
+        import omni
 
         def get_world_transform_xform(prim: Usd.Prim) -> typing.Tuple[Gf.Vec3d, Gf.Rotation, Gf.Vec3d]:
             """copy from https://docs.omniverse.nvidia.com/dev-guide/latest/programmer_ref/usd/transforms/get-world-transforms.html#:~:text=def%20get_world_transform_xform(prim%3A%20Usd.Prim)%20%2D%3E%20typing.Tuple%5BGf.Vec3d"""
@@ -918,9 +920,10 @@ class IsaacsimHandler(BaseSimHandler):
             )
         return self._none_static_joint_idx_original
 
-    def set_rigid_body_solver_position_iteration_count(self,prim_path, count):
+    def set_rigid_body_solver_position_iteration_count(self, prim_path, count):
         from isaacsim.core.utils.prims import get_prim_at_path
         from pxr import PhysxSchema
+
         prim = get_prim_at_path(prim_path)
         rigid_body = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
         rigid_body.CreateSolverPositionIterationCountAttr().Set(count)
@@ -933,7 +936,6 @@ class IsaacsimHandler(BaseSimHandler):
 
         assert isinstance(obj, BaseObjCfg)
         prim_path = f"/World/envs/env_.*/{obj.name}"
-
 
         ## Articulation object
         if isinstance(obj, ArticulationObjCfg):
@@ -971,7 +973,6 @@ class IsaacsimHandler(BaseSimHandler):
 
         ## Primitive object
         if isinstance(obj, PrimitiveCubeCfg):
-
             semantic_tags = [("class", "object")] if obj.name == "object" else None
             self.scene.rigid_objects[obj.name] = RigidObject(
                 RigidObjectCfg(
@@ -995,10 +996,10 @@ class IsaacsimHandler(BaseSimHandler):
                     ),
                 )
             )
-            self.set_rigid_body_solver_position_iteration_count('/World/envs/env_0/object', 32)
+            self.set_rigid_body_solver_position_iteration_count("/World/envs/env_0/object", 32)
 
             return
-            
+
         if isinstance(obj, PrimitiveSphereCfg):
             semantic_tags = [("class", "ball")] if obj.name == "ball" else None
 

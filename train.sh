@@ -21,7 +21,7 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "benchmark_random_material_bppt_48_patchcnn_rnn_searching" \
+    --run_name "actor_critic_rnn_cnn_ram_searching_vision4times_slowdown" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
     --wandb \
