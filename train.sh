@@ -10,6 +10,9 @@ if [ "$USER_NAME" = "balen" ]; then
 elif [ "$USER_NAME" = "ghr" ]; then
     PYTHON_PATH="/datasets/v2p/current/pw-workspace/conda/isaaclapb211/bin/python"
     echo "Using ghr's python path"
+elif [ "$USER_NAME" = "haoran" ]; then
+    PYTHON_PATH="/home/haoran/conda/envs/metasim/bin/python"
+    echo "Using haoran's python path"
 else
     PYTHON_PATH="python3"
     echo "Using default python path"
@@ -20,7 +23,7 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --task "active_vision" \
     --run_name "benchmark_random_material_bppt_48_patchcnn_rnn_searching" \
     --device "cuda:0" \
-    --actor_critic_class "use_patchcnn_rnn" \
+    --actor_critic_class "use_rnn_cnn_ram" \
     --wandb \
     --enable_opencv_display \
     --randomize_material \
