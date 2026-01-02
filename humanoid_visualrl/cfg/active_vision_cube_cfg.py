@@ -528,7 +528,9 @@ class BaseTableHumanoidTaskCfg:
     curriculum_object_mass_end_iter = 200
     curriculum_object_mass_update_interval = 200
     stage_finger_close_to_object_change_thres = 0.045
+    vision4times_slowdown = False
     vision_slow_down_scale = 4
+    
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15

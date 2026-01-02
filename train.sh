@@ -27,6 +27,7 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --wandb \
     --enable_opencv_display \
     --randomize_material \
+    --vision4times_slowdown \ 
     # --enable_grasp \
     # --resume \
     # --checkpoint 2300 \
