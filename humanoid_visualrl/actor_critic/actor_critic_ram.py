@@ -366,10 +366,10 @@ class ActorCriticCNNRecurrent(ActorCritic):
         # return image
 
 
+class GlimpseEncoder(nn.Module):
+    """https://arxiv.org/pdf/1406.6247."""
 
-class CNNGlimpseEncoder(nn.Module):
-    def __init__(self, k=4, hw=(50, 80), original_resolution=(100, 160)):
-        '''apply 4 CNN at each 25,40 patch'''
+    def __init__(self, k=4, hw=(25, 40), original_resolution=(100, 160)):
         super().__init__()
         self.k = k  # scale times
         self.hw = hw  # samllest height and width patch. for vega, original resolution is
@@ -390,42 +390,12 @@ class CNNGlimpseEncoder(nn.Module):
         #     width_start = center_width - int(width // 2 * (i + 1))
         #     width_end = center_width + int(width // 2 * (i + 1))
 
-        self.indices = [(25, 75, 40, 120), (13, 87, 20, 140), (0, 100, 0, 160)]
+        self.indices = [(37, 62, 60, 100), (25, 75, 40, 120), (13, 87, 20, 140), (0, 99, 0, 160)]
         # self.linear_layers.append(nn.Linear(3 * height * width, 512))
-        # input_dim = k * 3 * height * width
-        self.conv_net_1 = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-            nn.Flatten(),
-            nn.Linear(64, 255),
-            nn.ReLU(inplace=True),
-        )
-        self.conv_net_2 = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-            nn.Flatten(),
-            nn.Linear(64, 164),
-            nn.ReLU(inplace=True),
-        )
-        self.conv_net_3 = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-            nn.Flatten(),
-            nn.Linear(64, 93),
-            nn.ReLU(inplace=True),
-        )
+        input_dim = k * 3 * height * width
+        self.linear_layer_1 = nn.Linear(input_dim, input_dim // 2)
+        self.linear_layer_2 = nn.Linear(input_dim // 2, input_dim // 4)
+        self.linear_layer_3 = nn.Linear(input_dim // 4, 512)
         # 使用 AdaptiveAvgPool2d 将所有 patches 统一调整为 (25, 40)
         self.adaptive_pool = nn.AdaptiveAvgPool2d(self.hw)
 
@@ -441,23 +411,28 @@ class CNNGlimpseEncoder(nn.Module):
             # image_patch = image_patch.permute(0, 3, 1, 2)
             # 使用 average pooling 将所有 patches 统一调整为 (25, 40)
             # 转换回 [B, H, W, C] 并 reshape 为 [B, 1, -1]
-            # image_patch = image_patch.permute(0, 2, 3, 1)
-            # image_patch = image_patch.reshape(image.shape[0], 1, -1)
+            image_patch = image_patch.permute(0, 2, 3, 1)
+            image_patch = image_patch.reshape(image.shape[0], 1, -1)
             phi.append(image_patch)
+        phi = torch.cat(phi, dim=1)
+        phi = phi.view(phi.shape[0], -1)
         return phi
 
     def forward(self, image):
         phi = self.foveated_image(image)
-        phi_1 = self.conv_net_1(phi[0])
-        phi_2 = self.conv_net_2(phi[1])
-        phi_3 = self.conv_net_3(phi[2])
-        phi_out = torch.cat([phi_1, phi_2, phi_3], dim=1)
+
+        phi_out = self.linear_layer_1(phi)
+        phi_out = F.relu(phi_out)
+        phi_out = self.linear_layer_2(phi_out)
+        phi_out = F.relu(phi_out)
+        phi_out = self.linear_layer_3(phi_out)
+        phi_out = F.relu(phi_out)
         return phi_out
 
 
-class ActorCriticCNNRAM(ActorCriticCNNRecurrent):
+class ActorCriticRAM(ActorCriticCNNRecurrent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.vision_encoder = None
-        self.vision_encoder = CNNGlimpseEncoder(k=3, hw=(50, 80), original_resolution=(100, 160))
+        self.vision_encoder = GlimpseEncoder(k=4, hw=(25, 40), original_resolution=(100, 160))

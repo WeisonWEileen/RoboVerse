@@ -388,3 +388,28 @@ class VegaCfg(RobotCfg):
     tip_link_names = {"R_ff_tip", "R_lf_tip", "R_mf_tip", "R_rf_tip", "R_th_tip"}
 
     right_palm_link = ["R_mf_l1"]
+
+    # exploration joint with smaller penalty
+    actuators_energy_penalty_coffe: dict[str, BaseActuatorCfg] = {
+        "base_yaw_joint": 0.5,
+        "head_j2": 0.01,
+        "head_j3": 0.01,
+        "R_arm_j1": 1,  # Increased for stability
+        "R_arm_j2": 1,  # Increased for stability
+        "R_arm_j3": 1,
+        "R_arm_j4": 1,
+        "R_arm_j5": 1,
+        "R_arm_j6": 1,
+        "R_arm_j7": 1,
+        # Right hand - Thumb
+        "R_ff_j1": 0.35,
+        # "R_ff_j2": , follower joint
+        "R_lf_j1": 0.35,
+        # "R_lf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        "R_mf_j1": 0.35,
+        # "R_mf_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=0.9, stiffness=320, damping=22),
+        "R_rf_j1": 0.35,
+        "R_th_j0": 0.35,
+        "R_th_j1": 0.80,
+        # "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.1, stiffness=260, damping=20),
+    }

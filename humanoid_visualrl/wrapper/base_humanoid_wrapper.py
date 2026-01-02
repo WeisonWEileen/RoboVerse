@@ -721,3 +721,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         self.action_masking = torch.ones(self.num_actions, device=self.device, dtype=torch.float)
         self.action_masking[self.mask_joint_indices] = 0.0
+
+    def _get_joint_energy_penalty_coffe(self):
+        actuators_energy_penalty_coffe = self.robot.actuators_energy_penalty_coffe
+        sorted_actuators_names = sorted(actuators_energy_penalty_coffe.keys())
+        joint_energy_penalty_coffe = torch.zeros(self.num_actions, device=self.device, dtype=torch.float)
+        for i, name in enumerate(sorted_actuators_names):
+            joint_energy_penalty_coffe[i] = actuators_energy_penalty_coffe[name]
+        self.joint_energy_penalty_coffe = joint_energy_penalty_coffe * self.action_masking
+        return self.joint_energy_penalty_coffe

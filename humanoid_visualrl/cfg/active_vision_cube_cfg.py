@@ -415,6 +415,7 @@ class BaseTableHumanoidTaskCfg:
     reward_weights = {
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
+        "energy_consumption": -1e-7,
     }
 
     frame_stack = 1
@@ -592,7 +593,9 @@ class BaseTableHumanoidTaskCfg:
             self.ppo_cfg.policy.class_name = "ActorCriticResnet"
         if self.actor_critic_class == "use_rnn":
             self.ppo_cfg.policy.class_name = "ActorCriticCNNRecurrent"
-        if self.actor_critic_class == "use_rnn_foveated":
+        if self.actor_critic_class == "use_rnn_ram":
+            self.ppo_cfg.policy.class_name = "ActorCriticRAM"
+        if self.actor_critic_class == "use_rnn_cnn_ram":
             self.ppo_cfg.policy.class_name = "ActorCriticCNNRAM"
         if self.actor_critic_class == "use_vit_rnn":
             self.ppo_cfg.policy.class_name = "ActorCriticViTRecurrent"

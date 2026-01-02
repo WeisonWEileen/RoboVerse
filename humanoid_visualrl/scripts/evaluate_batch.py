@@ -216,7 +216,7 @@ def play(args):
             # yaw = 2.3 * 0.5
             # yaw = torch.tensor(yaw, device=env_wrapper.device)
         radius = task_cfg.randomize_object_radius
-        radius_bias = 2 * (torch.rand(env_wrapper.num_envs, device=env_wrapper.device) - 0.5) * 0.1
+        radius_bias = 0.07 * torch.ones(env_wrapper.num_envs, device=env_wrapper.device) 
         # radius_bias = 0.0
         
         # reset policy

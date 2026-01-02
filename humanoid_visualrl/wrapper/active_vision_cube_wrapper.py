@@ -144,6 +144,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.extra_buf["episode_metrics"]["see_flag_avg"] = 0.0
         self._get_joint_masking_indices()
+        self._get_joint_energy_penalty_coffe()
         # calucalte camera pos due to the bug that camera is not updated
         if len(self.cfg.cameras) > 0 and self.cfg.cameras[0].mount_to is not None:
             name = self.env.get_body_names(self.robot.name)
