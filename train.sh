@@ -18,16 +18,16 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "benchmark_random_material_bppt_48_grasping" \
+    --run_name "benchmark_random_material_bppt_48_patchcnn_rnn_searching" \
     --device "cuda:0" \
-    --actor_critic_class "use_rnn" \
+    --actor_critic_class "use_patchcnn_rnn" \
     --wandb \
-    --enable_grasp \
     --enable_opencv_display \
     --randomize_material \
-    --resume \
-    --checkpoint 2300 \
-    --load_run "2025_1214_185450" \
+    # --enable_grasp \
+    # --resume \
+    # --checkpoint 2300 \
+    # --load_run "2025_1214_185450" \
     # --debug
 
 

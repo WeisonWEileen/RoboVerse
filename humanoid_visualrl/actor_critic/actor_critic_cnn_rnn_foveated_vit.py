@@ -12,6 +12,7 @@ from rsl_rl.networks import Memory
 from rsl_rl.utils import resolve_nn_activation
 from torch import nn
 from torch.distributions import Normal
+from torch.nn import functional as F
 
 
 class ActorCritic(nn.Module):
@@ -28,7 +29,6 @@ class ActorCritic(nn.Module):
         activation="elu",
         init_noise_std=1.0,
         noise_std_type: str = "scalar",
-        masking_all: bool = False,
         **kwargs,
     ):
         if kwargs:
@@ -63,6 +63,7 @@ class ActorCritic(nn.Module):
             else:
                 critic_layers.append(nn.Linear(critic_hidden_dims[layer_index], critic_hidden_dims[layer_index + 1]))
                 critic_layers.append(activation)
+                critic_layers.append(nn.LayerNorm(critic_hidden_dims[layer_index + 1]))
         self.critic = nn.Sequential(*critic_layers)
 
         print(f"Actor MLP: {self.actor}")
@@ -84,7 +85,6 @@ class ActorCritic(nn.Module):
 
         self.mask = action_masking.clone()
         from loguru import logger as log
-
         log.info(f"Action Masking: {self.mask}")
 
     @staticmethod
@@ -209,7 +209,7 @@ def conv_output_size(h_w, kernel_size=1, stride=1, pad=0, dilation=1):
     return h, w
 
 
-class ActorCriticCNNRecurrentFoveated(ActorCritic):
+class ActorCriticCNNRecurrent(ActorCritic):
     is_recurrent = True
 
     def __init__(
@@ -227,7 +227,6 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
         init_noise_std=1.0,
         vision_height=96,
         vision_width=128,
-        masking_all=False,
         **kwargs,
     ):
         if "rnn_hidden_size" in kwargs:
@@ -252,41 +251,13 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
             critic_hidden_dims=critic_hidden_dims,
             activation=activation,
             init_noise_std=init_noise_std,
-            masking_all=masking_all,
         )
 
         activation = resolve_nn_activation(activation)
 
         h, w = 96, 128
-        filter_sizes = [16, 32, 64, 128]
         kernel_sizes = [8, 4, 3, 3]
         h, w = conv_output_size((h, w), kernel_size=kernel_sizes[0], stride=4, pad=0)
-        layer1_norm_shape = [filter_sizes[0], h, w]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[1], stride=2, pad=0)
-        layer2_norm_shape = [filter_sizes[1], h, w]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[2], stride=1, pad=0)
-        layer3_norm_shape = [filter_sizes[2], h, w]
-        h, w = conv_output_size((h, w), kernel_size=kernel_sizes[3], stride=1, pad=0)
-        layer4_norm_shape = [filter_sizes[3], h, w]
-
-        #  hisotry version 128 × 96
-        # self.vision_encoder = nn.Sequential(
-        #     nn.Conv2d(3, filter_sizes[0], kernel_size=kernel_sizes[0], stride=4, padding=0),
-        #     nn.ReLU(inplace=True),
-        #     nn.LayerNorm(layer1_norm_shape),
-        #     nn.Conv2d(filter_sizes[0], filter_sizes[1], kernel_size=kernel_sizes[1], stride=2, padding=0),
-        #     nn.ReLU(inplace=True),
-        #     nn.LayerNorm(layer2_norm_shape),
-        #     nn.Conv2d(filter_sizes[1], filter_sizes[2], kernel_size=kernel_sizes[2], stride=1, padding=0),
-        #     nn.LayerNorm(layer3_norm_shape),
-        #     nn.Conv2d(filter_sizes[2], filter_sizes[3], kernel_size=kernel_sizes[3], stride=1, padding=0),
-        #     nn.LayerNorm(layer4_norm_shape),
-        #     nn.ReLU(inplace=True),
-        #     nn.AdaptiveAvgPool2d((1, 1)),  # 全局平均池化 → (1×1), C=filter_sizes[3]
-        #     nn.Flatten(),  # (B, filter_sizes[3])
-        #     nn.Linear(filter_sizes[3], 32),  # 压缩 / 投影到 32 维
-        #     nn.ReLU(inplace=True),
-        # )
 
         self.vision_encoder = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
@@ -328,7 +299,7 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
             with torch.no_grad():
-                vision_fea_flat = self.vision_encoder(vision_flat)
+                vision_fea_flat = self.vision_encoder(self.preprocess_image(vision_flat))
             # 重新组织成 [time, batch, features]
             vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
@@ -338,7 +309,7 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
             self.update_distribution(inputs)
         else:  # [batch, features] - 来自推理时
             with torch.no_grad():
-                vision_fea = self.vision_encoder(vision)
+                vision_fea = self.vision_encoder(self.preprocess_image(vision))
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             inputs = self.memory_a(concat_inputs, masks, hidden_states)
             self.update_distribution(inputs.squeeze(0))
@@ -351,12 +322,13 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
     def act_inference(self, observations):
         state, vision = observations
         with torch.no_grad():
-            vision_fea = self.vision_encoder(vision)
+            vision_fea = self.vision_encoder(self.preprocess_image(vision))
         concat_inputs = torch.cat([state, vision_fea], dim=-1)
         inputs = self.memory_a(concat_inputs)
         # self.update_distribution(inputs.squeeze(0))
         # self.update_distribution(inputs.squeeze(0))
         mean = self.actor(inputs.squeeze(0))
+        mean = mean * self.mask
         return mean
 
     def evaluate(self, critic_observations, masks=None, hidden_states=None):
@@ -365,10 +337,9 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
         # 检查输入维度，如果有时间维度需要特殊处理
         if state.dim() == 3:  # [time, batch, features] - 来自 recurrent_mini_batch_generator
             time_steps, batch_size = state.shape[:2]
-
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
-            vision_fea_flat = self.vision_encoder(vision_flat)
+            vision_fea_flat = self.vision_encoder(self.preprocess_image(vision_flat))
             # 重新组织成 [time, batch, features]
             vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
@@ -377,7 +348,7 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
             # input_c 已经是展平的，所以不需要 squeeze(0)
             value = self.critic(input_c)
         else:  # [batch, features] - 来自推理时
-            vision_fea = self.vision_encoder(vision)
+            vision_fea = self.vision_encoder(self.preprocess_image(vision))
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             input_c = self.memory_c(concat_inputs, masks, hidden_states)
             value = self.critic(input_c.squeeze(0))
@@ -386,3 +357,335 @@ class ActorCriticCNNRecurrentFoveated(ActorCritic):
 
     def get_hidden_states(self):
         return self.memory_a.hidden_states, self.memory_c.hidden_states
+
+    def preprocess_image(self, image):
+        """Input: image: torch.Tensor.int8, shape (B, 3, H, W). Output: image: torch.Tensor.float, shape (B, 3, H, W)."""
+        # image = image.to(torch.int8)
+        return image / 255.0 - 0.5
+        # return image
+
+# import torch
+# from torch import Tensor
+import torch.nn as nn
+# import torch.nn.functional as F
+from abc import ABC, abstractmethod
+from torchvision.transforms import Normalize
+from typing import List
+# import math
+# from transformers import SiglipImageProcessor, SiglipVisionModel
+from einops import rearrange
+# import open_clip
+import numpy as np
+
+
+def crop_sizes_from_levels(levels: int, window_size: int, max_resoluiton: int) -> List[int]:
+    if levels == 1:
+        return [max_resoluiton]
+    return [int(i) for i in list(np.linspace(window_size, max_resoluiton, levels))]
+
+
+def create_foveated_batch(x: torch.Tensor, crop_sizes: List[int], window_size: int) -> torch.Tensor:
+    """
+    Creates a batch of foveated images at different scales.
+
+    Args:
+        x (torch.Tensor): Input tensor in format (B, C, H, W)
+        crop_sizes (List[int]): List of crop sizes for each scale
+        window_size (int): Size to resize each crop to
+
+    Returns:
+        torch.Tensor: Batch of foveated images
+    """
+    _, _, h, w = x.shape
+
+    # Compute maximum crop size\
+    max_crop_size = max(crop_sizes)
+
+    # Calculate necessary padding
+    pad_h = max(0, max_crop_size - h)
+    pad_w = max(0, max_crop_size - w)
+    pad_top = pad_h // 2
+    pad_bottom = pad_h - pad_top
+    pad_left = pad_w // 2
+    pad_right = pad_w - pad_left
+
+    # Pad the input tensor to the maximum required size
+    x_padded = F.pad(x, (pad_left, pad_right, pad_top, pad_bottom), mode="constant", value=0)
+
+    foveated_images = []
+
+    for crop_size in crop_sizes:
+        # Calculate start indices for cropping
+        start_h = (x_padded.shape[2] - crop_size) // 2
+        start_w = (x_padded.shape[3] - crop_size) // 2
+
+        # Crop the central region
+        cropped = x_padded[:, :, start_h : start_h + crop_size, start_w : start_w + crop_size]
+
+        # Resize to window_size x window_size using bilinear interpolation
+        resized = F.interpolate(
+            cropped, size=(window_size, window_size), mode="bilinear", align_corners=False, antialias=True
+        )
+        resized = resized.clamp(0, 1)
+
+        foveated_images.append(resized)
+
+    # Concatenate along the batch dimension
+    return torch.cat(foveated_images, dim=0)
+
+
+class MultiScaleViT(nn.Module):
+    """Base class for multi-scale vision transformer encoders"""
+
+    def __init__(
+        self,
+        crop_sizes: List[int] = [25, 50, 75, 100],
+        window_size: int = 224,
+        device: str = "cpu",
+        embedding_dim: int = 384,
+        patch_size: int = 16,
+        pool_size: int = 4,
+        freeze_encoder: bool = True,
+    ):
+        super().__init__()
+
+        # Store configuration
+        self.window_size = window_size
+        self.crop_sizes = crop_sizes
+        self.num_levels = len(crop_sizes)
+        self.embedding_dim = embedding_dim
+        self.patch_size = patch_size
+
+        # Initialize positional embeddings
+        W = max(crop_sizes)
+        self.pool_size = pool_size
+        self.avg_pooling = nn.AvgPool2d(kernel_size=pool_size, stride=pool_size)
+
+        # This pools spatially from 16x16 to 4x4 over the H, W dimensions for (L, C, H, W) tensors
+        self.rope_ids = torch.empty(
+            (
+                self.num_levels,
+                self.window_size // (self.patch_size * self.pool_size),
+                self.window_size // (self.patch_size * self.pool_size),
+                2,
+            ),
+            device=device,
+        )
+        # Also calculate the rope embeddings for the image
+        rows, cols = torch.meshgrid(torch.arange(W), torch.arange(W), indexing="ij")
+        ids = torch.stack([rows, cols], dim=-1)  # shape (W, W, 2)
+
+        for i in range(self.num_levels):
+            crop_start = W // 2 - self.crop_sizes[i] // 2
+            crop_end = W // 2 + self.crop_sizes[i] // 2
+            ids_crop = ids[crop_start:crop_end, crop_start:crop_end]
+            ids_crop = ids_crop.unsqueeze(0).permute(0, 3, 1, 2)
+            # interpolate the ids to the window size and then call embednd
+            ids_crop = F.interpolate(
+                ids_crop.double(),
+                size=(
+                    self.window_size // (self.patch_size * self.pool_size),
+                    self.window_size // (self.patch_size * self.pool_size),
+                ),
+                mode="bilinear",
+                align_corners=True,
+                antialias=True,
+            ).permute(0, 2, 3, 1)
+            self.rope_ids[i] = ids_crop
+
+        # we unsqueeze twice since rope expects it to be (B, 1, L, D, 2, 2)
+        self.rope_ids = self.rope_ids.reshape(1, -1, 2)
+
+    @abstractmethod
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        pass
+
+    def get_trainable_parameters(self):
+        return []
+
+
+class MultiScaleDino(MultiScaleViT):
+    def __init__(self, **kwargs):
+        super().__init__( **kwargs)
+
+        self.model = torch.hub.load(
+            "/home/jkerr/dinov3", "dinov3_vits16", source="local", weights="/home/jkerr/dinov3/models/dinov3_vits16.pth"
+        ).to(kwargs.get("device", "cpu"), dtype=torch.bfloat16)
+        self.model.eval()
+        # self.model = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14_reg").to(kwargs.get('device', 'cpu'), dtype=torch.bfloat16)
+        self.normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
+        if kwargs["freeze_encoder"]:
+            for param in self.model.parameters():
+                param.requires_grad = False
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B = x.shape[0]
+        x = x.reshape(-1, *x.shape[2:])
+        x = self.normalize(x)
+
+        patch_tokens = self.model.get_intermediate_layers(x, reshape=True)[0]  # (b n) c h w
+        if self.pool_size > 1:
+            patch_tokens = self.avg_pooling(patch_tokens)  # (b n) c h/4 w/4
+            patch_tokens = rearrange(patch_tokens, "(b n) c h w -> b n h w c", b=B, n=self.num_levels)
+        else:
+            # When pool_size <= 1, use the patch tokens directly without pooling
+            patch_tokens = rearrange(patch_tokens, "(b n) c h w -> b n h w c", b=B, n=self.num_levels)
+        patch_tokens = patch_tokens.reshape(B, -1, self.embedding_dim)
+        return patch_tokens
+
+class EyeRobotOpenSourceVisionEncoder(nn.Module):
+    """
+    Fit your code:
+      input : img (B,3,H,W) float in [0,1]
+      output: feat (B, vision_dim)
+    Internally:
+      create_foveated_batch -> (B*num_levels,3,window,window)
+      reshape -> (B,num_levels,3,window,window)
+      MultiScaleDino -> patch_tokens (B,L,C)
+      pool -> (B,C)
+      proj -> (B,vision_dim)
+    """
+
+    def __init__(
+        self,
+        device="cuda",
+        levels=4,
+        window_size=25,
+        min_crop=25,
+        max_crop=100,
+        embedding_dim=384,  # matches MultiScaleDino in your snippet
+        patch_size=16,
+        pool_size=4,
+        vision_dim=512,  # 输出给你的 RNN 的维度
+        freeze_encoder=True,
+        token_pool="mean",  # "mean" 或 "max"
+        use_amp=True,
+    ):
+        super().__init__()
+        self.window_size = window_size
+        self.levels = levels
+        self.use_amp = use_amp
+        self.token_pool = token_pool
+
+        # crop sizes（你也可以直接传 [224,448,896,1792]）
+        crop_sizes = crop_sizes_from_levels(levels, min_crop, max_crop)
+
+        self.ms_dino = MultiScaleDino(
+            crop_sizes=crop_sizes,
+            window_size=window_size,
+            device=device,
+            embedding_dim=embedding_dim,
+            patch_size=patch_size,
+            pool_size=pool_size,
+            freeze_encoder=freeze_encoder,
+        )
+
+        # 把 pooled 的 (B,embedding_dim) 投到你想要的维度
+        self.proj = nn.Sequential(
+            nn.Linear(embedding_dim, vision_dim),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, img: torch.Tensor) -> torch.Tensor:
+        """
+        img: (B,3,H,W) float in [0,1]
+        """
+        B = img.shape[0]
+
+        # 1) 生成多尺度中心 crop，并统一 resize 到 window_size
+        #    output: (B*num_levels,3,window,window)
+        fov = create_foveated_batch(img, self.ms_dino.crop_sizes, self.window_size)
+
+        # 2) reshape 成 MultiScaleDino 期望的 (B,num_levels,3,window,window)
+        fov = fov.reshape(B, self.levels, *fov.shape[1:])
+
+        # 3) 得到 patch tokens: (B,L,C)
+        #    这里 DINO/DINOV3 已在 MultiScaleDino 内部 normalize + (可冻结)
+        amp_ctx = torch.autocast(device_type=img.device.type, dtype=torch.bfloat16, enabled=self.use_amp)
+        with amp_ctx:
+            patch_tokens = self.ms_dino(fov)  # (B,L,C)
+
+        # 4) token pooling -> (B,C)
+        if self.token_pool == "mean":
+            pooled = patch_tokens.mean(dim=1)
+        elif self.token_pool == "max":
+            pooled = patch_tokens.amax(dim=1)
+        else:
+            raise ValueError(f"Unknown token_pool: {self.token_pool}")
+
+        # 5) project -> (B, vision_dim)
+        feat = self.proj(pooled)
+        return feat
+
+
+class GlimpseEncoder(nn.Module):
+    """https://arxiv.org/pdf/1406.6247."""
+
+    def __init__(self, k=4, hw=(25, 40), original_resolution=(100, 160)):
+        super().__init__()
+        self.k = k  # scale times
+        self.hw = hw  # samllest height and width patch. for vega, original resolution is
+        # (100, 160). hw =
+
+        self.indices = []
+        self.linear_layers = []
+        height = self.hw[0]
+        width = self.hw[1]
+        center_height = original_resolution[0] // 2
+        center_width = original_resolution[1] // 2
+
+        # for i in range(self.k):
+        #     # format (height_start, height_end, width_start, width_end)
+
+        #     height_start = center_height - int(height // 2 * (i + 1) + 1)
+        #     height_end = center_height + int(height // 2 * (i + 1) + 1)
+        #     width_start = center_width - int(width // 2 * (i + 1))
+        #     width_end = center_width + int(width // 2 * (i + 1))
+
+        self.indices = [(37, 62, 60, 100), (25, 75, 40, 120), (13, 87, 20, 140), (0, 99, 0, 160)]
+        # self.linear_layers.append(nn.Linear(3 * height * width, 512))
+        input_dim = k * 3 * height * width
+        self.linear_layer_1 = nn.Linear(input_dim, input_dim // 2)
+        self.linear_layer_2 = nn.Linear(input_dim // 2, input_dim // 4)
+        self.linear_layer_3 = nn.Linear(input_dim // 4, 512)
+        # 使用 AdaptiveAvgPool2d 将所有 patches 统一调整为 (25, 40)
+        self.adaptive_pool = nn.AdaptiveAvgPool2d(self.hw)
+
+    def foveated_image(self, image):
+        phi = []
+        for i in range(self.k):
+            indices = self.indices[i]
+            image_patch = image[:, :, indices[0] : indices[1], indices[2] : indices[3]]
+
+            if i != 0:
+                image_patch = self.adaptive_pool(image_patch)
+            # 将 [B, H, W, C] 转换为 [B, C, H, W] 格式
+            # image_patch = image_patch.permute(0, 3, 1, 2)
+            # 使用 average pooling 将所有 patches 统一调整为 (25, 40)
+            # 转换回 [B, H, W, C] 并 reshape 为 [B, 1, -1]
+            image_patch = image_patch.permute(0, 2, 3, 1)
+            image_patch = image_patch.reshape(image.shape[0], 1, -1)
+            phi.append(image_patch)
+        phi = torch.cat(phi, dim=1)
+        phi = phi.view(phi.shape[0], -1)
+        return phi
+
+    def forward(self, image):
+        phi = self.foveated_image(image)
+
+        phi_out = self.linear_layer_1(phi)
+        phi_out = F.relu(phi_out)
+        phi_out = self.linear_layer_2(phi_out)
+        phi_out = F.relu(phi_out)
+        phi_out = self.linear_layer_3(phi_out)
+        phi_out = F.relu(phi_out)
+        return phi_out
+
+
+class ActorCriticCNNFoveatedViT(ActorCriticCNNRecurrent):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.vision_encoder = None
+        self.vision_encoder = EyeRobotOpenSourceVisionEncoder()

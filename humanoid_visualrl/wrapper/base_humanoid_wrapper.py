@@ -57,7 +57,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         if self.enable_opencv_display:
             self.opencv_renderer = OpenCVRenderer(
                 window_name="First Person View of Env " + str(opencv_render_env_idx),
-                window_size=(640, 480),  # Upscale from 64x48 to 640x480
+                window_size=(160*5, 100*5),  # Upscale from 64x48 to 640x480
                 fps_limit=opencv_fps,
                 enable_recording=True,  # Allow video recording
                 recording_path="humanoid_vision_recording.mp4",

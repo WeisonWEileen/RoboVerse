@@ -358,7 +358,7 @@ class BaseTableHumanoidTaskCfg:
     max_episode_length: int = 2400
     randomize_obj_material: bool = False
     update_obj_material_step_interval: int = 96 * 100
-    reset_fall_down_threshold = 0.54 - 0.04 / 2 # 0.54 is for height 0.8
+    reset_fall_down_threshold = 0.54 - 0.04 / 2  # 0.54 is for height 0.8
 
     @configclass
     class HumanoidExtraCfg:
@@ -375,13 +375,13 @@ class BaseTableHumanoidTaskCfg:
         resample_on_env_reset: bool = True
 
     humanoid_extra_cfg: HumanoidExtraCfg = HumanoidExtraCfg()
-#  0.9 + 0.06 / 2 + 0.01
+    #  0.9 + 0.06 / 2 + 0.01
     init_states = [
         {
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.52, 0.0, 0.50 +  0.06 / 2 + 0.01]),
+                    "pos": torch.tensor([0.52, 0.0, 0.50 + 0.06 / 2 + 0.01]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -411,6 +411,10 @@ class BaseTableHumanoidTaskCfg:
         # "wrist_close_to_object_and_grasp": 1.0,
         # "lift_object": 2.0,
         # "fuse_wrist_close_to_object_and_grasp": 0.5,
+    }
+    reward_weights = {
+        "pixel_norm_at_object": 0.4 * scale,
+        "action_smoothness": -0.1 * scale,
     }
 
     frame_stack = 1
@@ -455,7 +459,7 @@ class BaseTableHumanoidTaskCfg:
             mount_quat=(0.5, -0.5, 0.5, -0.5),
             focal_length=7.6,
             horizontal_aperture=20.0,
-            clipping_range=(0.05, 3.),
+            clipping_range=(0.05, 3.0),
         )
     ]
 
@@ -515,7 +519,6 @@ class BaseTableHumanoidTaskCfg:
     mode: Literal["train", "test"] = "train"
     occlude_cube = False
     occlude_cube_yaw_range = 0.8
-    
 
     # initially give large mass to encourage contact, and then linearly decrease to 0.05
     curriculum_object_mass_flag = True
@@ -524,8 +527,6 @@ class BaseTableHumanoidTaskCfg:
     curriculum_object_mass_end_iter = 200
     curriculum_object_mass_update_interval = 200
     stage_finger_close_to_object_change_thres = 0.045
-
-
 
     def __post_init__(self):
         self.command_ranges.wrist_max_radius = 0.15
@@ -566,7 +567,7 @@ class BaseTableHumanoidTaskCfg:
         # self.randomize_object_yaw_range = 2.14
         self.curriculum_object_yaw = True
         self.curriculum_initial_object_yaw_range = 0.3
-        self.randomize_object_yaw_range = 0.7
+        self.randomize_object_yaw_range = 2.2
         self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
         self.curriculum_avg_thres_higher = 0.93
         self.curriculum_avg_thres_lower = 0.85
@@ -595,6 +596,8 @@ class BaseTableHumanoidTaskCfg:
             self.ppo_cfg.policy.class_name = "ActorCriticCNNRAM"
         if self.actor_critic_class == "use_vit_rnn":
             self.ppo_cfg.policy.class_name = "ActorCriticViTRecurrent"
+        if self.actor_critic_class == "use_patchcnn_rnn":
+            self.ppo_cfg.policy.class_name = "ActorCriticPatchCNNRecurrent"
 
         log.info("================================================")
         log.info(f"USING {self.actor_critic_class} ACTOR CRITIC CLASS")

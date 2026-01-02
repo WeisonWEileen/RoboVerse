@@ -685,9 +685,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         # print(contact_for≤ce_matrix_sum[0])
         return contact_force_matrix_sum
-
+    
     def _reward_contact_force_upward(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        #  if > 0 penalty, if < 0 reward
+        #  if > 0 penalty, if < 0 reward 
         return -torch.clamp(self.upward_force, min=-25.0, max=0.0)
         # return self.upward_force
 

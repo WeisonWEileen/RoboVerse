@@ -12,7 +12,61 @@ from rsl_rl.networks import Memory
 from rsl_rl.utils import resolve_nn_activation
 from torch import nn
 from torch.distributions import Normal
-from torch.nn import functional as F
+import torch.nn.functional as F
+
+
+class PatchAttentionVisionEncoder(nn.Module):
+    """
+    CNN backbone + patch (spatial) attention gating.
+    Output shape: (B, out_dim)
+    """
+
+    def __init__(self, out_dim: int = 512, attn_norm: str = "sigmoid", init_attn_to_one: bool = True):
+        super().__init__()
+        assert attn_norm in ["sigmoid", "softmax"]
+
+        # Same conv trunk as your current Sequential (until the last conv output)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=8, stride=4)  # (96×128) -> (23×31)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=4, stride=2)  # (23×31) -> (10×14)
+        self.conv3 = nn.Conv2d(128, 64, kernel_size=3, stride=1)  # (10×14) -> (8×12)
+        self.act = nn.ReLU(inplace=True)
+
+        # 1x1 conv generates per-patch attention logits: (B,1,H,W)
+        self.attn = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0)
+        self.attn_norm = attn_norm
+
+        # Head (same as yours)
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(64, out_dim)
+        self.fc_act = nn.ReLU(inplace=True)
+
+        # (Optional) initialize attention to ~1 so it doesn't kill features at start
+        if init_attn_to_one:
+            nn.init.zeros_(self.attn.weight)
+            nn.init.constant_(self.attn.bias, 6.0)  # sigmoid(6) ~ 0.997
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B,3,96,128)
+        f = self.act(self.conv1(x))
+        f = self.act(self.conv2(f))
+        f = self.act(self.conv3(f))  # f: (B,64,H,W) with H=8,W=12
+
+        logits = self.attn(f)  # (B,1,H,W)
+
+        if self.attn_norm == "sigmoid":
+            A = torch.sigmoid(logits)  # (B,1,H,W), each in (0,1)
+        else:
+            # spatial softmax over H*W
+            B, _, H, W = logits.shape
+            A = F.softmax(logits.view(B, 1, H * W), dim=-1).view(B, 1, H, W)
+
+        f_att = f * A  # broadcast over channel: (B,64,H,W)
+
+        z = self.pool(f_att)  # (B,64,1,1)
+        z = torch.flatten(z, 1)  # (B,64)
+        z = self.fc(z)  # (B,out_dim)
+        z = self.fc_act(z)
+        return z
 
 
 class ActorCritic(nn.Module):
@@ -210,7 +264,7 @@ def conv_output_size(h_w, kernel_size=1, stride=1, pad=0, dilation=1):
     return h, w
 
 
-class ActorCriticCNNRecurrent(ActorCritic):
+class ActorCriticPatchCNNRecurrent(ActorCritic):
     is_recurrent = True
 
     def __init__(
@@ -260,17 +314,10 @@ class ActorCriticCNNRecurrent(ActorCritic):
         kernel_sizes = [8, 4, 3, 3]
         h, w = conv_output_size((h, w), kernel_size=kernel_sizes[0], stride=4, pad=0)
 
-        self.vision_encoder = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten(),
-            nn.Linear(64, 512),
-            nn.ReLU(inplace=True),
+        self.vision_encoder = PatchAttentionVisionEncoder(
+            out_dim=512,
+            attn_norm="sigmoid",  # 推荐 sigmoid 更稳；你也可以改 "softmax"
+            init_attn_to_one=True,
         )
         # self.vision_encoder = VisionBackbonePDC(vision_height, vision_width, output_dim=64)
 
@@ -364,75 +411,3 @@ class ActorCriticCNNRecurrent(ActorCritic):
         # image = image.to(torch.int8)
         return image / 255.0 - 0.5
         # return image
-
-
-class GlimpseEncoder(nn.Module):
-    """https://arxiv.org/pdf/1406.6247."""
-
-    def __init__(self, k=4, hw=(25, 40), original_resolution=(100, 160)):
-        super().__init__()
-        self.k = k  # scale times
-        self.hw = hw  # samllest height and width patch. for vega, original resolution is
-        # (100, 160). hw =
-
-        self.indices = []
-        self.linear_layers = []
-        height = self.hw[0]
-        width = self.hw[1]
-        center_height = original_resolution[0] // 2
-        center_width = original_resolution[1] // 2
-
-        # for i in range(self.k):
-        #     # format (height_start, height_end, width_start, width_end)
-
-        #     height_start = center_height - int(height // 2 * (i + 1) + 1)
-        #     height_end = center_height + int(height // 2 * (i + 1) + 1)
-        #     width_start = center_width - int(width // 2 * (i + 1))
-        #     width_end = center_width + int(width // 2 * (i + 1))
-
-        self.indices = [(37, 62, 60, 100), (25, 75, 40, 120), (13, 87, 20, 140), (0, 99, 0, 160)]
-        # self.linear_layers.append(nn.Linear(3 * height * width, 512))
-        input_dim = k * 3 * height * width
-        self.linear_layer_1 = nn.Linear(input_dim, input_dim // 2)
-        self.linear_layer_2 = nn.Linear(input_dim // 2, input_dim // 4)
-        self.linear_layer_3 = nn.Linear(input_dim // 4, 512)
-        # 使用 AdaptiveAvgPool2d 将所有 patches 统一调整为 (25, 40)
-        self.adaptive_pool = nn.AdaptiveAvgPool2d(self.hw)
-
-    def foveated_image(self, image):
-        phi = []
-        for i in range(self.k):
-            indices = self.indices[i]
-            image_patch = image[:, :, indices[0] : indices[1], indices[2] : indices[3]]
-
-            if i != 0:
-                image_patch = self.adaptive_pool(image_patch)
-            # 将 [B, H, W, C] 转换为 [B, C, H, W] 格式
-            # image_patch = image_patch.permute(0, 3, 1, 2)
-            # 使用 average pooling 将所有 patches 统一调整为 (25, 40)
-            # 转换回 [B, H, W, C] 并 reshape 为 [B, 1, -1]
-            image_patch = image_patch.permute(0, 2, 3, 1)
-            image_patch = image_patch.reshape(image.shape[0], 1, -1)
-            phi.append(image_patch)
-        phi = torch.cat(phi, dim=1)
-        phi = phi.view(phi.shape[0], -1)
-        return phi
-
-    def forward(self, image):
-        phi = self.foveated_image(image)
-
-        phi_out = self.linear_layer_1(phi)
-        phi_out = F.relu(phi_out)
-        phi_out = self.linear_layer_2(phi_out)
-        phi_out = F.relu(phi_out)
-        phi_out = self.linear_layer_3(phi_out)
-        phi_out = F.relu(phi_out)
-        return phi_out
-
-
-class ActorCriticCNNRAM(ActorCriticCNNRecurrent):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.vision_encoder = None
-        self.vision_encoder = GlimpseEncoder(k=4, hw=(25, 40), original_resolution=(100, 160))

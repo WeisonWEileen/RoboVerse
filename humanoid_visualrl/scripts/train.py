@@ -41,7 +41,7 @@ if __name__ == "__main__":
         log.info("Using random seed (seed=-1)")
     assert args.opencv_render_env_idx < args.num_envs, "opencv_render_env_idx must be less than num_envs"
 
-    assert args.actor_critic_class in ["use_vision", "use_rnn", "use_resnet", "use_rnn_foveated", "use_vit_rnn"], (
+    assert args.actor_critic_class in ["use_vision", "use_rnn", "use_resnet", "use_rnn_foveated", "use_vit_rnn", "use_rnn_foveated_vit", "use_patchcnn_rnn"], (
         "Invalid actor critic class"
     )
     # task_cfg, cfg_file_path = get_cfg_cls(args)
