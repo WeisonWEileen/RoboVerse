@@ -210,6 +210,111 @@ def conv_output_size(h_w, kernel_size=1, stride=1, pad=0, dilation=1):
     return h, w
 
 
+class CNNGlimpseEncoder(nn.Module):
+    def __init__(self, k=4, hw=(50, 80), original_resolution=(100, 160)):
+        """apply 4 CNN at each 25,40 patch"""
+        super().__init__()
+        self.k = k  # scale times
+        self.hw = hw  # samllest height and width patch. for vega, original resolution is
+        # (100, 160). hw =
+
+        self.indices = []
+        self.linear_layers = []
+        # height = self.hw[0]
+        # width = self.hw[1]
+        # center_height = original_resolution[0] // 2
+        # center_width = original_resolution[1] // 2
+
+        # for i in range(self.k):
+        #     # format (height_start, height_end, width_start, width_end)
+
+        #     height_start = center_height - int(height // 2 * (i + 1) + 1)
+        #     height_end = center_height + int(height // 2 * (i + 1) + 1)
+        #     width_start = center_width - int(width // 2 * (i + 1))
+        #     width_end = center_width + int(width // 2 * (i + 1))
+
+        self.indices = [(25, 75, 40, 120), (13, 87, 20, 140), (0, 100, 0, 160)]
+        # self.linear_layers.append(nn.Linear(3 * height * width, 512))
+        # input_dim = k * 3 * height * width
+        self.conv_net_1 = nn.Sequential(
+            nn.Conv2d(3, 32, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),  # g -> g/2
+            nn.Conv2d(32, 64, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
+            nn.Flatten(),
+            # nn.Linear(64, 255),
+            nn.ReLU(inplace=True),
+        )
+        # self.conv_net_2 = nn.Sequential(
+        #     nn.Conv2d(3, 32, 3, padding=1),
+        #     nn.ReLU(inplace=True),
+        #     nn.MaxPool2d(2),  # g -> g/2
+        #     nn.Conv2d(32, 64, 3, padding=1),
+        #     nn.ReLU(inplace=True),
+        #     nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
+        #     nn.Flatten(),
+        #     # nn.Linear(64, 164),
+        #     nn.ReLU(inplace=True),
+        # )
+        # self.conv_net_3 = nn.Sequential(
+        #     nn.Conv2d(3, 32, 3, padding=1),
+        #     nn.ReLU(inplace=True),
+        #     nn.MaxPool2d(2),  # g -> g/2
+        #     nn.Conv2d(32, 64, 3, padding=1),
+        #     nn.ReLU(inplace=True),
+        #     nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
+        #     nn.Flatten(),
+        #     # nn.Linear(64, 93),
+        #     nn.ReLU(inplace=True),
+        # )
+        # 使用 AdaptiveAvgPool2d 将所有 patches 统一调整为 (25, 40)
+        self.adaptive_pool = nn.AdaptiveAvgPool2d(self.hw)
+
+    def foveated_image(self, image):
+        phi = []
+        for i in range(self.k):
+            indices = self.indices[i]
+            image_patch = image[:, :, indices[0] : indices[1], indices[2] : indices[3]]
+
+            if i != 0:
+                image_patch = self.adaptive_pool(image_patch)
+            # 将 [B, H, W, C] 转换为 [B, C, H, W] 格式
+            # image_patch = image_patch.permute(0, 3, 1, 2)
+            # 使用 average pooling 将所有 patches 统一调整为 (25, 40)
+            # 转换回 [B, H, W, C] 并 reshape 为 [B, 1, -1]
+            # image_patch = image_patch.permute(0, 2, 3, 1)
+            # image_patch = image_patch.reshape(image.shape[0], 1, -1)
+            phi.append(image_patch)
+        return phi
+
+    def forward(self, image):
+        # phi = self.foveated_image(image)
+        # phi_1 = self.conv_net_1(phi[0])
+        # phi_2 = self.conv_net_1(phi[1])
+        # phi_3 = self.conv_net_1(phi[2])
+        # phi_out = torch.cat([phi_1, phi_2, phi_3], dim=1)
+        phi = []
+
+        for i in range(self.k):
+            indices = self.indices[i]
+            image_patch = image[:, :, indices[0] : indices[1], indices[2] : indices[3]]
+
+            if i != 0:
+                image_patch = self.adaptive_pool(image_patch)
+            # 将 [B, H, W, C] 转换为 [B, C, H, W] 格式
+            # image_patch = image_patch.permute(0, 3, 1, 2)
+            # 使用 average pooling 将所有 patches 统一调整为 (25, 40)
+            # 转换回 [B, H, W, C] 并 reshape 为 [B, 1, -1]
+            # image_patch = image_patch.permute(0, 2, 3, 1)
+            # image_patch = image_patch.reshape(image.shape[0], 1, -1)
+            # phi.append(image_patch)
+            phi.append(self.conv_net_1(image_patch))
+        phi_out = torch.cat(phi, dim=1)
+        return phi_out
+
+
 class ActorCriticCNNRecurrent(ActorCritic):
     is_recurrent = True
 
@@ -260,18 +365,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
         kernel_sizes = [8, 4, 3, 3]
         h, w = conv_output_size((h, w), kernel_size=kernel_sizes[0], stride=4, pad=0)
 
-        self.vision_encoder = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten(),
-            nn.Linear(64, 512),
-            nn.ReLU(inplace=True),
-        )
+        self.vision_encoder = CNNGlimpseEncoder(k=3, hw=(50, 80), original_resolution=(100, 160))
         # self.vision_encoder = VisionBackbonePDC(vision_height, vision_width, output_dim=64)
 
         # FIXME hard code here
@@ -340,7 +434,8 @@ class ActorCriticCNNRecurrent(ActorCritic):
             time_steps, batch_size = state.shape[:2]
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
-            vision_fea_flat = self.vision_encoder(self.preprocess_image(vision_flat))
+            with torch.no_grad():
+                vision_fea_flat = self.vision_encoder(self.preprocess_image(vision_flat))
             # 重新组织成 [time, batch, features]
             vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
@@ -349,7 +444,8 @@ class ActorCriticCNNRecurrent(ActorCritic):
             # input_c 已经是展平的，所以不需要 squeeze(0)
             value = self.critic(input_c)
         else:  # [batch, features] - 来自推理时
-            vision_fea = self.vision_encoder(self.preprocess_image(vision))
+            with torch.no_grad():
+                vision_fea = self.vision_encoder(self.preprocess_image(vision))
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             input_c = self.memory_c(concat_inputs, masks, hidden_states)
             value = self.critic(input_c.squeeze(0))
@@ -366,97 +462,6 @@ class ActorCriticCNNRecurrent(ActorCritic):
         # return image
 
 
-
-class CNNGlimpseEncoder(nn.Module):
-    def __init__(self, k=4, hw=(50, 80), original_resolution=(100, 160)):
-        '''apply 4 CNN at each 25,40 patch'''
-        super().__init__()
-        self.k = k  # scale times
-        self.hw = hw  # samllest height and width patch. for vega, original resolution is
-        # (100, 160). hw =
-
-        self.indices = []
-        self.linear_layers = []
-        height = self.hw[0]
-        width = self.hw[1]
-        center_height = original_resolution[0] // 2
-        center_width = original_resolution[1] // 2
-
-        # for i in range(self.k):
-        #     # format (height_start, height_end, width_start, width_end)
-
-        #     height_start = center_height - int(height // 2 * (i + 1) + 1)
-        #     height_end = center_height + int(height // 2 * (i + 1) + 1)
-        #     width_start = center_width - int(width // 2 * (i + 1))
-        #     width_end = center_width + int(width // 2 * (i + 1))
-
-        self.indices = [(25, 75, 40, 120), (13, 87, 20, 140), (0, 100, 0, 160)]
-        # self.linear_layers.append(nn.Linear(3 * height * width, 512))
-        # input_dim = k * 3 * height * width
-        self.conv_net_1 = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-            nn.Flatten(),
-            nn.Linear(64, 255),
-            nn.ReLU(inplace=True),
-        )
-        self.conv_net_2 = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-            nn.Flatten(),
-            nn.Linear(64, 164),
-            nn.ReLU(inplace=True),
-        )
-        self.conv_net_3 = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-            nn.Flatten(),
-            nn.Linear(64, 93),
-            nn.ReLU(inplace=True),
-        )
-        # 使用 AdaptiveAvgPool2d 将所有 patches 统一调整为 (25, 40)
-        self.adaptive_pool = nn.AdaptiveAvgPool2d(self.hw)
-
-    def foveated_image(self, image):
-        phi = []
-        for i in range(self.k):
-            indices = self.indices[i]
-            image_patch = image[:, :, indices[0] : indices[1], indices[2] : indices[3]]
-
-            if i != 0:
-                image_patch = self.adaptive_pool(image_patch)
-            # 将 [B, H, W, C] 转换为 [B, C, H, W] 格式
-            # image_patch = image_patch.permute(0, 3, 1, 2)
-            # 使用 average pooling 将所有 patches 统一调整为 (25, 40)
-            # 转换回 [B, H, W, C] 并 reshape 为 [B, 1, -1]
-            # image_patch = image_patch.permute(0, 2, 3, 1)
-            # image_patch = image_patch.reshape(image.shape[0], 1, -1)
-            phi.append(image_patch)
-        return phi
-
-    def forward(self, image):
-        phi = self.foveated_image(image)
-        phi_1 = self.conv_net_1(phi[0])
-        phi_2 = self.conv_net_2(phi[1])
-        phi_3 = self.conv_net_3(phi[2])
-        phi_out = torch.cat([phi_1, phi_2, phi_3], dim=1)
-        return phi_out
-
 class ActorCriticCNNRAM(ActorCriticCNNRecurrent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.vision_encoder = None
-        self.vision_encoder = CNNGlimpseEncoder(k=3, hw=(50, 80), original_resolution=(100, 160))

@@ -24,10 +24,11 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --run_name "actor_critic_rnn_cnn_ram_searching_vision4times_slowdown" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
-    --wandb \
     --enable_opencv_display \
     --randomize_material \
-    --vision4times_slowdown \ 
+    # --vision4times_slowdown \
+    # --debug
+    # --wandb \
     # --enable_grasp \
     # --resume \
     # --checkpoint 2300 \
