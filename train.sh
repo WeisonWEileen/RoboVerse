@@ -26,6 +26,8 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --actor_critic_class "use_rnn_cnn_ram" \
     --enable_opencv_display \
     --randomize_material \
+    # --actor_critic_class "use_rnn_cnn_ram" \
+
     # --vision4times_slowdown \
     # --debug
     # --wandb \

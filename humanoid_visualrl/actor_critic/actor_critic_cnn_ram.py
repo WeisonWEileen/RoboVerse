@@ -237,10 +237,10 @@ class CNNGlimpseEncoder(nn.Module):
         # self.linear_layers.append(nn.Linear(3 * height * width, 512))
         # input_dim = k * 3 * height * width
         self.conv_net_1 = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1),
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(32, 64, 3, padding=1),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
             nn.Flatten(),
