@@ -337,7 +337,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
             name: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
             for name in self.reward_scales.keys()
         }
-        self.episode_metrics = {name: 0 for name in self.reward_scales.keys()}
+        self.episode_metrics = {}
 
     def _compute_reward(self, tensor_state):
         """Compute all the reward from the states provided."""
@@ -346,11 +346,11 @@ class HumanoidBaseWrapper(RslRlWrapper):
         for i in range(len(self.reward_functions)):
             name = self.reward_names[i]
             rew_func_return = self.reward_functions[i](tensor_state, self.robot.name, self.cfg)
-            if isinstance(rew_func_return, tuple):
-                unscaled_rew, metric = rew_func_return
-                self.episode_metrics[name] = metric.mean().item()
-            else:
-                unscaled_rew = rew_func_return
+            # if isinstance(rew_func_return, tuple):
+            #     unscaled_rew, metric = rew_func_return
+            #     self.episode_metrics[name] = metric.mean().item()
+            # else:
+            unscaled_rew = rew_func_return
             rew = unscaled_rew * self.reward_scales[name]
             self.rew_buf += rew
             self.episode_sums[name] += rew
@@ -581,8 +581,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
             )
             self.episode_sums[key][env_ids] = 0.0
 
-        # log metrics
-        self.extra_buf["episode_metrics"] = deepcopy(self.episode_metrics)
+        # # log metrics
+        # self.extra_buf["episode_metrics"] = deepcopy(self.episode_metrics)
 
         # reset env handler state buffer
         for i in range(self.obs_history.maxlen):

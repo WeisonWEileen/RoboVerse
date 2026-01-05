@@ -21,11 +21,12 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "actor_critic_rnn_cnn_ram_searching_vision4times_slowdown" \
+    --run_name "cnn_baseline" \
     --device "cuda:0" \
-    --actor_critic_class "use_rnn_cnn_ram" \
+    --actor_critic_class "use_rnn" \
     --enable_opencv_display \
     --randomize_material \
+    --wandb 
     # --actor_critic_class "use_rnn_cnn_ram" \
 
     # --vision4times_slowdown \

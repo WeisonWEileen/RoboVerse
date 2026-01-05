@@ -63,6 +63,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
         else:
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
+
+        # Initialize episode_metrics if it doesn't exist
+        if "episode_metrics" not in self.extra_buf:
+            self.extra_buf["episode_metrics"] = {}
+        self.extra_buf["episode_metrics"]["curriculum_object_yaw_range"] = self.curriculum_object_yaw_range
         log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")
         # exit()
         self.see_flag_float = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
@@ -144,7 +149,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         else:
             self.compute_pixel_distance_reward = False
 
-        self.extra_buf["episode_metrics"]["see_flag_avg"] = 0.0
         self._get_joint_masking_indices()
         self._get_joint_energy_penalty_coffe()
         # calucalte camera pos due to the bug that camera is not updated
@@ -469,6 +473,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.privileged_obs_buf = obs
         self.obs_buf = (self.obs_buf_state, self.vision_rgb_buf)
         self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
+        self.extra_buf["episode_metrics"]["curriculum_object_yaw_range"]
 
     def _pre_reset_hook(self, env_ids=None):
         if self.cfg.randomize_material:

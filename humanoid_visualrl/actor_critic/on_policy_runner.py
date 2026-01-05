@@ -32,11 +32,14 @@ from humanoid_visualrl.actor_critic.actor_critic_ram import ActorCriticRAM
 from humanoid_visualrl.actor_critic.actor_critic_patchcnn_rnn import ActorCriticPatchCNNRecurrent
 from humanoid_visualrl.actor_critic.actor_critic_cnn_ram import ActorCriticCNNRAM
 from humanoid_visualrl.actor_critic.actor_critic_cnn_rnn_foveated_vit import ActorCriticCNNFoveatedViT
+
 # from humanoid_visualrl.actor_critic.actor_critic_resnet_rnn import ActorCriticResnetRecurrent
 from rsl_rl.utils import store_code_state
 
 import imageio.v2 as iio
 import cv2
+
+
 class OnPolicyRunner:
     """On-policy runner for training and evaluation."""
 
@@ -90,9 +93,9 @@ class OnPolicyRunner:
 
         policy_class = eval(self.policy_cfg.pop("class_name"))
         # TODO: hard code here
-        policy: ActorCriticCNN = policy_class(num_obs, num_privileged_obs, self.env.num_actions, action_masking=env.action_masking, **self.policy_cfg).to(
-            self.device
-        )
+        policy: ActorCriticCNN = policy_class(
+            num_obs, num_privileged_obs, self.env.num_actions, action_masking=env.action_masking, **self.policy_cfg
+        ).to(self.device)
 
         # resolve dimension of rnd gated state
         if "rnd_cfg" in self.alg_cfg and self.alg_cfg["rnd_cfg"] is not None:
@@ -224,11 +227,11 @@ class OnPolicyRunner:
 
         # Book keeping
         ep_infos = []
+        ep_metrics_list = []  # Store episode_metrics for logging
         rewbuffer = deque(maxlen=100)
         lenbuffer = deque(maxlen=100)
         cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
         cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
-        # see_flag_avg = 0.0  # Initialize see_flag_avg in the correct scope
 
         # create buffers for logging extrinsic and intrinsic rewards
         if self.alg.rnd:
@@ -250,8 +253,8 @@ class OnPolicyRunner:
         record_video = False
         for it in range(start_iter, tot_iter):
             if self.record_video and it % 100 == 0:
-                record_video = True 
-                images = []    
+                record_video = True
+                images = []
             start = time.time()
             # Rollout
             with torch.inference_mode():
@@ -284,6 +287,9 @@ class OnPolicyRunner:
                             ep_infos.append(infos["episode"])
                         elif "log" in infos:
                             ep_infos.append(infos["log"])
+                        # Collect episode_metrics for logging
+                        if "episode_metrics" in infos:
+                            ep_metrics_list.append(infos["episode_metrics"])
                         # Update rewards
                         if self.alg.rnd:
                             cur_ereward_sum += rewards
@@ -298,11 +304,6 @@ class OnPolicyRunner:
                         new_ids = (dones > 0).nonzero(as_tuple=False)
                         rewbuffer.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
                         lenbuffer.extend(cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
-
-                        # for metric logging, not a individual reward
-                        # if "episode_metrics" in infos:
-                        #     if "see_flag_avg" in infos["episode_metrics"]:
-                        #         see_flag_avg = infos["episode_metrics"]["see_flag_avg"]
                         cur_reward_sum[new_ids] = 0
                         cur_episode_length[new_ids] = 0
                         # -- intrinsic and extrinsic rewards
@@ -313,23 +314,22 @@ class OnPolicyRunner:
                             cur_ireward_sum[new_ids] = 0
 
                         if record_video:
-                            rgb_frame = self.env.env._get_offscreen_viewport_render() 
-                            
+                            rgb_frame = self.env.env._get_offscreen_viewport_render()
+
                             egocentric_frame = (self.env.vision_rgb_buf[0].permute(1, 2, 0)).cpu().numpy()
                             egocentric_frame = egocentric_frame.astype(np.uint8)
                             egocentric_frame = cv2.resize(egocentric_frame, (374, 374))
 
                             images.append(np.concatenate([egocentric_frame, rgb_frame], axis=1))
 
-
                     # self.env.render()
 
                 # totally record 6 iterations of video
                 if self.record_video and it % 100 == 5 and self.log_dir is not None:
-                    record_video = False 
-                    iio.mimsave(os.path.join(self.log_dir, f"video_{it-5}_to_{it}.mp4"), images, fps=30)
-                    images = [] #reset images buffer
-                
+                    record_video = False
+                    iio.mimsave(os.path.join(self.log_dir, f"video_{it - 5}_to_{it}.mp4"), images, fps=30)
+                    images = []  # reset images buffer
+
                 stop = time.time()
                 collection_time = stop - start
                 start = stop
@@ -352,8 +352,9 @@ class OnPolicyRunner:
                 if it % self.save_interval == 0:
                     self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
 
-            # Clear episode infos
+            # Clear episode infos and metrics
             ep_infos.clear()
+            ep_metrics_list.clear()
             # Save code state
             if it == start_iter and not self.disable_logs and self.log_dir is not None:
                 # obtain all the diff files
@@ -398,6 +399,26 @@ class OnPolicyRunner:
                     self.writer.add_scalar("Episode/" + key, value, locs["it"])
                     ep_string += f"""{f"Mean episode {key}:":>{pad}} {value:.4f}\n"""
 
+        # -- Episode metrics (from episode_metrics, not individual rewards)
+        if locs.get("ep_metrics_list"):
+            # Aggregate metrics across all episodes
+            aggregated_metrics = {}
+            for ep_metrics in locs["ep_metrics_list"]:
+                for key, value in ep_metrics.items():
+                    if key not in aggregated_metrics:
+                        aggregated_metrics[key] = []
+                    # Handle both scalar and tensor values
+                    if isinstance(value, torch.Tensor):
+                        aggregated_metrics[key].append(value.item() if value.numel() == 1 else value.mean().item())
+                    else:
+                        aggregated_metrics[key].append(float(value))
+
+            # Log aggregated metrics
+            for key, values in aggregated_metrics.items():
+                mean_value = statistics.mean(values) if values else 0.0
+                self.writer.add_scalar(f"EpisodeMetrics/{key}", mean_value, locs["it"])
+                ep_string += f"""{f"Mean episode metric {key}:":>{pad}} {mean_value:.4f}\n"""
+
         mean_std = self.alg.policy.action_std.mean()
         fps = int(collection_size / (locs["collection_time"] + locs["learn_time"]))
 
@@ -429,10 +450,6 @@ class OnPolicyRunner:
                 self.writer.add_scalar(
                     "Train/mean_episode_length/time", statistics.mean(locs["lenbuffer"]), self.tot_time
                 )
-
-        # Log see_flag_avg regardless of whether episodes have completed
-        if "see_flag_avg" in locs:
-            self.writer.add_scalar("Episode/see_flag_avg", locs["see_flag_avg"], locs["it"])
 
         str = f" \033[1m Learning iteration {locs['it']}/{locs['tot_iter']} \033[0m "
 
