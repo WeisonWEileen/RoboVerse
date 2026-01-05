@@ -260,7 +260,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
         h, w = conv_output_size((h, w), kernel_size=kernel_sizes[0], stride=4, pad=0)
 
         self.vision_encoder = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (96×128) → (23×31), C=64
+            nn.Conv2d(3, 64, kernel_size=8, stride=4),  # (100×160) → (23×31), C=64
             nn.ReLU(inplace=True),
             nn.Conv2d(64, 128, kernel_size=4, stride=2),  # (23×31) → (10×14), C=128
             nn.ReLU(inplace=True),

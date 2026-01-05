@@ -239,7 +239,7 @@ class CNNGlimpseEncoder(nn.Module):
         self.conv_net_1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),  # g -> g/2
+            # nn.MaxPool2d(2),  # g -> g/2
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
@@ -247,28 +247,28 @@ class CNNGlimpseEncoder(nn.Module):
             # nn.Linear(64, 255),
             nn.ReLU(inplace=True),
         )
-        # self.conv_net_2 = nn.Sequential(
-        #     nn.Conv2d(3, 32, 3, padding=1),
-        #     nn.ReLU(inplace=True),
-        #     nn.MaxPool2d(2),  # g -> g/2
-        #     nn.Conv2d(32, 64, 3, padding=1),
-        #     nn.ReLU(inplace=True),
-        #     nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-        #     nn.Flatten(),
-        #     # nn.Linear(64, 164),
-        #     nn.ReLU(inplace=True),
-        # )
-        # self.conv_net_3 = nn.Sequential(
-        #     nn.Conv2d(3, 32, 3, padding=1),
-        #     nn.ReLU(inplace=True),
-        #     nn.MaxPool2d(2),  # g -> g/2
-        #     nn.Conv2d(32, 64, 3, padding=1),
-        #     nn.ReLU(inplace=True),
-        #     nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-        #     nn.Flatten(),
-        #     # nn.Linear(64, 93),
-        #     nn.ReLU(inplace=True),
-        # )
+        self.conv_net_2 = nn.Sequential(
+            nn.Conv2d(3, 16, 3, padding=1),
+            nn.ReLU(inplace=True),
+            # nn.MaxPool2d(2),  # g -> g/2
+            nn.Conv2d(16, 32, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
+            nn.Flatten(),
+            # nn.Linear(64, 164),
+            nn.ReLU(inplace=True),
+        )
+        self.conv_net_3 = nn.Sequential(
+            nn.Conv2d(3, 16, 3, padding=1),
+            nn.ReLU(inplace=True),
+            # nn.MaxPool2d(2),  # g -> g/2
+            nn.Conv2d(16, 32, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
+            nn.Flatten(),
+            # nn.Linear(64, 93),
+            nn.ReLU(inplace=True),
+        )
         # 使用 AdaptiveAvgPool2d 将所有 patches 统一调整为 (25, 40)
         self.adaptive_pool = nn.AdaptiveAvgPool2d(self.hw)
 
@@ -310,7 +310,7 @@ class CNNGlimpseEncoder(nn.Module):
             # image_patch = image_patch.permute(0, 2, 3, 1)
             # image_patch = image_patch.reshape(image.shape[0], 1, -1)
             # phi.append(image_patch)
-            phi.append(self.conv_net_1(image_patch))
+            phi.append(self.conv_net_1(image_patch) if i == 0 else self.conv_net_2(image_patch) if i == 1 else self.conv_net_3(image_patch))
         phi_out = torch.cat(phi, dim=1)
         return phi_out
 
@@ -434,8 +434,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
             time_steps, batch_size = state.shape[:2]
             # 展平时间和批次维度进行vision编码
             vision_flat = vision.reshape(time_steps * batch_size, *vision.shape[2:])
-            with torch.no_grad():
-                vision_fea_flat = self.vision_encoder(self.preprocess_image(vision_flat))
+            vision_fea_flat = self.vision_encoder(self.preprocess_image(vision_flat))
             # 重新组织成 [time, batch, features]
             vision_fea = vision_fea_flat.reshape(time_steps, batch_size, -1)
 
@@ -444,8 +443,7 @@ class ActorCriticCNNRecurrent(ActorCritic):
             # input_c 已经是展平的，所以不需要 squeeze(0)
             value = self.critic(input_c)
         else:  # [batch, features] - 来自推理时
-            with torch.no_grad():
-                vision_fea = self.vision_encoder(self.preprocess_image(vision))
+            vision_fea = self.vision_encoder(self.preprocess_image(vision))
             concat_inputs = torch.cat([state, vision_fea], dim=-1)
             input_c = self.memory_c(concat_inputs, masks, hidden_states)
             value = self.critic(input_c.squeeze(0))
