@@ -1,19 +1,32 @@
 import torch
 import torch.nn as nn
 
+# vision_encoder = nn.Sequential(
+#     nn.Conv2d(3, 64, kernel_size=8, stride=4),
+#     nn.ReLU(inplace=True),
+#     nn.Conv2d(64, 128, kernel_size=4, stride=2),
+#     nn.ReLU(inplace=True),
+#     nn.Conv2d(128, 64, kernel_size=3, stride=1),
+#     nn.ReLU(inplace=True),
+#     nn.AdaptiveAvgPool2d((1, 1)),
+#     nn.Flatten(),
+#     nn.Linear(64, 512),
+#     nn.ReLU(inplace=True),
+# )
+
 vision_encoder = nn.Sequential(
-    nn.Conv2d(3, 64, kernel_size=8, stride=4),
+    nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
     nn.ReLU(inplace=True),
-    nn.Conv2d(64, 128, kernel_size=4, stride=2),
+    # nn.MaxPool2d(2),  # g -> g/2
+    nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
     nn.ReLU(inplace=True),
-    nn.Conv2d(128, 64, kernel_size=3, stride=1),
+    # nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
+    nn.Conv2d(in_channels=32, out_channels=8, kernel_size=3, stride=2),
     nn.ReLU(inplace=True),
-    nn.AdaptiveAvgPool2d((1, 1)),
     nn.Flatten(),
-    nn.Linear(64, 512),
+    # nn.Linear(64, 255),
     nn.ReLU(inplace=True),
 )
-
 
 def hook_fn(name):
     def _hook(module, inp, out):
@@ -35,7 +48,7 @@ for i, m in enumerate(vision_encoder):
     hooks.append(m.register_forward_hook(hook_fn(f"layer[{i}]")))
 
 # dummy input: batch=2
-x = torch.randn(2, 3, 100, 160)
+x = torch.randn(2, 3, 50, 80)
 with torch.no_grad():
     y = vision_encoder(x)
 
