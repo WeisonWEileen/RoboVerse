@@ -473,7 +473,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.privileged_obs_buf = obs
         self.obs_buf = (self.obs_buf_state, self.vision_rgb_buf)
         self.extra_buf["observations"]["critic"] = (self.privileged_obs_buf, self.vision_rgb_buf)
-        self.extra_buf["episode_metrics"]["curriculum_object_yaw_range"]
+        self.extra_buf["episode_metrics"]["curriculum_object_yaw_range"] = self.curriculum_object_yaw_range
 
     def _pre_reset_hook(self, env_ids=None):
         if self.cfg.randomize_material:
