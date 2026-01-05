@@ -266,15 +266,15 @@ class ActorCriticCNNRecurrent(ActorCritic):
             nn.ReLU(inplace=True),
             nn.Conv2d(128, 64, kernel_size=3, stride=1),  # (10×14) → (8×12),  C=64
             nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d((1, 1)),
+            # nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
-            nn.Linear(64, 512),
+            nn.Linear(9216, 512),
             nn.ReLU(inplace=True),
         )
         # self.vision_encoder = VisionBackbonePDC(vision_height, vision_width, output_dim=64)
 
         # FIXME hard code here
-        vision_fea_dim = self.vision_encoder(torch.zeros(1, 3, 96, 128)).shape[1]
+        vision_fea_dim = self.vision_encoder(torch.zeros(1, 3, 100, 160)).shape[1]
 
         self.memory_a = Memory(
             num_actor_obs + vision_fea_dim, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_dim
