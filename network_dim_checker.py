@@ -15,19 +15,18 @@ import torch.nn as nn
 # )
 
 vision_encoder = nn.Sequential(
-    nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
+    nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1, stride=2),
     nn.ReLU(inplace=True),
     # nn.MaxPool2d(2),  # g -> g/2
-    nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
+    nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, padding=1, stride=1),
     nn.ReLU(inplace=True),
     # nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-    nn.Conv2d(in_channels=32, out_channels=8, kernel_size=3, stride=2),
+    nn.Conv2d(in_channels=16, out_channels=8, kernel_size=3, stride=1),
     nn.ReLU(inplace=True),
     nn.Flatten(),
-    # nn.Linear(64, 255),
+    # nn.Linear(7488, 256),
     nn.ReLU(inplace=True),
 )
-
 def hook_fn(name):
     def _hook(module, inp, out):
         # inp is a tuple; out may be Tensor or tuple/list of Tensors

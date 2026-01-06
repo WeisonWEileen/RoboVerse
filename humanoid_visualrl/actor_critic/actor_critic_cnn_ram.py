@@ -239,43 +239,46 @@ class CNNGlimpseEncoder(nn.Module):
         # self.linear_layers.append(nn.Linear(3 * height * width, 512))
         # input_dim = k * 3 * height * width
         self.conv_net_1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1, stride=2),
             nn.ReLU(inplace=True),
             # nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, padding=1, stride=1),
             nn.ReLU(inplace=True),
             # nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-            nn.Conv2d(in_channels=32, out_channels=8, kernel_size=3, stride=2),
+            nn.Conv2d(in_channels=16, out_channels=8, kernel_size=3, stride=1),
             nn.ReLU(inplace=True),
             nn.Flatten(),
-            nn.Linear(7488, 256),
-            nn.ReLU(inplace=True),
+            nn.Linear(6992, 50),
+            nn.LayerNorm(50),
+            nn.Tanh(),
         )
         self.conv_net_2 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1, stride=2),
             nn.ReLU(inplace=True),
             # nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, padding=1, stride=1),
             nn.ReLU(inplace=True),
             # nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-            nn.Conv2d(in_channels=32, out_channels=8, kernel_size=3, stride=2),
+            nn.Conv2d(in_channels=16, out_channels=8, kernel_size=3, stride=1),
             nn.ReLU(inplace=True),
             nn.Flatten(),
-            nn.Linear(7488, 171),
-            nn.ReLU(inplace=True),
+            nn.Linear(6992, 32),
+            nn.LayerNorm(32),
+            nn.Tanh(),
         )
         self.conv_net_3 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1, stride=2),
             nn.ReLU(inplace=True),
             # nn.MaxPool2d(2),  # g -> g/2
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, padding=1, stride=1),
             nn.ReLU(inplace=True),
             # nn.AdaptiveAvgPool2d(1),  # (B,64,1,1)
-            nn.Conv2d(in_channels=32, out_channels=8, kernel_size=3, stride=2),
+            nn.Conv2d(in_channels=16, out_channels=8, kernel_size=3, stride=1),
             nn.ReLU(inplace=True),
             nn.Flatten(),
-            nn.Linear(7488, 85),
-            nn.ReLU(inplace=True),
+            nn.Linear(6992, 18),
+            nn.LayerNorm(18),
+            nn.Tanh(),
         )
         # 使用 AdaptiveAvgPool2d 将所有 patches 统一调整为 (25, 40)
         # TODO need to figure out this and resize

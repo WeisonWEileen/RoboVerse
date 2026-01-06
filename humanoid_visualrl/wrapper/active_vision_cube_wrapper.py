@@ -264,7 +264,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
 
-        # ======update object pose======
+        # ====== update object pose ======
         self.object_pose_buf = tensor_state.objects["object"].root_state[:, :7]
 
         # ======update vision rgb and seg======
@@ -279,8 +279,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
         # if self.common_step_counte
-        if self.common_step_counter % self.cfg.vision_slow_down_scale == 0:
-            self.vision_rgb_buf = tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2).clone()
+        # if self.common_step_counter % self.cfg.vision_slow_down_scale == 0:
+        self.vision_rgb_buf = tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2).clone()
         # else:
         #     self.vision_rgb_buf = torch.zeros(self.num_envs, 3, self.cfg.cameras[0].height, self.cfg.cameras[0].width, device=self.device, dtype=torch.uint8)
         # self.vision_rgb_buf.copy_(tensor_state.cameras[self.cfg.cameras[0].name].rgb.permute(0, 3, 1, 2))
@@ -378,29 +378,29 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 # if rgb_image.dtype != np.uint8:
                 #     rgb_image = (rgb_image * 255).astype(np.uint8)
 
-                cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
+                # cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
 
-                # 绘制中空绿色圆圈（半径15像素）
-                cv2.circle(
-                    rgb_image,
-                    (int(self.image_center_x), int(self.image_center_y)),
-                    self.cfg.thres_radius,
-                    (0, 255, 0),
-                    2,
-                )
+                # # 绘制中空绿色圆圈（半径15像素）
+                # cv2.circle(
+                #     rgb_image,
+                #     (int(self.image_center_x), int(self.image_center_y)),
+                #     self.cfg.thres_radius,
+                #     (0, 255, 0),
+                #     2,
+                # )
 
-                # 绘制图像中心点（绿色圆圈）
-                cv2.circle(
-                    rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
-                )  # 绿色实心圆
+                # # 绘制图像中心点（绿色圆圈）
+                # cv2.circle(
+                #     rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+                # )  # 绿色实心圆
 
-                cv2.line(
-                    rgb_image,
-                    (center_x, center_y),
-                    (int(self.image_center_x), int(self.image_center_y)),
-                    (255, 255, 0),
-                    1,
-                )
+                # cv2.line(
+                #     rgb_image,
+                #     (center_x, center_y),
+                #     (int(self.image_center_x), int(self.image_center_y)),
+                #     (255, 255, 0),
+                #     1,
+                # )
 
             # 在图像正中间绘制红色方框（高度50，宽度80）
             # box_width = 80
@@ -902,20 +902,22 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if self._ema_reward > self.cfg.ema_reward_threshold:
                 if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
                     self._ema_reward = 0
-                    log.info(f"RESET ema_reward: {self._ema_reward}")
+                    # log.info(f"RESET ema_reward: {self._ema_reward}")
                     self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
                     self.last_curriculum_update_step = self.common_step_counter
-                    log.info(
-                        f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
-                    )
+                    # log.info(
+                        # f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                    # )
                 else:
-                    log.info(
-                        f"FULL RANGE! NOT UPDATE ema_reward: {self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE! ema_reward_threshold: {self.cfg.ema_reward_threshold}"
-                    )
+                    pass # move it to the wandb
+                    # log.info(
+                    #     f"FULL RANGE! NOT UPDATE ema_reward: {self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE! ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                    # )
             else:
-                log.info(
-                    f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
-                )
+                pass
+                # log.info(
+                    # f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                # )
 
     def _update_curriculum_object_mass(self, current_iteration):
         if self.cfg.curriculum_object_mass_flag and self.mass_curriculum_trigger:

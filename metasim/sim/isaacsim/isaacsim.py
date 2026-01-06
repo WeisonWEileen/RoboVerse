@@ -1721,7 +1721,7 @@ class IsaacsimHandler(BaseSimHandler):
                 horizontal_aperture=camera.horizontal_aperture,
                 clipping_range=camera.clipping_range,
             )
-
+        camera_update_period = self.physics_dt * self.scenario.decimation * 4
         camera_inst = TiledCamera(
             TiledCameraCfg(
                 # update_period
@@ -1737,6 +1737,7 @@ class IsaacsimHandler(BaseSimHandler):
                 colorize_instance_segmentation=False,
                 colorize_instance_id_segmentation=False,
                 update_latest_camera_pose=True,
+                update_period=camera_update_period,
             )
         )
         self.scene.sensors[camera.name] = camera_inst
