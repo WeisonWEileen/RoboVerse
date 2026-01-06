@@ -1713,6 +1713,7 @@ class IsaacsimHandler(BaseSimHandler):
                 camera.intrinsics,
                 camera.width,
                 camera.height,
+                clipping_range=camera.clipping_range,
             )
         else:
             spawn_cfg = sim_utils.PinholeCameraCfg(
