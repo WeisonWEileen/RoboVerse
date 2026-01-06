@@ -416,6 +416,7 @@ class BaseTableHumanoidTaskCfg:
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
         "energy_consumption": -3e-6,
+        "finger_close_to_object": 1.3 * scale,
     }
 
     frame_stack = 1
@@ -612,8 +613,6 @@ class BaseTableHumanoidTaskCfg:
         # training runtime highly relevant
         # self.robot = "g1_static_dex1"
         self.robot = "vega"
-        # self.robot = "g1_static_dex1_comp"
-        # self.robot = "g1_static_inpire_left_fixed"
         self.num_envs = 96
         self.enable_opencv_display = True
         self.use_vision = True
@@ -837,10 +836,6 @@ class BaseTableHumanoidTaskCfg:
         log.info(f"reward_threshold: {self.ema_reward_threshold}")
 
         self.seed = self.ppo_cfg.seed
-
-        # self.filter_pairs = [
-        #     (self.robot, "object"),
-        # ]
 
         # randomize occlude cube material
         from metasim.randomization.presets.scene_presets import SceneMaterialCollections

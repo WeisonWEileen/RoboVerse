@@ -21,11 +21,14 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "cnn_rnn_ram_not_share_no_pool_head_scale_larger" \
+    --run_name "cnn_rnn_ram_not_share_no_pool_reaching" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
     --enable_opencv_display \
-    --wandb 
+    --wandb \
+    --resume \
+    --checkpoint 2700 \
+    --load_run "2026_0106_023609" \
     # --randomize_material \
     # --actor_critic_class "use_rnn_cnn_ram" \
 
@@ -33,9 +36,6 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     # --debug
     # --wandb \
     # --enable_grasp \
-    # --resume \
-    # --checkpoint 2300 \
-    # --load_run "2025_1214_185450" \
     # --debug
 
 
