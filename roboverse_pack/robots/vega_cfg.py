@@ -63,8 +63,8 @@ class VegaCfg(RobotCfg):
         # "R_th_j2": BaseActuatorCfg(velocity_limit=6.28, torque_limit=1.1, stiffness=260, damping=20),
     }
     action_scale = {
-        "base_yaw_joint": 0.25,
-        "head_j2": 0.25,
+        "base_yaw_joint": 0.35,
+        "head_j2": 0.45,
         "head_j3": 0.25,
         "R_arm_j1": 0.25,
         "R_arm_j2": 0.25,

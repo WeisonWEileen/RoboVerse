@@ -19,13 +19,13 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 64 \
+    --num_envs 128 \
     --task "active_vision" \
     --run_name "cnn_rnn_ram_not_share_no_pool" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
     --enable_opencv_display \
-    # --wandb 
+    --wandb 
     # --randomize_material \
     # --actor_critic_class "use_rnn_cnn_ram" \
 
