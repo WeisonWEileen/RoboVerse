@@ -415,7 +415,7 @@ class BaseTableHumanoidTaskCfg:
     reward_weights = {
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
-        "energy_consumption": -1e-5,
+        "energy_consumption": -3e-6,
     }
 
     frame_stack = 1
