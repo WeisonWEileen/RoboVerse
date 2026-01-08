@@ -381,7 +381,7 @@ class BaseTableHumanoidTaskCfg:
             "objects": {
                 # "cube": {
                 "object": {
-                    "pos": torch.tensor([0.52, 0.0, 0.50 + 0.06 / 2 + 0.01]),
+                    "pos": torch.tensor([0.58, 0.0, 0.50 + 0.06 / 2 + 0.01]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                 },
             },
@@ -412,11 +412,28 @@ class BaseTableHumanoidTaskCfg:
         # "lift_object": 2.0,
         # "fuse_wrist_close_to_object_and_grasp": 0.5,
     }
-    reward_weights = {
+    phase: int = 0
+    reward_weights_phase0 = {
+        "pixel_norm_at_object": 0.8 * scale,
+        "action_smoothness": -0.1 * scale,
+        "energy_consumption": -3e-6,
+    }
+
+    reward_weights_phase1 = {
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
         "energy_consumption": -3e-6,
         "finger_close_to_object": 1.3 * scale,
+    }
+
+    # cube ready in hand. reward for holding the cube not falling down
+    reward_weights_phase2 = {
+        "pixel_norm_at_object": 0.4 * scale,
+        "action_smoothness": -0.1 * scale,
+        "energy_consumption": -3e-6,
+        "finger_close_to_object": 1.3 * scale,
+        # "contact_force_upward": 0.25 * scale,
+        "contact_force": 1.0 * scale,
     }
 
     frame_stack = 1
@@ -441,6 +458,8 @@ class BaseTableHumanoidTaskCfg:
 
     # control
     action_scale = 0.25
+    delta_control: bool = True
+    """Whether to use delta control mode. If True, actions are accumulated. If False, actions are absolute positions."""
 
     task_name = "active_vision"
 
@@ -531,9 +550,19 @@ class BaseTableHumanoidTaskCfg:
     stage_finger_close_to_object_change_thres = 0.045
     vision4times_slowdown = False
     vision_slow_down_scale = 4
-    
 
     def __post_init__(self):
+        if self.phase == 0:
+            self.reward_weights = self.reward_weights_phase0
+        elif self.phase == 1:
+            self.reward_weights = self.reward_weights_phase1
+        elif self.phase == 2:
+            self.reward_weights = self.reward_weights_phase2
+        else:
+            raise ValueError(f"Invalid phase: {self.phase}")
+
+        # self.phase = self.phase
+
         self.command_ranges.wrist_max_radius = 0.15
         # self.randomize_object_y_offset = 0.1
         self.randomize_object_curriculum = True
@@ -844,5 +873,4 @@ class BaseTableHumanoidTaskCfg:
             self.randomize_cfg["material_cfg"]["occlusion_cube"] = {
                 "material_path": SceneMaterialCollections.wall_materials(),
             }
-        
 

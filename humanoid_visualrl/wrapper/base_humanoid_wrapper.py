@@ -57,7 +57,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         if self.enable_opencv_display:
             self.opencv_renderer = OpenCVRenderer(
                 window_name="First Person View of Env " + str(opencv_render_env_idx),
-                window_size=(160*5, 100*5),  # Upscale from 64x48 to 640x480
+                window_size=(160 * 5, 100 * 5),  # Upscale from 64x48 to 640x480
                 fps_limit=opencv_fps,
                 enable_recording=True,  # Allow video recording
                 recording_path="humanoid_vision_recording.mp4",
@@ -65,6 +65,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
             )
             self._update_opencv_status_text()
         self._load_actuator_indices(scenario.robots[0])
+
+        self.accumulated_actions = self.default_joint_pd_target[:, self.actuated_index].clone()
 
     def _load_actuator_indices(self, robot):
         """Load actuator indices from robot cfg."""
@@ -143,17 +145,23 @@ class HumanoidBaseWrapper(RslRlWrapper):
         all_default_joint_pos = scenario.robots[0].default_joint_positions
         sorted_joint_pos = [all_default_joint_pos[name] for name in sorted_joint_names]
 
+        if self.robot.name == "vega":
+            # Get all joint names sorted (as used in joint_pos indexing)
+            all_joint_names = self.env.get_joint_names(self.robot.name, sort=True)
+            self.base_joint_index = all_joint_names.index("base_yaw_joint")
+
         self.default_joint_pd_target = (
             torch.tensor(sorted_joint_pos, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
         )
         actuator_keys = sorted(scenario.robots[0].actuators.keys())
-        
+
         # assert default joint position and init state not the same
         for name in actuator_keys:
             a = scenario.robots[0].default_joint_positions[name]
             b = self.cfg.init_states[0]["robots"][self.robot.name]["dof_pos"][name]
             # all are float32
             import math
+
             assert math.isclose(a, b), f"Default joint position and init state not the same for {name}"
 
         self.actuated_index = [sorted_joint_names.index(name) for name in actuator_keys]
@@ -211,9 +219,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self._p_gains = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         self._d_gains = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         self._torque_limits = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
-        self._action_scale =  torch.ones(
-            self.num_envs, self.num_actions, device=self.device, requires_grad=False
-        )
+        self._action_scale = torch.ones(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
         i = 0
         for dof_name in sorted(self.robot.actuators.keys()):
             self._action_scale[:, i] = self.robot.action_scale[dof_name]
@@ -263,6 +269,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         # store globally for reset update and pass to obs and privileged_obs
         self.actions = torch.zeros(
+            self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.accumulated_actions = torch.zeros(
             self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
         # history buffer for reward computation
@@ -469,18 +478,32 @@ class HumanoidBaseWrapper(RslRlWrapper):
         return torch.clip(actions, -clip_action_limit, clip_action_limit).to(self.device)
 
     def _pre_physics_step(self, actions):
-        """Apply action smoothing and wrap actions as dict before physics step."""
-        delay = torch.rand((self.num_envs, 1), device=self.device)
-        actions = (1 - delay) * actions.to(self.device) + delay * self.actions
-        clipped_actions = self.clip_actions(actions)
-        self.actions = clipped_actions
-        # if not self.env.control_effort_mode:
-        #     self.actions +=  (self.default_joint_pd_target[:, self.actuated_index] +self._action_scale * self.actions)
-        return self.actions * self._action_scale
+        """Apply action smoothing and wrap actions as dict before physics step.
+
+        If delta_control is True, uses delta control mode where actions are accumulated.
+        If delta_control is False, uses default pd target version with action smoothing.
+        """
+        if self.cfg.delta_control:
+            # delta control version
+            self.actions = self.clip_actions(actions)
+            self.accumulated_actions += self._action_scale * self.actions * 0.25
+            return self.accumulated_actions
+        else:
+            # default pd target version
+            delay = torch.rand((self.num_envs, 1), device=self.device)
+            actions = (1 - delay) * actions.to(self.device) + delay * self.actions
+            clipped_actions = self.clip_actions(actions)
+            self.actions = clipped_actions
+            return self.actions * self._action_scale
 
     def _physics_step(self, action) -> None:
         #  set pos target
-        self.env.set_dof_targets(action + self.default_joint_pd_target[:, self.actuated_index])
+        if getattr(self.cfg, "delta_control", False):
+            # delta control: action is already absolute position (accumulated_actions)
+            self.env.set_dof_targets(action)
+        else:
+            # default pd target: action is relative offset (scaled), need to add default position
+            self.env.set_dof_targets(action + self.default_joint_pd_target[:, self.actuated_index])
         # self.robot_yaw_buffer_action[0] = 1.575
         # velocity = self._compute_velocity(self.robot_yaw_buffer_action)
         # velocity = torch.ones((self.num_envs, 2), device=self.device, dtype=torch.float) * 10
@@ -551,7 +574,11 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.env.sim.forward()
 
         # reset state buffer in the wrapper
-        self.actions[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids][:, self.actuator_indices]
+        if not self.cfg.delta_control:
+            self.actions[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids][:, self.actuator_indices]
+        else:
+            self.actions[env_ids] = 0.0
+            self.accumulated_actions[env_ids] = self.default_joint_pd_target[env_ids][:, self.actuated_index]
         # self.last_actions[env_ids] = 0.0
         # self.last_last_actions[env_ids] = 0.0
         self.last_dof_vel[env_ids] = 0.0
@@ -562,6 +589,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         #
         self.dof_pos[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids]
         self.dof_vel[env_ids] = 0.0
+
 
         self._post_reset_hook(env_ids)
 

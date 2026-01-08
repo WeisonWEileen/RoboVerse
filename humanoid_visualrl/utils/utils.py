@@ -342,6 +342,7 @@ def get_args():
         seed: int = -1
         enable_grasp: bool = False
         vision4times_slowdown: bool = False
+        phase: int = 0 
         
         """Random seed for reproducibility. -1 means random seed."""
 

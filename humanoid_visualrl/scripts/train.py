@@ -54,8 +54,12 @@ if __name__ == "__main__":
     # task_cfg, cfg_file_path = get_cfg_cls(args)
     task_cfg_cls = get_task_cfg_class(args.task)
 
+    assert args.phase in [0, 1, 2], "Invalid phase"
+    # cfg.phase = args.phase
+
     task_cfg = task_cfg_cls(
-        finetune=args.resume, actor_critic_class=args.actor_critic_class, enable_grasp=args.enable_grasp, vision4times_slowdown=args.vision4times_slowdown
+        finetune=args.resume, actor_critic_class=args.actor_critic_class, enable_grasp=args.enable_grasp, vision4times_slowdown=args.vision4times_slowdown,
+        phase=args.phase
     )
 
     if hasattr(task_cfg, "randomize_material"):
@@ -125,7 +129,7 @@ if __name__ == "__main__":
         # do not log, faster reset
 
         log_dir = None
-        task_cfg.max_episode_length_s = 3
+        task_cfg.max_episode_length_s = 1
         scenario.num_envs = 8
         
 

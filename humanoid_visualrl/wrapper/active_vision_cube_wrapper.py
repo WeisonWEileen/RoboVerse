@@ -55,7 +55,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.success_thres = (
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
-        if self.cfg.curriculum_object_yaw:
+        if self.cfg.curriculum_object_yaw and self.cfg.phase == 0:
             self.curriculum_object_yaw_range = (
                 self.cfg.curriculum_initial_object_yaw_range * self.cfg.randomize_object_yaw_range
             )
@@ -63,6 +63,20 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
         else:
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
+
+        if self.cfg.phase == 2:
+            if self.robot.name == "vega":
+                sorted_joint_names = self.env.get_joint_names(self.robot.name, sort=True)
+                joint1_idx = sorted_joint_names.index("R_arm_j1")
+                joint2_idx = sorted_joint_names.index("R_arm_j2")
+                joint3_idx = sorted_joint_names.index("R_arm_j3")
+                joint4_idx = sorted_joint_names.index("R_arm_j4")
+                joint5_idx = sorted_joint_names.index("R_arm_j5")
+                joint6_idx = sorted_joint_names.index("R_arm_j6")
+                joint7_idx = sorted_joint_names.index("R_arm_j7")
+
+                self.init_states.robots["vega"].joint_pos[:, joint1_idx] += 0.7
+                self.init_states.robots["vega"].joint_pos[:, joint4_idx] -= 0.2
 
         # Initialize episode_metrics if it doesn't exist
         if "episode_metrics" not in self.extra_buf:
@@ -248,6 +262,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
 
         self.object_pose_buf = self.init_states.objects["object"].root_state[:, :7].clone()
+
+        
         if "semantic_seg" in self.cfg.cameras[0].data_types:
             self.semantic_seg = True
         else:
@@ -480,8 +496,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.domain_randomization_helper.randomization(env_ids=env_ids, step_count=self.common_step_counter)
 
         if self.cfg.randomization:
-            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_object_yaw_range
-            # yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
+            # yaw: 物体相对于机器人的方位角（用于计算物体位置）
+            object_relative_yaw = (
+                2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.curriculum_object_yaw_range
+            )
+            # if occlusion cube yaw is close to 45 degree, add radius
+
             # radius bias randomize_object_radius_range
             radius_bias = (
                 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * self.cfg.randomize_object_radius_range
@@ -494,7 +514,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 occlusion_cube_radius = radius - 0.1
                 # +0.1 radius random 抖动
                 occlusion_cube_yaw = (
-                    yaw + (torch.rand(len(env_ids), device=self.device) - 0.5) * 2 * self.cfg.occlude_cube_yaw_range
+                    object_relative_yaw
+                    + (torch.rand(len(env_ids), device=self.device) - 0.5) * 2 * self.cfg.occlude_cube_yaw_range
                 )
                 occlusion_cube_x = torch.cos(occlusion_cube_yaw) * occlusion_cube_radius
                 occlusion_cube_y = torch.sin(occlusion_cube_yaw) * occlusion_cube_radius
@@ -506,17 +527,25 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     occlusion_cube_yaw,
                 )
 
-            object_x = torch.cos(yaw) * radius
-            object_y = torch.sin(yaw) * radius
+            object_x = torch.cos(object_relative_yaw) * radius
+            object_y = torch.sin(object_relative_yaw) * radius
             self.init_states.objects["object"].root_state[env_ids, 0] = object_x
             self.init_states.objects["object"].root_state[env_ids, 1] = object_y
             # self.done_buf[env_ids] = False
-            # randomize yaw
-            yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
+            # randomize object's own rotation yaw (物体自身的旋转角度)
+            object_rotation_yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
             quat = quat_from_euler_xyz(
-                torch.zeros(len(env_ids), device=self.device), torch.zeros(len(env_ids), device=self.device), yaw
+                torch.zeros(len(env_ids), device=self.device),
+                torch.zeros(len(env_ids), device=self.device),
+                object_rotation_yaw,
             )
             self.init_states.objects["object"].root_state[env_ids, 3:7] = quat
+
+            # if robot is in the phase 2, align robot base yaw joint to face the object
+            # 使用物体相对于机器人的方位角来对齐机器人base yaw joint
+            if self.cfg.phase == 2:
+                self.init_states.robots["vega"].joint_pos[env_ids, self.base_joint_index] = object_relative_yaw
+                # pass
 
     def _post_reset_hook(self, env_ids):
         self.stage[env_ids] = 0
@@ -536,7 +565,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _check_reset(self):
         # move 0.05 to config
-        terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.1
+        if self.cfg.phase == 2:
+            terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z) < 0.1
+        else:
+            terminate = (
+                torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.1
+            )
         too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
         # self.reset_buf = self.timeout_buf
         # too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
@@ -871,6 +905,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         return below_distance.squeeze(1) * (self.stage == 0)
 
+    # def _reward_object_holding(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+
     def _update_curriculum(self):
         current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
         self._update_obj_material()
@@ -892,12 +928,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
             reward = self.episode_sums["pixel_norm_at_object"].mean()
             # Always update last_reward to track current performance
-            reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)
-            self.last_reward = reward
+            # reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)
+            # self.last_reward = reward
 
-            iterations_since_last_update = current_iteration - (
-                self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
-            )
+            # iterations_since_last_update = current_iteration - (
+            #     self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
+            # )
 
             if self._ema_reward > self.cfg.ema_reward_threshold:
                 if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
@@ -906,17 +942,17 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     self.curriculum_object_yaw_range += self.cfg.randomize_object_yaw_range * 0.05
                     self.last_curriculum_update_step = self.common_step_counter
                     # log.info(
-                        # f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                    # f"UPDATE ema_reward:{self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} iterations_since_last_update: {iterations_since_last_update:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
                     # )
                 else:
-                    pass # move it to the wandb
+                    pass  # move it to the wandb
                     # log.info(
                     #     f"FULL RANGE! NOT UPDATE ema_reward: {self._ema_reward:.4f}, NO UPDATE curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, FULL RANGE! ema_reward_threshold: {self.cfg.ema_reward_threshold}"
                     # )
             else:
                 pass
                 # log.info(
-                    # f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
+                # f"NO UPDATE ema_reward: {self._ema_reward:.4f}, curriculum_object_yaw_range: {self.curriculum_object_yaw_range}, reward_improvement: {reward_improvement_ratio:.4f} ema_reward_threshold: {self.cfg.ema_reward_threshold}"
                 # )
 
     def _update_curriculum_object_mass(self, current_iteration):
