@@ -434,6 +434,7 @@ class BaseTableHumanoidTaskCfg:
         "finger_close_to_object": 1.3 * scale,
         "contact_force": 1.0 * scale,
         "contact_force_upward": 0.25 * scale,
+        "lift_object": 2.0 * scale,
     }
 
     frame_stack = 1
