@@ -64,19 +64,19 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         else:
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
 
-        if self.cfg.phase == 2:
-            if self.robot.name == "vega":
-                sorted_joint_names = self.env.get_joint_names(self.robot.name, sort=True)
-                joint1_idx = sorted_joint_names.index("R_arm_j1")
-                joint2_idx = sorted_joint_names.index("R_arm_j2")
-                joint3_idx = sorted_joint_names.index("R_arm_j3")
-                joint4_idx = sorted_joint_names.index("R_arm_j4")
-                joint5_idx = sorted_joint_names.index("R_arm_j5")
-                joint6_idx = sorted_joint_names.index("R_arm_j6")
-                joint7_idx = sorted_joint_names.index("R_arm_j7")
+        # if self.cfg.phase == 2:
+        #     if self.robot.name == "vega":
+        #         sorted_joint_names = self.env.get_joint_names(self.robot.name, sort=True)
+        #         joint1_idx = sorted_joint_names.index("R_arm_j1")
+        #         joint2_idx = sorted_joint_names.index("R_arm_j2")
+        #         joint3_idx = sorted_joint_names.index("R_arm_j3")
+        #         joint4_idx = sorted_joint_names.index("R_arm_j4")
+        #         joint5_idx = sorted_joint_names.index("R_arm_j5")
+        #         joint6_idx = sorted_joint_names.index("R_arm_j6")
+        #         joint7_idx = sorted_joint_names.index("R_arm_j7")
 
-                self.init_states.robots["vega"].joint_pos[:, joint1_idx] += 0.7
-                self.init_states.robots["vega"].joint_pos[:, joint4_idx] -= 0.2
+        # self.init_states.robots["vega"].joint_pos[:, joint1_idx] += 0.7
+        # self.init_states.robots["vega"].joint_pos[:, joint4_idx] -= 0.2
 
         # Initialize episode_metrics if it doesn't exist
         if "episode_metrics" not in self.extra_buf:
@@ -218,9 +218,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 0.5274,
                 0.0,
                 0.0,  # R_ff_j1
-                0.0, # R_mf_j1
-                0.0, # R_rf_j1
-                0.0, # R_lf_j1
+                0.0,  # R_mf_j1
+                0.0,  # R_rf_j1
+                0.0,  # R_lf_j1
                 0.0,
                 0.0,
                 0.0,
@@ -234,7 +234,11 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             device="cuda:0",
             # get indices of the arms joints
         )
-        self.init_states.robots["vega"].joint_pos = self.vega_stretch_joint_pos.repeat(self.num_envs, 1)
+        # self.init_states.
+        # half init from stretch pose
+        self.init_states.robots["vega"].joint_pos[: self.num_envs // 2] = self.vega_stretch_joint_pos.repeat(
+            self.num_envs // 2, 1
+        )
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -574,8 +578,17 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if self.cfg.phase == 2:
                 # 复制len(env_ids)份vega_stretch_joint_pos赋值
 
+                # only those < num_envs//2 are in stretch pose
+                # Convert env_ids to tensor for comparison
+                env_ids_tensor = torch.tensor(env_ids, device=self.device, dtype=torch.long)
+                mask = env_ids_tensor < self.num_envs // 2
+                stretch_env_ids = env_ids_tensor[mask]
+
                 # align robot base yaw joint to face the object
-                self.init_states.robots["vega"].joint_pos[env_ids, self.base_joint_index] = object_relative_yaw
+                if len(stretch_env_ids) > 0:
+                    self.init_states.robots["vega"].joint_pos[stretch_env_ids, self.base_joint_index] = (
+                        object_relative_yaw[mask]
+                    )
 
                 # self.accumulated_actions[env_ids] = self.init_states.robots["vega"].joint_pos[env_ids][
                 #     :, self.actuated_index

@@ -416,13 +416,13 @@ class BaseTableHumanoidTaskCfg:
     reward_weights_phase0 = {
         "pixel_norm_at_object": 0.8 * scale,
         "action_smoothness": -0.1 * scale,
-        "energy_consumption": -3e-6,
+        "energy_consumption": -3e-7,
     }
 
     reward_weights_phase1 = {
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
-        "energy_consumption": -3e-6,
+        "energy_consumption": -3e-7,
         "finger_close_to_object": 1.3 * scale,
     }
 
@@ -430,10 +430,10 @@ class BaseTableHumanoidTaskCfg:
     reward_weights_phase2 = {
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
-        "energy_consumption": -3e-6,
+        "energy_consumption": -3e-7,
         "finger_close_to_object": 1.3 * scale,
-        # "contact_force_upward": 0.25 * scale,
         "contact_force": 1.0 * scale,
+        "contact_force_upward": 0.25 * scale,
     }
 
     frame_stack = 1
