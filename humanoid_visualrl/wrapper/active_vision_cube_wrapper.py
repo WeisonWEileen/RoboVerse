@@ -590,11 +590,25 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         object_relative_yaw[mask]
                     )
 
+                
+
+
                 # self.accumulated_actions[env_ids] = self.init_states.robots["vega"].joint_pos[env_ids][
                 #     :, self.actuated_index
                 # ]
 
     def _post_reset_hook(self, env_ids):
+        if self.cfg.phase == 2:
+            # set object close to the hand
+            body_reindex = self.env.get_body_reindex('vega')
+            body_state = self.env.scene.articulations["vega"].data.body_state_w[:, body_reindex]
+            finger_tip_pos = body_state[:, self.left_index_intermediate_link_indices, :3]
+
+            self.env._set_object_pose(
+                self.cfg.objects[1], finger_tip_pos, torch.zeros(len(env_ids), 4, device=self.device), env_ids=env_ids
+            )
+
+
         self.stage[env_ids] = 0
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
@@ -611,13 +625,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.robot_yaw_buffer_action[env_ids] = 0.0
 
     def _check_reset(self):
-        # move 0.05 to config
-        if self.cfg.phase == 2:
-            terminate = torch.abs(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z) < 0.1
-        else:
-            terminate = (
+        terminate = (
                 torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.1
             )
+        # move 0.05 to config
+        # if self.cfg.phase == 2:
+        #     terminate = terminate | (torch.abs(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z) < 0.1)
+
         too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
         # self.reset_buf = self.timeout_buf
         # too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
