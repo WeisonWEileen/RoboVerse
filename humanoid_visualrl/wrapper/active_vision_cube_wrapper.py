@@ -207,6 +207,35 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.obj_randomizer = ObjectRandomizer(cfg=ObjectRandomCfg(obj_name="object"), device=self.device)
         self.obj_randomizer.bind_handler(self.env)
 
+        self.vega_stretch_joint_pos = torch.tensor(
+            [
+                -1.1486,
+                0.0509,
+                0.1644,
+                -2.1385,
+                0.1022,
+                -0.2556,
+                0.5274,
+                0.2891,
+                0.3240,
+                0.2811,
+                0.3299,
+                -0.3572,
+                -0.3860,
+                -1.0154,
+                -1.1581,
+                1.6050,
+                -0.1655,
+                -0.2109,
+                -0.7990,
+                -0.1641,
+                0.1135,
+            ],
+            device="cuda:0",
+            # get indices of the arms joints
+        )
+        self.init_states.robots["vega"].joint_pos = self.vega_stretch_joint_pos.repeat(self.num_envs, 1)
+
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
         if self.robot.name == "g1_static_dex1":
@@ -263,7 +292,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.object_pose_buf = self.init_states.objects["object"].root_state[:, :7].clone()
 
-        
         if "semantic_seg" in self.cfg.cameras[0].data_types:
             self.semantic_seg = True
         else:
@@ -544,8 +572,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # if robot is in the phase 2, align robot base yaw joint to face the object
             # 使用物体相对于机器人的方位角来对齐机器人base yaw joint
             if self.cfg.phase == 2:
+                # 复制len(env_ids)份vega_stretch_joint_pos赋值
+
+                # align robot base yaw joint to face the object
                 self.init_states.robots["vega"].joint_pos[env_ids, self.base_joint_index] = object_relative_yaw
-                # pass
+
+                # self.accumulated_actions[env_ids] = self.init_states.robots["vega"].joint_pos[env_ids][
+                #     :, self.actuated_index
+                # ]
 
     def _post_reset_hook(self, env_ids):
         self.stage[env_ids] = 0

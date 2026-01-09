@@ -578,7 +578,9 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self.actions[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids][:, self.actuator_indices]
         else:
             self.actions[env_ids] = 0.0
-            self.accumulated_actions[env_ids] = self.default_joint_pd_target[env_ids][:, self.actuated_index]
+            self.accumulated_actions[env_ids] = self.init_states.robots["vega"].joint_pos[env_ids][
+                    :, self.actuated_index
+                ]
         # self.last_actions[env_ids] = 0.0
         # self.last_last_actions[env_ids] = 0.0
         self.last_dof_vel[env_ids] = 0.0
