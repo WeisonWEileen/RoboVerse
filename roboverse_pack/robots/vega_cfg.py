@@ -96,7 +96,7 @@ class VegaCfg(RobotCfg):
         "R_arm_j1": 0.15,
         "R_arm_j2": 0.15,
         "R_arm_j3": 0.05,
-        "R_arm_j4": 0.22,
+        "R_arm_j4": 0.18,
         "R_arm_j5": 0.15,
         "R_arm_j6": 0.05,
         "R_arm_j7": 0.10,
@@ -123,7 +123,7 @@ class VegaCfg(RobotCfg):
     # Joint angle limits from URDF (in radians)
     joint_limits: dict[str, tuple[float, float]] = {
         "head_j3": (-0.52, 0.0),
-        # "head_j2": (-2.792, 2.792),
+        "head_j2": (-0.71, 0.71),
         # "head_j3": (-1.378, 1.483),
         # # Base wheels - locked at 0.0
         # "B_wheel_j1": (0.0, 0.0),

@@ -300,7 +300,7 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
-            mass=0.05,  # 增加质量以确保更好的物理行为
+            mass=20,  # 增加质量以确保更好的物理行为
         ),
         # PrimitiveCylinderCfg(
         #     name="object",

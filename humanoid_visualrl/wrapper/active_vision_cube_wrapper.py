@@ -91,7 +91,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if obj.name == "object":
                 self.obj = obj
                 break
-            
+
         self.randomize_robot_yaw_range = self.cfg.randomize_robot_yaw_range * 0.1
         # robot_yaw_limit = self.robot.joint_limits["waist_yaw_joint"]
         # self.robot_yaw_limit = list(robot_yaw_limit)
@@ -237,7 +237,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         # self.init_states.
         # half init from stretch pose
-        self.init_states.robots["vega"].joint_pos[: self.num_envs // 2] = self.vega_stretch_joint_pos.repeat(
+        if self.cfg.phase == 2:
+            self.init_states.robots["vega"].joint_pos[: self.num_envs // 2] = self.vega_stretch_joint_pos.repeat(
             self.num_envs // 2, 1
         )
 
@@ -637,9 +638,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # self.reset_buf = self.timeout_buf
         # too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
         # two far from reset_point
-        too_far = (
-            torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.2
-        )
+        # too_far = (
+        #     torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.2
+        # )
 
         self.reset_buf = self.timeout_buf | terminate | too_far
         return self.reset_buf
