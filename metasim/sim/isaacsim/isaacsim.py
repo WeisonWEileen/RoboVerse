@@ -269,6 +269,8 @@ class IsaacsimHandler(BaseSimHandler):
 
         # self._load_render_settings()
         self.scene.clone_environments(copy_from_source=False)
+        # Set joint limits after cloning environments to ensure all environments have the limits
+
         if self.scenario.task.active_contact_sensor:
             self._load_sensors()
         self._set_perspective_camera_pose()
@@ -308,6 +310,9 @@ class IsaacsimHandler(BaseSimHandler):
         self._init_viewports()
         self._is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         a = self.none_static_joint_idx_original
+        for robot in self.robots:
+            if hasattr(robot, "joint_limits") and robot.joint_limits is not None:
+                self._set_joint_limits(robot.name, robot.joint_limits)
 
     # for ac
     @property
@@ -919,6 +924,38 @@ class IsaacsimHandler(BaseSimHandler):
                 env_ids=torch.arange(self.num_envs, device=self.device),
             )
         return self._none_static_joint_idx_original
+
+    def _set_joint_limits(self, robot_name: str, joint_limits: dict[str, tuple[float, float]]) -> None:
+        """
+        Set joint position limits for a robot.
+
+        Args:
+            robot_name: Name of the robot
+            joint_limits: Dictionary mapping joint names to (min, max) tuples (in radians)
+        """
+        robot_inst = self.scene.articulations[robot_name]
+        joint_names = robot_inst.joint_names
+
+        # Get current joint limits (shape: num_envs, num_joints, 2)
+        current_limits = robot_inst.root_physx_view.get_dof_limits()
+
+        # Create a copy to modify
+        new_limits = current_limits.clone()
+
+        # Set limits for each joint specified in joint_limits
+        for joint_name, (min_limit, max_limit) in joint_limits.items():
+            if joint_name not in joint_names:
+                log.warning(f"Joint {joint_name} not found in robot {robot_name}, skipping joint limit setting")
+                continue
+
+            joint_idx = joint_names.index(joint_name)
+            # Set limits for all environments
+            new_limits[:, joint_idx, 0] = min_limit  # lower limit
+            new_limits[:, joint_idx, 1] = max_limit  # upper limit
+            log.debug(f"Set joint limit for {joint_name}: [{min_limit}, {max_limit}]")
+
+        # Apply the new limits
+        robot_inst.root_physx_view.set_dof_limits(new_limits, torch.arange(self.num_envs))
 
     def set_rigid_body_solver_position_iteration_count(self, prim_path, count):
         from isaacsim.core.utils.prims import get_prim_at_path

@@ -21,15 +21,15 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "cnn_rnn_ram_not_share_no_pool_reverse_curriculum" \
+    --run_name "cnn_rnn_ram_not_share_no_pool_smaller_mass" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
     --enable_opencv_display \
     --wandb \
     --resume \
     --phase 2 \
-    --checkpoint 800 \
-    --load_run 2026_0108_152432 \
+    --checkpoint 1300 \
+    --load_run 2026_0109_154934 \
 
     # --resume \
     # --checkpoint 2700 \

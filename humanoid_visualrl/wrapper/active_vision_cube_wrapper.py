@@ -91,6 +91,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if obj.name == "object":
                 self.obj = obj
                 break
+            
         self.randomize_robot_yaw_range = self.cfg.randomize_robot_yaw_range * 0.1
         # robot_yaw_limit = self.robot.joint_limits["waist_yaw_joint"]
         # self.robot_yaw_limit = list(robot_yaw_limit)
@@ -598,15 +599,15 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 # ]
 
     def _post_reset_hook(self, env_ids):
-        if self.cfg.phase == 2:
-            # set object close to the hand
-            body_reindex = self.env.get_body_reindex('vega')
-            body_state = self.env.scene.articulations["vega"].data.body_state_w[:, body_reindex]
-            finger_tip_pos = body_state[:, self.left_index_intermediate_link_indices, :3]
+        # if self.cfg.phase == 2:
+        #     # set object close to the hand
+        #     body_reindex = self.env.get_body_reindex('vega')
+        #     body_state = self.env.scene.articulations["vega"].data.body_state_w[:, body_reindex]
+        #     finger_tip_pos = body_state[:, self.left_index_intermediate_link_indices, :3]
 
-            self.env._set_object_pose(
-                self.cfg.objects[1], finger_tip_pos, torch.zeros(len(env_ids), 4, device=self.device), env_ids=env_ids
-            )
+        #     self.env._set_object_pose(
+        #         self.cfg.objects[1], finger_tip_pos, torch.zeros(len(env_ids), 4, device=self.device), env_ids=env_ids
+        #     )
 
 
         self.stage[env_ids] = 0
