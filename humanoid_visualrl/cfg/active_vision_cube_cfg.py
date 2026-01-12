@@ -434,7 +434,7 @@ class BaseTableHumanoidTaskCfg:
         "finger_close_to_object": 0.7 * scale,
         "contact_force": 1.0 * scale,
         "contact_force_upward": 1.0 * scale,
-        "lift_object": 3.0 * scale,
+        "lift_object": 50.0 * scale,
     }
 
     frame_stack = 1
@@ -548,7 +548,7 @@ class BaseTableHumanoidTaskCfg:
     curriculum_object_mass_begin_iter = 0
     curriculum_object_mass_end_iter = 200
     curriculum_object_mass_update_interval = 200
-    stage_finger_close_to_object_change_thres = 0.045
+    stage_finger_close_to_object_change_thres = 0.25
     vision4times_slowdown = False
     vision_slow_down_scale = 4
 

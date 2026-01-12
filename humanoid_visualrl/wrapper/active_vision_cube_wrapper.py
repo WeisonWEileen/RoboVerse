@@ -5,8 +5,6 @@
 # render reset frame to before compute obs
 from __future__ import annotations
 
-import cv2
-import numpy as np
 import torch
 
 from humanoid_visualrl.cfg.active_vision_cube_cfg import BaseTableHumanoidTaskCfg
@@ -83,6 +81,10 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.extra_buf["episode_metrics"] = {}
         self.extra_buf["episode_metrics"]["curriculum_object_yaw_range"] = self.curriculum_object_yaw_range
         log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")
+
+        self.extra_buf["episode_metrics"]["curriculum_obj_mass"] = self.cfg.objects[1].mass
+        # log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")       
+        
         # exit()
         self.see_flag_float = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
         self.stage = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
@@ -732,7 +734,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )  # cube offset
 
         reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
-        if not self.mass_curriculum_trigger:
+
+        if self.cfg.curriculum_object_mass_flag and not self.mass_curriculum_trigger:
             dist_mean = dist.mean()
             if dist_mean < self.cfg.stage_finger_close_to_object_change_thres:
                 self.mass_curriculum_trigger_count += 1
@@ -989,7 +992,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         if self.cfg.curriculum_object_yaw:
             # Only check and log once per 100 iterations, and only at the exact iteration boundary
             # if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
-            reward = self.episode_sums["pixel_norm_at_object"].mean()
+            # reward = self.episode_sums["pixel_norm_at_object"].mean()
             # Always update last_reward to track current performance
             # reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)
             # self.last_reward = reward
@@ -1025,6 +1028,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 mass = self.cfg.curriculum_object_mass_range[1] * torch.ones((self.num_envs, 1), device="cpu")
                 log.info(f"UPDATE curriculum_object_mass: {self.cfg.curriculum_object_mass_range[1]}")
                 self.obj_randomizer.set_mass("object", mass, env_ids=list(range(self.num_envs)))
+                self.extra_buf["episode_metrics"]["curriculum_obj_mass"] = mass[0][0].item()
 
             elif current_iteration > self.end_mass_curriculum_iter:
                 return
@@ -1041,3 +1045,4 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 # randomize around the mass
                 mass = mass + (torch.rand((self.num_envs, 1), device="cpu") - 0.5) * 0.05
                 self.obj_randomizer.set_mass("object", mass, env_ids=list(range(self.num_envs)))
+                self.extra_buf["episode_metrics"]["curriculum_obj_mass"] = mass.mean().item()
