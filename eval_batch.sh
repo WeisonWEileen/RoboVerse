@@ -30,15 +30,17 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/evaluate_batch.py \
     --task "active_vision" \
     --device "cuda:0" \
     --resume \
-    --load_run "2026_0102_010109" \
-    --checkpoint 1600 \
-    --actor_critic_class "use_patchcnn_rnn" \
+    --load_run "2026_0112_230719" \
+    --checkpoint 3000 \
+    --actor_critic_class "use_rnn_cnn_ram" \
     --num_envs 50 \
     --evaluation_round 10 \
     --randomize_material \
-    --eval_randomize_material_train \
     --enable_opencv_display \
-    # --enable_grasp \
+    --enable_grasp \
+    --phase 2 \
+    --robot "vega"
+    # --eval_randomize_material_train \
     # --eval_occlu \
     # --eval_occlu \
     # --occlude_cube

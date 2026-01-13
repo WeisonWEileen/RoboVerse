@@ -15,7 +15,7 @@ from metasim.types import TensorState
 from metasim.utils import configclass
 from loguru import logger as log
 
-from metasim.scenario.objects import RigidObjCfg
+from metasim.scenario.objects import RigidObjCfg, ArticulationObjCfg
 
 
 @configclass
@@ -120,7 +120,7 @@ class LeggedRobotRunnerCfg:
 
 
 # @register_task("g1_static_dex1_fixed_gazing")
-@configclass(name="active_vision")
+@configclass(name="av")
 class BaseTableHumanoidTaskCfg:
     """Base class for legged-gym style humanoid tasks.
 
@@ -302,15 +302,15 @@ class BaseTableHumanoidTaskCfg:
             default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
             mass=20,  # 增加质量以确保更好的物理行为
         ),
-        # PrimitiveCylinderCfg(
-        #     name="object",
-        #     radius=0.025,
-        #     height=0.05,
-        #     color=[1.0, 0.0, 0.0],
-        #     collision_enabled=True,
-        #     default_position=(0.55, 0.1, 0.9 + 0.05 / 2 + 0.01),
-        #     mass=20.0,
-        # ),
+        ArticulationObjCfg(
+            name="box_base",
+            fix_base_link=True,
+            default_position=(0.20, 0.0, 0.60),
+            default_orientation=(1.0, 0.0, 0.0, 0.0),
+            usd_path="roboverse_data/assets/rlbench/close_box/box_base/usd/box_base.usd",
+            urdf_path="roboverse_data/assets/rlbench/close_box/box_base/urdf/box_base_unique.urdf",
+            mjcf_path="roboverse_data/assets/rlbench/close_box/box_base/mjcf/box_base_unique.mjcf",
+        ),
         # ArticulationObjCfg(
         #     name="box_base",
         #     fix_base_link=True,

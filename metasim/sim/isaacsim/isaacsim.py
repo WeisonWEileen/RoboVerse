@@ -1020,10 +1020,10 @@ class IsaacsimHandler(BaseSimHandler):
                         visual_material=sim_utils.PreviewSurfaceCfg(
                             diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
                         ),
-                        physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=5.0),
-                        # physics_material=sim_utils.RigidBodyMaterialCfg(
-                        # static_friction=2.0,
-                        # ),
+                        physics_material=sim_utils.RigidBodyMaterialCfg(
+                            static_friction=10.0,  # 增加静摩擦力
+                            dynamic_friction=10.0,  # 增加动摩擦力
+                        ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
                         semantic_tags=semantic_tags,

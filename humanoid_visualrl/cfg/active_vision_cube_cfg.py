@@ -8,14 +8,14 @@ from typing import Callable, Literal
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveCylinderCfg
+from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.types import TensorState
 from metasim.utils import configclass
 from loguru import logger as log
 
-from metasim.scenario.objects import RigidObjCfg, ArticulationObjCfg
+from metasim.scenario.objects import RigidObjCfg
 
 
 @configclass
@@ -392,7 +392,7 @@ class BaseTableHumanoidTaskCfg:
     command_dim = 14
     num_actions = 17 - 6
     torque_limit_scale = 1.0
-    scale = 0.5
+    scale = 0.2
     reward_weights: dict[str, float] = {
         "pixel_norm_at_object": 0.4 * scale,
         "finger_close_to_object": 1.3 * scale,
@@ -432,9 +432,9 @@ class BaseTableHumanoidTaskCfg:
         "action_smoothness": -0.1 * scale,
         "energy_consumption": -3e-7,
         "finger_close_to_object": 0.7 * scale,
-        "contact_force": 1.0 * scale,
-        "contact_force_upward": 1.0 * scale,
-        "lift_object": 150.0 * scale,
+        "contact_force": 0.8 * scale,
+        "contact_force_upward": 0.8 * scale,
+        "lift_object": 200.0 * scale,
     }
 
     frame_stack = 1

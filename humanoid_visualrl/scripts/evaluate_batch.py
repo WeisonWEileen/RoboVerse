@@ -30,7 +30,7 @@ from metasim.scenario.lights import DomeLightCfg
 from metasim.scenario.scenario import ScenarioCfg
 from humanoid_visualrl.utils.video_saver import VideoSaver
 
-N_DIVIDE = 10
+N_DIVIDE = 1
 SUCCESS_FLAG_THRESHOLD = 0.8
 SUCCESS_REACHING_FRAMES_THRESHOLD = 0.3
 
@@ -64,7 +64,7 @@ def play(args):
     # get task cfg from cfg.py in load_path
     # breakpoint()
     task_cfg_cls = load_task_cfg(args)
-    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class, finetune=args.resume, occlude_cube=args.eval_occlu, enable_grasp=args.enable_grasp)
+    task_cfg = task_cfg_cls(actor_critic_class = args.actor_critic_class, finetune=args.resume, occlude_cube=args.eval_occlu, enable_grasp=args.enable_grasp, phase=args.phase)
 
     assert args.num_envs % N_DIVIDE == 0, f"num_envs must be divisible by {N_DIVIDE} for batch evaluation, but got {args.num_envs}"
     N_interval_envs = args.num_envs // N_DIVIDE
@@ -272,8 +272,6 @@ def play(args):
             #         env_ids=too_close_env_ids,
             #     )
 
-
-
             # env_wrapper.env._set_object_pose(
             #     env_wrapper.cfg.objects[3],
             #     occlusion_cube_state[:, :3],
@@ -319,8 +317,6 @@ def play(args):
                 success_reaching_flag = (dis_reaching_flag & env_wrapper.see_flag).float()
                 success_reaching_flag_acc_single_count += success_reaching_flag
 
-
-
             camera_pos = env_wrapper.camera_pos_w[:, :3]
             camera_quat = env_wrapper.camera_quat_w[:, :4]
             camera_direction = env_wrapper.object_pose_buf[:, :3] - camera_pos
@@ -347,15 +343,12 @@ def play(args):
                 f"reaching success_flag: {success_reaching_flag} for evaluation round {i}, success_flag_average: {success_reaching_flag_}"
             )
             
-        # success_flag = success_flag_average > SUCCESS_FLAG_THRESHOLD
-        # if success_flag:
+
         if not args.eval_reaching:
             log.info(f"success_flag: {success_flag} for evaluation round {i}, success_flag_average: {success_flag_average}")
 
 
         # generation different interval success rate
-
-
         if i == 2 :
             video_saver.save()
             log.info(f"Saved {i} round video at: {video_saver.video_path}")

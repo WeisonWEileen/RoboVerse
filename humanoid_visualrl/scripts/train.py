@@ -129,9 +129,11 @@ if __name__ == "__main__":
         # do not log, faster reset
 
         log_dir = None
-        task_cfg.max_episode_length_s = 1
+        # task_cfg.max_episode_length_s = 1
         scenario.num_envs = 8
-        
+        scenario.sim_params.num_threads = 1
+        task_cfg.objects[1].mass = 0.1
+        task_cfg.curriculum_object_mass_range = (task_cfg.curriculum_object_mass_range[0],task_cfg.curriculum_object_mass_range[0])
 
     log.info(f"Using simulator: {args.sim}")
     env_cls = get_task_class(args.task)
