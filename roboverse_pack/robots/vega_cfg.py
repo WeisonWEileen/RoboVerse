@@ -90,16 +90,16 @@ class VegaCfg(RobotCfg):
     # }
 
     action_scale = {
-        "base_yaw_joint": 0.12,
-        "head_j2": 0.05,
-        "head_j3": 0.03,
-        "R_arm_j1": 0.15,
-        "R_arm_j2": 0.15,
-        "R_arm_j3": 0.05,
-        "R_arm_j4": 0.18,
-        "R_arm_j5": 0.15,
-        "R_arm_j6": 0.05,
-        "R_arm_j7": 0.10,
+        "base_yaw_joint": 0.25,
+        "head_j2": 0.25,
+        "head_j3": 0.25,
+        "R_arm_j1": 0.15 * 0.5,
+        "R_arm_j2": 0.15 * 0.5,
+        "R_arm_j3": 0.05 * 0.5,
+        "R_arm_j4": 0.18 * 0.5,
+        "R_arm_j5": 0.15 * 0.5,
+        "R_arm_j6": 0.05 * 0.5,
+        "R_arm_j7": 0.10 * 0.5,
         # "R_arm_j1": 0.0,
         # "R_arm_j2": 0.0,
         # "R_arm_j3": 0.0,
@@ -107,77 +107,44 @@ class VegaCfg(RobotCfg):
         # "R_arm_j5": 0.0,
         # "R_arm_j6": 0.0,
         # "R_arm_j7": 0.0,
-        "R_ff_j1": 0.25,
-        "R_lf_j1": 0.25,
-        "R_mf_j1": 0.25,
-        "R_rf_j1": 0.25,
-        "R_th_j0": 0.25,
-        "R_th_j1": 0.60,
+        "R_ff_j1": 0.75,
+        "R_lf_j1": 0.75,
+        "R_mf_j1": 0.75,
+        "R_rf_j1": 0.75,
+        "R_th_j0": 0.75,
+        "R_th_j1": 0.80,
     }
     assert len(action_scale) == len(actuators), f"action_scale: {action_scale} != len(actuators): {len(actuators)}"
 
     # five mimic joints in the finger
     mimic_joints: dict[str] = {"R_ff_j2", "R_lf_j·2", "R_mf_j2", "R_rf_j2", "R_th_j2"}
 
+    modified_joint_limits: dict[str, tuple[float, float]] = {
+        "head_j3": (-0.52, 0.0),
+        "head_j2": (-0.71, 0.71),
+    }
+
     # ==================== Joint Limits ====================
     # Joint angle limits from URDF (in radians)
     joint_limits: dict[str, tuple[float, float]] = {
         "head_j3": (-0.52, 0.0),
         "head_j2": (-0.71, 0.71),
-        # "head_j3": (-1.378, 1.483),
-        # # Base wheels - locked at 0.0
-        # "B_wheel_j1": (0.0, 0.0),
-        # "B_wheel_j2": (0.0, 0.0),
-        # "R_wheel_j1": (0.0, 0.0),
-        # "R_wheel_j2": (0.0, 0.0),
-        # "L_wheel_j1": (0.0, 0.0),
-        # "L_wheel_j2": (0.0, 0.0),
-        # # Torso
-        # "torso_j1": (0.2, 0.2),
-        # "torso_j2": (0.5, 1.0),
-        # "torso_j3": (0.0, 0.0),
-        # # Left arm
-        # "L_arm_j1": (-3.071, 3.071),
-        # "L_arm_j2": (-0.453, 1.553),
-        # "L_arm_j3": (-3.071, 3.071),
-        # "L_arm_j4": (-3.071, 0.244),
-        # "L_arm_j5": (-3.071, 3.071),
-        # "L_arm_j6": (-1.396, 1.396),
-        # "L_arm_j7": (-1.378, 1.117),
-        # # Right arm - locked at 0.0
-        # "R_arm_j1": (0.0, 0.0),
-        # "R_arm_j2": (0.0, 0.0),
-        # "R_arm_j3": (0.0, 0.0),
-        # "R_arm_j4": (0.0, 0.0),
-        # "R_arm_j5": (0.0, 0.0),
-        # "R_arm_j6": (0.0, 0.0),
-        # "R_arm_j7": (0.0, 0.0),
-        # # Left hand - Thumb
-        # "L_th_j0": (-0.0158, 1.605),
-        # "L_th_j1": (-0.3468, 0.1834),
-        # "L_th_j2": (-0.4298, 0.2731),
-        # # Left hand - Fingers
-        # "L_ff_j1": (-1.0946, 0.2891),
-        # "L_ff_j2": (-1.2101, 0.3681),
-        # "L_mf_j1": (-1.0844, 0.2801),
-        # "L_mf_j2": (-1.2026, 0.3533),
-        # "L_rf_j1": (-1.0154, 0.2840),
-        # "L_rf_j2": (-1.1156, 0.3599),
-        # "L_lf_j1": (-1.0118, 0.2811),
-        # "L_lf_j2": (-1.1073, 0.4014),
-        # # Right hand - locked at 0.0
-        # "R_th_j0": (0.0, 0.0),
-        # "R_th_j1": (0.0, 0.0),
-        # "R_th_j2": (0.0, 0.0),
-        # # Right hand - Fingers (locked at 0.0)
-        # "R_ff_j1": (0.0, 0.0),
-        # "R_ff_j2": (0.0, 0.0),
-        # "R_mf_j1": (0.0, 0.0),
-        # "R_mf_j2": (0.0, 0.0),
-        # "R_rf_j1": (0.0, 0.0),
-        # "R_rf_j2": (0.0, 0.0),
-        # "R_lf_j1": (0.0, 0.0),
-        # "R_lf_j2": (0.0, 0.0),
+        "base_yaw_joint": (-1.5708, 1.5708),
+        "R_arm_j1": (-3.071, 3.071),
+        "R_arm_j2": (-1.553, 0.453),
+        "R_arm_j3": (-3.071, 3.071),
+        "R_arm_j4": (-3.071, 0.244),
+        "R_arm_j5": (-3.071, 3.071),
+        "R_arm_j6": (-1.396, 1.396),
+        "R_arm_j7": (-1.117, 1.378),
+        # Right hand - Thumb
+        "R_ff_j1": (-1.0946, 0.2891),
+        "R_lf_j1": (-1.0118, 0.2811),
+        "R_mf_j1": (-1.0844, 0.2801),
+        "R_rf_j1": (-1.0154, 0.2840),
+        "R_th_j0": (-0.0158, 1.605),
+        "R_th_j1": (-0.3468, 0.1834),
+        # "R_th_j2": (-0.95, 0.95),
     }
 
     # ==================== Control Types ====================
@@ -387,9 +354,7 @@ class VegaCfg(RobotCfg):
     }
 
     num_joints_all: int = (
-        len(actuators)
-        + len(mimic_joints)
-        + len(default_fixed_joints)
+        len(actuators) + len(mimic_joints) + len(default_fixed_joints)
         # + len(velocity_joints)
         # + len(origial_config_joint)
     )

@@ -48,8 +48,10 @@ class ActorCritic(nn.Module):
         for layer_index in range(len(actor_hidden_dims)):
             if layer_index == len(actor_hidden_dims) - 1:
                 actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], num_actions))
+                actor_layers.append(nn.Tanh())
             else:
                 actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], actor_hidden_dims[layer_index + 1]))
+                # actor_layers.append(nn.LayerNorm(actor_hidden_dims[layer_index + 1]))
                 actor_layers.append(activation)
         self.actor = nn.Sequential(*actor_layers)
 
@@ -322,7 +324,13 @@ class CNNGlimpseEncoder(nn.Module):
             # image_patch = image_patch.permute(0, 2, 3, 1)
             # image_patch = image_patch.reshape(image.shape[0], 1, -1)
             # phi.append(image_patch)
-            phi.append(self.conv_net_1(image_patch) if i == 0 else self.conv_net_2(image_patch) if i == 1 else self.conv_net_3(image_patch))
+            phi.append(
+                self.conv_net_1(image_patch)
+                if i == 0
+                else self.conv_net_2(image_patch)
+                if i == 1
+                else self.conv_net_3(image_patch)
+            )
         phi_out = torch.cat(phi, dim=1)
         return phi_out
 

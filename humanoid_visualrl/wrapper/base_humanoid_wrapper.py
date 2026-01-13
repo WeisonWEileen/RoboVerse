@@ -66,7 +66,15 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self._update_opencv_status_text()
         self._load_actuator_indices(scenario.robots[0])
 
-        self.accumulated_actions = self.default_joint_pd_target[:, self.actuated_index].clone()
+        # self.accumulated_actions =
+        # self.accumulated_actions = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
+
+        if self.cfg.delta_control:
+            self.accumulated_actions = self._scale_actions_to_normalized(
+                self.default_joint_pd_target[:, self.actuated_index].clone()
+            )
+        else:
+            self.accumulated_actions = self.default_joint_pd_target[:, self.actuated_index].clone()
 
     def _load_actuator_indices(self, robot):
         """Load actuator indices from robot cfg."""
@@ -166,6 +174,40 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         self.actuated_index = [sorted_joint_names.index(name) for name in actuator_keys]
         # self.actuated_index = torch.tensor(actuated_index, device=self.device)
+
+        # Parse joint limits for delta control clipping
+        if hasattr(scenario.robots[0], "joint_limits") and scenario.robots[0].joint_limits is not None:
+            joint_limits = scenario.robots[0].joint_limits
+            sorted_joint_limits_min = []
+            sorted_joint_limits_max = []
+            for name in actuator_keys:
+                if name in joint_limits:
+                    min_limit, max_limit = joint_limits[name]
+                    sorted_joint_limits_min.append(min_limit)
+                    sorted_joint_limits_max.append(max_limit)
+                else:
+                    # If no limit specified, use very large bounds
+                    sorted_joint_limits_min.append(-10.0)
+                    sorted_joint_limits_max.append(10.0)
+            self.joint_limits_min = (
+                torch.tensor(sorted_joint_limits_min, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
+            )
+            self.joint_limits_max = (
+                torch.tensor(sorted_joint_limits_max, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
+            )
+
+            self.joint_range = self.joint_limits_max - self.joint_limits_min
+
+        else:
+            raise ValueError("No joint limits specified for the robot, Not implemented yet")
+            # If no joint limits specified, use very large bounds
+            # num_actuators = len(actuator_keys)
+            # self.joint_limits_min = (
+            #     torch.full((self.num_envs, num_actuators), -10.0, device=self.device)
+            # )
+            # self.joint_limits_max = (
+            #     torch.full((self.num_envs, num_actuators), 10.0, device=self.device)
+            # )
 
     def _init_buffers(self):
         """Init all buffer for reward computation."""
@@ -477,6 +519,38 @@ class HumanoidBaseWrapper(RslRlWrapper):
         clip_action_limit = self.cfg.normalization.clip_actions
         return torch.clip(actions, -clip_action_limit, clip_action_limit).to(self.device)
 
+    def _unscale_actions_to_joint_limits(self, accumulated_actions):
+        """Unscale accumulated actions to joint limits range.
+
+        Maps accumulated actions from [-1, 1] range to actual joint limits [joint_limits_min, joint_limits_max].
+        This ensures that actions are properly scaled to joint limits before being sent to the simulator.
+
+        Since policy's last layer is tanh, actions are expected to be in [-1, 1] range.
+        This method clamps actions to [-1, 1] first, then maps them to joint limits.
+
+        Args:
+            accumulated_actions: Accumulated actions (should be in [-1, 1] range from tanh output)
+
+        Returns:
+            Actions unscaled to joint limits range, ready for simulator
+        """
+        # Clamp actions to [-1, 1] range (policy output is tanh, but clamp for safety)
+        normalized_actions = torch.clamp(accumulated_actions, -1.0, 1.0)
+
+        # Get default positions for actuated joints
+        normalized_actions_ = (normalized_actions + 1) / 2
+
+        # Final safety clip to ensure within joint limits
+        unscaled_actions = self.joint_range * normalized_actions_ + self.joint_limits_min
+
+        return unscaled_actions
+
+    def _scale_actions_to_normalized(self, joint_positions):
+        """Convert to normalized actions [-1, 1] range."""
+        normalized_actions = (joint_positions - self.joint_limits_min) / self.joint_range
+        normalized_actions_ = (normalized_actions - 0.5) * 2
+        return normalized_actions_
+
     def _pre_physics_step(self, actions):
         """Apply action smoothing and wrap actions as dict before physics step.
 
@@ -484,10 +558,11 @@ class HumanoidBaseWrapper(RslRlWrapper):
         If delta_control is False, uses default pd target version with action smoothing.
         """
         if self.cfg.delta_control:
-            # delta control version
-            self.actions = self.clip_actions(actions)
-            self.accumulated_actions += self._action_scale * self.actions * 0.25
-            return self.accumulated_actions
+            # print(actions[:, -3].mean())
+            # actions[:, -3] =
+            self.accumulated_actions += self._action_scale * actions * 0.25
+            unscaled_action = self._unscale_actions_to_joint_limits(self.accumulated_actions)
+            return unscaled_action
         else:
             # default pd target version
             delay = torch.rand((self.num_envs, 1), device=self.device)
@@ -499,7 +574,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _physics_step(self, action) -> None:
         #  set pos target
         if getattr(self.cfg, "delta_control", False):
-            # delta control: action is already absolute position (accumulated_actions)
+            # delta control: action is accumulated_actions, unscale to joint limits before sending to simulator
+            # unscaled_action = self._unscale_actions_to_joint_limits(action)
             self.env.set_dof_targets(action)
         else:
             # default pd target: action is relative offset (scaled), need to add default position
@@ -575,12 +651,14 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
         # reset state buffer in the wrapper
         if not self.cfg.delta_control:
-            self.actions[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids][:, self.actuator_indices]
+            self.actions[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids][
+                :, self.actuator_indices
+            ]
         else:
             self.actions[env_ids] = 0.0
-            self.accumulated_actions[env_ids] = self.init_states.robots["vega"].joint_pos[env_ids][
-                    :, self.actuated_index
-                ]
+            # Scale init joint positions to normalized space for delta control
+            init_joint_pos = self.init_states.robots[self.robot.name].joint_pos[:, self.actuated_index]
+            self.accumulated_actions[env_ids] = self._scale_actions_to_normalized(init_joint_pos)[env_ids]
         # self.last_actions[env_ids] = 0.0
         # self.last_last_actions[env_ids] = 0.0
         self.last_dof_vel[env_ids] = 0.0
@@ -592,12 +670,12 @@ class HumanoidBaseWrapper(RslRlWrapper):
         self.dof_pos[env_ids] = self.init_states.robots[self.robot.name].joint_pos[env_ids]
         self.dof_vel[env_ids] = 0.0
 
-
         self._post_reset_hook(env_ids)
 
         if not self.cfg.task_name == "active_vision":
             self.base_quat[env_ids] = (
-                torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device, dtype=torch.float32)
+                torch
+                .tensor([1.0, 0.0, 0.0, 0.0], device=self.device, dtype=torch.float32)
                 .unsqueeze(0)
                 .repeat(len(env_ids), 1)
             )

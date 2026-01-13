@@ -21,15 +21,15 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision" \
-    --run_name "cnn_rnn_searching_not_slowdown4" \
+    --run_name "cnn_rnn_searching_" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
     --enable_opencv_display \
+    --phase 2 \
+    --resume \
+    --checkpoint 200 \
+    --load_run 2026_0112_205846 \
     --wandb \
-    --phase 0 \
-    # --resume \
-    # --checkpoint 2400 \
-    # --load_run 2026_0110_200626 
 
     # --resume \
     # --checkpoint 2700 \

@@ -43,11 +43,12 @@ class CriticVisualizer:
         """Initialize the visualizer.
 
         Args:
-            window_size: Number of recent values to display
+            window_size: Initial window size for x-axis (not used for data storage)
         """
         self.window_size = window_size
-        self.critic_values = deque(maxlen=window_size)
-        self.steps = deque(maxlen=window_size)
+        # Store all historical data without maxlen limit
+        self.critic_values = deque()
+        self.steps = deque()
         self.step_count = 0
 
         # Setup matplotlib figure
@@ -55,7 +56,7 @@ class CriticVisualizer:
         (self.line,) = self.ax.plot([], [], "b-", linewidth=2, label="Critic Value")
         self.ax.set_xlabel("Step", fontsize=12)
         self.ax.set_ylabel("Critic Value", fontsize=12)
-        self.ax.set_title("Real-time Critic Value Visualization", fontsize=14, fontweight="bold")
+        self.ax.set_title("Real-time Critic Value Visualization (All History)", fontsize=14, fontweight="bold")
         self.ax.grid(True, alpha=0.3)
         self.ax.legend()
         self.ax.set_xlim(0, window_size)
@@ -74,31 +75,43 @@ class CriticVisualizer:
         self.step_count += 1
 
         if len(self.critic_values) > 1:
-            # Update the plot
+            # Update the plot with all historical data
             self.line.set_data(list(self.steps), list(self.critic_values))
 
-            # Auto-scale y-axis
+            # Auto-scale y-axis based on all data
             if len(self.critic_values) > 0:
                 min_val = min(self.critic_values)
                 max_val = max(self.critic_values)
                 margin = (max_val - min_val) * 0.1 if max_val != min_val else 0.1
                 self.ax.set_ylim(min_val - margin, max_val + margin)
 
-            # Update x-axis to show sliding window
-            if self.step_count > self.window_size:
-                self.ax.set_xlim(self.step_count - self.window_size, self.step_count)
-            else:
-                self.ax.set_xlim(0, max(self.window_size, self.step_count))
+            # Update x-axis to show all historical data
+            # Add some padding on the right side
+            x_max = max(self.step_count, self.window_size)
+            self.ax.set_xlim(0, x_max + 10)
 
-            # Add current value text
+            # Add current value text with statistics
             if hasattr(self, "text"):
                 self.text.remove()
+
+            # Calculate statistics
+            avg_val = sum(self.critic_values) / len(self.critic_values)
+            min_val = min(self.critic_values)
+            max_val = max(self.critic_values)
+
+            stats_text = (
+                f"Current: {critic_value:.4f}\n"
+                f"Step: {self.step_count}\n"
+                f"Avg: {avg_val:.4f}\n"
+                f"Min: {min_val:.4f}\n"
+                f"Max: {max_val:.4f}"
+            )
             self.text = self.ax.text(
                 0.02,
                 0.98,
-                f"Current: {critic_value:.4f}\nStep: {self.step_count}",
+                stats_text,
                 transform=self.ax.transAxes,
-                fontsize=11,
+                fontsize=10,
                 verticalalignment="top",
                 bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
             )
@@ -237,7 +250,7 @@ def play(args):
     log.info("Critic visualizer initialized. Close the plot window to stop.")
 
     # Reset interval
-    reset_interval = 75
+    reset_interval = 275
     obj_rand_range = task_cfg.randomize_object_yaw_range
     radius = task_cfg.randomize_object_radius
 
@@ -246,7 +259,8 @@ def play(args):
             # Reset environment periodically
             if step % reset_interval == 0:
                 # Sample random yaw
-                yaw = (random.random() - 0.5) * 2 * obj_rand_range
+                # yaw = (random.random() - 0.5) * 2 * obj_rand_range
+                yaw = 2.2
                 yaw = torch.tensor(yaw, device=env_wrapper.device)
 
                 radius_bias = 0.07 * torch.ones(1, device=env_wrapper.device)

@@ -15,7 +15,7 @@ from metasim.types import TensorState
 from metasim.utils import configclass
 from loguru import logger as log
 
-from metasim.scenario.objects import RigidObjCfg, ArticulationObjCfg
+from metasim.scenario.objects import RigidObjCfg
 
 
 @configclass
