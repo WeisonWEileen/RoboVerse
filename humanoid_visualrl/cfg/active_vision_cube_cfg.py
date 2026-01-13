@@ -655,9 +655,9 @@ class BaseTableHumanoidTaskCfg:
             self.ppo_cfg.policy.masking_all = True
 
         if self.robot == "vega":
-            if "finger_close_to_object" in self.reward_weights and self.enable_grasp:
+            if self.phase == 2:
                 self.mask_joint_names = []
-            elif "finger_close_to_object" in self.reward_weights and not self.enable_grasp:
+            elif self.phase == 1:
                 # mask hand
                 self.mask_joint_names = [
                     "R_th_j0",
@@ -667,8 +667,8 @@ class BaseTableHumanoidTaskCfg:
                     "R_rf_j1",
                     "R_lf_j1",
                 ]
-            else:
-                self.mask_joint_names = [
+            elif self.phase == 0:
+                self.phase = [
                     "R_arm_j1",
                     "R_arm_j2",
                     "R_arm_j3",
@@ -683,6 +683,8 @@ class BaseTableHumanoidTaskCfg:
                     "R_rf_j1",
                     "R_lf_j1",
                 ]
+            else:
+                raise ValueError(f"Invalid phase: {self.phase}")
 
         if self.robot in ["g1_static_dex1"]:
             self.init_states[0]["robots"] = {
