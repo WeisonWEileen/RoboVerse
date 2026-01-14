@@ -560,7 +560,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         if self.cfg.delta_control:
             # print(actions[:, -3].mean())
             # actions[:, -3] =
-            self.accumulated_actions += self._action_scale * actions * 0.25
+            self.accumulated_actions += self._action_scale * actions 
             unscaled_action = self._unscale_actions_to_joint_limits(self.accumulated_actions)
             return unscaled_action
         else:
