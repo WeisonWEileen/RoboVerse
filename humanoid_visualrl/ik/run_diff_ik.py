@@ -162,10 +162,15 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     goal_marker = VisualizationMarkers(frame_marker_cfg.replace(prim_path="/Visuals/ee_goal"))
 
     # Define goals for the arm
+    # ee_goals = [
+    #     [0.3, 0.1, 0.7, 1.0, 0.0, 0.0, 0.0],
+    #     [0.3, -0.3, 0.65, 1.0, 0.0, 0.0, 0.0],
+    #     [0.3, 0, 0.8, 1.0, 0.0, 0.0, 0.0],
+    # ]
     ee_goals = [
-        [0.2, 0.1, 0.7, 1.0, 0.0, 0.0, 0.0],
-        [0.2, -0.3, 0.6, 1.0, 0.0, 0.0, 0.0],
-        [0.2, 0, 0.5, 1.0, 0.0, 0.0, 0.0],
+        # [0.3, 0.1, 0.7, 0, 0, -0.7071, 0.7071],
+        [0.3, -0.3, 0.65, 0, 0, -0.7071, 0.7071],
+        # [0.3, 0, 0.8, 0, 0, -0.7071, 0.7071],
     ]
     ee_goals = torch.tensor(ee_goals, device=sim.device)
     # Track the given command
@@ -180,7 +185,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     elif args_cli.robot == "ur10":
         robot_entity_cfg = SceneEntityCfg("robot", joint_names=[".*"], body_names=["ee_link"])
     elif args_cli.robot == "vega":
-        robot_entity_cfg = SceneEntityCfg("robot", joint_names=["R_arm_j.*"], body_names=["R_arm_l7"])
+        robot_entity_cfg = SceneEntityCfg("robot", joint_names=["R_arm_j.*"], body_names=["R_mf_l1"])
     else:
         raise ValueError(f"Robot {args_cli.robot} is not supported. Valid: franka_panda, ur10")
     # Resolving the scene entities
