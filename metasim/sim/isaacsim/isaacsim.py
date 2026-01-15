@@ -744,20 +744,6 @@ class IsaacsimHandler(BaseSimHandler):
                     collision_enabled=True, contact_offset=0.02, rest_offset=0.0
                 ),
             ),
-            # actuators={
-            #     # jn: ImplicitActuatorCfg(
-            #     jn: ImplicitActuatorCfg(
-            #         # prim_path
-            #         joint_names_expr=[jn],
-            #         # TODO fix this with different mode
-            #         stiffness=robot.actuators[jn].stiffness if robot.control_type[jn] == "position" else 0.0,
-            #         damping=robot.actuators[jn].damping if robot.control_type[jn] == "position" else 0.0,
-            #         armature=0.01,
-            #         friction=0.05,
-            #         # TODO armature to be determined
-            #     )
-            #     for jn in sorted_actuator_names
-            # },
             actuators=actuators,
         )
         # now it do not support simultaneous position and effort control

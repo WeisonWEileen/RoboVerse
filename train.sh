@@ -33,7 +33,7 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
 
     # --resume \
     # --checkpoint 2700 \
-# --load_run "2026_0106_023609" \
+    # --load_run "2026_0106_023609" \
     # --randomize_material \
     # --actor_critic_class "use_rnn_cnn_ram" \
 
