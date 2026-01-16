@@ -602,7 +602,8 @@ class BaseTableHumanoidTaskCfg:
         # self.randomize_object_yaw_range = 2.14
         self.curriculum_object_yaw = True
         self.curriculum_initial_object_yaw_range = 0.3
-        self.randomize_object_yaw_range = 2.2
+        # self.randomize_object_yaw_range = 1.8
+        self.randomize_object_yaw_range = 0.0
         self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
         self.curriculum_avg_thres_higher = 0.93
         self.curriculum_avg_thres_lower = 0.85
@@ -827,7 +828,7 @@ class BaseTableHumanoidTaskCfg:
                         "R_arm_j7": 0.0,
                         # Right hand - open
                         "R_th_j0": 1.47,
-                        "R_th_j1": -0.10,
+                        "R_th_j1": 0.15,
                         "R_ff_j1": 0.0,
                         "R_mf_j1": 0.0,
                         "R_rf_j1": 0.0,
@@ -876,4 +877,3 @@ class BaseTableHumanoidTaskCfg:
             self.randomize_cfg["material_cfg"]["occlusion_cube"] = {
                 "material_path": SceneMaterialCollections.wall_materials(),
             }
-

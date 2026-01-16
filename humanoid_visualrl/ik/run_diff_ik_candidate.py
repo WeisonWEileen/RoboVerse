@@ -13,6 +13,7 @@ from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(description="Tutorial on using the differential IK controller.")
 parser.add_argument("--robot", type=str, default="franka_panda", help="Name of the robot.")
 parser.add_argument("--num_envs", type=int, default=128, help="Number of environments to spawn.")
+# parser
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
@@ -22,6 +23,41 @@ args_cli = parser.parse_args()
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
+joint_names = [
+    "base_yaw_joint",
+    "L_wheel_j1",
+    "R_wheel_j1",
+    "torso_j1",
+    "torso_j2",
+    "torso_j3",
+    "L_arm_j1",
+    "R_arm_j1",
+    "L_arm_j2",
+    "R_arm_j2",
+    "head_j2",
+    "L_arm_j3",
+    "R_arm_j3",
+    "head_j3",
+    "L_arm_j4",
+    "R_arm_j4",
+    "L_arm_j5",
+    "R_arm_j5",
+    "L_arm_j6",
+    "R_arm_j6",
+    "L_arm_j7",
+    "R_arm_j7",
+    "R_ff_j1",
+    "R_lf_j1",
+    "R_mf_j1",
+    "R_rf_j1",
+    "R_th_j0",
+    "R_ff_j2",
+    "R_lf_j2",
+    "R_mf_j2",
+    "R_rf_j2",
+    "R_th_j1",
+    "R_th_j2",
+]
 """Rest everything follows."""
 
 import torch
@@ -252,7 +288,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     # Initialize data collection for qpos recording
     recorded_qpos = []
     recorded_cube_pos = []  # Store cube positions (pos + quat)
-    max_recorded_frames = 400
+    max_recorded_frames = 200
     recording_complete = False
 
     # Define simulation stepping
@@ -260,7 +296,9 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     count = 0
     offset = torch.tensor([0.0, 0.0, 0.06], device=robot.device)
     cube_hand_offset = torch.tensor([0.0, 0.05, 0.03], device=robot.device)
-
+    
+    # get index of joint_names
+    joint_ids = [robot.joint_names.index(jn) for jn in joint_names]
     # Simulation loop
     while simulation_app.is_running():
         # reset
@@ -328,17 +366,16 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         # perform step
         sim.step()
         # update sim-time
-        count += 1
         # update buffers
         scene.update(sim_dt)
 
         # obtain quantities from simulation
         ee_pose_w = robot.data.body_state_w[:, robot_entity_cfg.body_ids[0], 0:7]
         # update marker positions
-        ee_marker.visualize(ee_pose_w[:, 0:3], ee_pose_w[:, 3:7])
-        goal_marker.visualize(
-            ik_commands[:, 0:3] + delta[:, 0:3] + scene.env_origins + offset, ik_commands[:, 3:7] + delta[:, 3:7]
-        )
+        # ee_marker.visualize(ee_pose_w[:, 0:3], ee_pose_w[:, 3:7])
+        # goal_marker.visualize(
+        #     ik_commands[:, 0:3] + delta[:, 0:3] + scene.env_origins + offset, ik_commands[:, 3:7] + delta[:, 3:7]
+        # )
 
         # Check if ee_pose_w xyz difference is less than 0.05 and record qpos
         if (count + 1) % 150 == 0:
@@ -375,6 +412,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
                         print(f"[INFO]: Recorded {len(recorded_qpos)} frames and saved to {output_file}")
                         print(f"[INFO]: qpos shape: {qpos_array.shape}")
                         print(f"[INFO]: cube_pos shape: {cube_pos_array.shape}")
+
+        count += 1
 
 
 def main():

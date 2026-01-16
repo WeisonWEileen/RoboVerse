@@ -129,8 +129,8 @@ if __name__ == "__main__":
         # do not log, faster reset
 
         log_dir = None
-        # task_cfg.max_episode_length_s = 1
-        scenario.num_envs = 8
+        task_cfg.max_episode_length_s = 1.5
+        # scenario.num_envs = 1
         scenario.sim_params.num_threads = 1
         task_cfg.objects[1].mass = 0.1
         task_cfg.curriculum_object_mass_range = (task_cfg.curriculum_object_mass_range[0],task_cfg.curriculum_object_mass_range[0])
@@ -160,6 +160,7 @@ if __name__ == "__main__":
         device=device,
         log_dir=log_dir,
         use_vision=task_cfg.use_vision,
+        debug=args.debug,
     )
 
     if args.resume:

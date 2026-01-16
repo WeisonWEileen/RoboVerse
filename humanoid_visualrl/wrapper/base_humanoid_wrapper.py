@@ -158,6 +158,11 @@ class HumanoidBaseWrapper(RslRlWrapper):
             all_joint_names = self.env.get_joint_names(self.robot.name, sort=True)
             self.base_joint_index = all_joint_names.index("base_yaw_joint")
 
+            actuator_keys = sorted(scenario.robots[0].actuators.keys())
+
+            all_joint_names_global_unsorted = self.env._get_joint_names(self.robot.name, sort=False, only_valid=False)
+            self.actuated_local_index = [all_joint_names.index(name) for name in actuator_keys]
+
         self.default_joint_pd_target = (
             torch.tensor(sorted_joint_pos, device=self.device).unsqueeze(0).repeat(self.num_envs, 1)
         )
@@ -172,8 +177,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
 
             assert math.isclose(a, b), f"Default joint position and init state not the same for {name}"
 
+        # in [mimic + actuated] space
         self.actuated_index = [sorted_joint_names.index(name) for name in actuator_keys]
-        # self.actuated_index = torch.tensor(actuated_index, device=self.device)
 
         # Parse joint limits for delta control clipping
         if hasattr(scenario.robots[0], "joint_limits") and scenario.robots[0].joint_limits is not None:
@@ -560,7 +565,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         if self.cfg.delta_control:
             # print(actions[:, -3].mean())
             # actions[:, -3] =
-            self.accumulated_actions += self._action_scale * actions 
+            self.accumulated_actions += self._action_scale * actions
             unscaled_action = self._unscale_actions_to_joint_limits(self.accumulated_actions)
             return unscaled_action
         else:

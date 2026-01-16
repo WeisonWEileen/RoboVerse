@@ -5,6 +5,8 @@
 # render reset frame to before compute obs
 from __future__ import annotations
 
+import os
+import numpy as np
 import torch
 
 from humanoid_visualrl.cfg.active_vision_cube_cfg import BaseTableHumanoidTaskCfg
@@ -57,8 +59,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.curriculum_object_yaw_range = (
                 self.cfg.curriculum_initial_object_yaw_range * self.cfg.randomize_object_yaw_range
             )
-            # self.curriculum_object_yaw_range =  self.cfg.randomize_object_yaw_range
-            # self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
         else:
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
 
@@ -83,8 +83,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")
 
         self.extra_buf["episode_metrics"]["curriculum_obj_mass"] = self.cfg.objects[1].mass
-        # log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")       
-        
+        # log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")
+
         # exit()
         self.see_flag_float = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
         self.stage = torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
@@ -132,8 +132,71 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.mass_curriculum_trigger = False
         self.mass_curriculum_trigger_count = 0
 
-        self._reset(list(range(self.num_envs)))
+        # Load recorded qpos and cube_pos from npz file
+        npz_path = "/home/panwei/RoboVerse/humanoid_visualrl/ik/qpos/recorded_qpos_1.npz"
+        if os.path.exists(npz_path):
+            data = np.load(npz_path)
+            recorded_qpos_raw = torch.tensor(data["qpos"], device=self.device)  # [400, num_joints]
+            # from isaacsim deleted joint version to none deleted version
+            # ids: indices in original joint order (all joints) that correspond to none_static joints
+            ids = [
+                0,
+                2,
+                3,
+                4,
+                8,
+                9,
+                10,
+                11,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                32,
+                33,
+                34,
+                35,
+                36,
+                42,
+                43,
+                44,
+                45,
+                46,
+                56,
+            ]
+            self.recorded_qpos = recorded_qpos_raw[:, ids][:, self.env._none_static_joint_idx_reindexed][
+                :, self.actuated_index
+            ]
+            self.recorded_cube_pos = torch.tensor(data["cube_pos"], device=self.device)  # [400, 7]
 
+            # Filter out data where sqrt(x^2 + y^2) < threshold
+            threshold = self.cfg.init_states[0]["objects"]["object"]["pos"][0]
+            cube_xy_dist = torch.sqrt(self.recorded_cube_pos[:, 0] ** 2 + self.recorded_cube_pos[:, 1] ** 2)
+            mask = cube_xy_dist >= threshold
+            original_count = len(self.recorded_qpos)
+            self.recorded_qpos = self.recorded_qpos[mask]
+            self.recorded_cube_pos = self.recorded_cube_pos[mask]
+
+            log.info(
+                f"Loaded {len(self.recorded_qpos)} recorded poses from {npz_path} (filtered from {original_count} entries)"
+            )
+
+        else:
+            log.warning(f"NPZ file not found at {npz_path}, using default stretch pose")
+            self.recorded_qpos = None
+            self.recorded_cube_pos = None
+
+        self._reset(list(range(self.num_envs)))
         self._update_camera_pose = False
 
         # get segmatic id
@@ -241,8 +304,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # half init from stretch pose
         if self.cfg.phase == 2:
             self.init_states.robots["vega"].joint_pos[: self.num_envs // 2] = self.vega_stretch_joint_pos.repeat(
-            self.num_envs // 2, 1
-        )
+                self.num_envs // 2, 1
+            )
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -580,8 +643,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             # if robot is in the phase 2, align robot base yaw joint to face the object
             # 使用物体相对于机器人的方位角来对齐机器人base yaw joint
             if self.cfg.phase == 2:
-                # 复制len(env_ids)份vega_stretch_joint_pos赋值
-
                 # only those < num_envs//2 are in stretch pose
                 # Convert env_ids to tensor for comparison
                 env_ids_tensor = torch.tensor(env_ids, device=self.device, dtype=torch.long)
@@ -590,16 +651,53 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
                 # align robot base yaw joint to face the object
                 if len(stretch_env_ids) > 0:
-                    self.init_states.robots["vega"].joint_pos[stretch_env_ids, self.base_joint_index] = (
-                        object_relative_yaw[mask]
-                    )
+                    # If we have recorded poses, randomly sample from them
+                    if self.recorded_qpos is not None and self.recorded_cube_pos is not None:
+                        num_stretch = len(stretch_env_ids)
+                        # Randomly select indices from recorded poses
+                        selected_indices = torch.randint(0, len(self.recorded_qpos), (num_stretch,), device=self.device)
 
-                
+                        # Set joint positions from recorded data
+                        self.init_states.robots["vega"].joint_pos[stretch_env_ids, :][:, self.actuated_local_index] = (
+                            self.recorded_qpos[selected_indices, :]
+                        )
 
+                        # Override base_joint_index with object_relative_yaw
+                        self.init_states.robots["vega"].joint_pos[stretch_env_ids, self.base_joint_index] = (
+                            object_relative_yaw[mask] - 0.3
+                        )
 
-                # self.accumulated_actions[env_ids] = self.init_states.robots["vega"].joint_pos[env_ids][
-                #     :, self.actuated_index
-                # ]
+                        # Get cube positions from recorded data (relative to robot base)
+                        cube_pos_local = self.recorded_cube_pos[selected_indices, :3]  # [num_stretch, 3]
+                        cube_quat_local = self.recorded_cube_pos[selected_indices, 3:7]  # [num_stretch, 4]
+
+                        # Rotate cube x and y coordinates by object_relative_yaw to convert to world coordinates
+                        yaw_angles = object_relative_yaw[mask]  # [num_stretch]
+                        cos_yaw = torch.cos(yaw_angles)
+                        sin_yaw = torch.sin(yaw_angles)
+
+                        # Rotate 2D coordinates (x, y) by yaw angle
+                        cube_x_rotated = cube_pos_local[:, 0] * cos_yaw - cube_pos_local[:, 1] * sin_yaw
+                        cube_y_rotated = cube_pos_local[:, 0] * sin_yaw + cube_pos_local[:, 1] * cos_yaw
+
+                        # Set cube position in world coordinates (x, y rotated, z unchanged)
+                        self.init_states.objects["object"].root_state[stretch_env_ids, 0] = cube_x_rotated
+                        self.init_states.objects["object"].root_state[stretch_env_ids, 1] = cube_y_rotated
+                        self.init_states.objects["object"].root_state[stretch_env_ids, 2] = cube_pos_local[:, 2]
+
+                        # Rotate cube quaternion by yaw angle
+                        yaw_quat = quat_from_euler_xyz(
+                            torch.zeros(num_stretch, device=self.device),
+                            torch.zeros(num_stretch, device=self.device),
+                            yaw_angles,
+                        )
+                        cube_quat_rotated = quat_mul(yaw_quat, cube_quat_local)
+                        self.init_states.objects["object"].root_state[stretch_env_ids, 3:7] = cube_quat_rotated
+                    else:
+                        # Fallback to default behavior
+                        self.init_states.robots["vega"].joint_pos[stretch_env_ids, self.base_joint_index] = (
+                            object_relative_yaw[mask]
+                        )
 
     def _post_reset_hook(self, env_ids):
         # if self.cfg.phase == 2:
@@ -611,7 +709,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         #     self.env._set_object_pose(
         #         self.cfg.objects[1], finger_tip_pos, torch.zeros(len(env_ids), 4, device=self.device), env_ids=env_ids
         #     )
-
+        # self.accumulated_actions[env_ids] = self.init_states.robots["vega"].joint_pos[env_ids, :][:, self.actuated_local_index].clone()
 
         self.stage[env_ids] = 0
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
@@ -629,9 +727,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.robot_yaw_buffer_action[env_ids] = 0.0
 
     def _check_reset(self):
-        terminate = (
-                torch.abs(self.object_pose_buf[:, 2] - self.cfg.init_states[0]["objects"]["object"]["pos"][2]) > 0.1
-            )
+        terminate = self.cfg.init_states[0]["objects"]["object"]["pos"][2] - self.object_pose_buf[:, 2] > 0.1
         # move 0.05 to config
         # if self.cfg.phase == 2:
         #     terminate = terminate | (torch.abs(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z) < 0.1)

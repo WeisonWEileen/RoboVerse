@@ -43,14 +43,14 @@ import cv2
 class OnPolicyRunner:
     """On-policy runner for training and evaluation."""
 
-    def __init__(self, env: VecEnv, train_cfg: dict, log_dir: str | None = None, device="cpu", use_vision=False):
+    def __init__(self, env: VecEnv, train_cfg: dict, log_dir: str | None = None, device="cpu", use_vision=False, debug=False):
         self.cfg = train_cfg
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
         self.device = device
         self.env = env
         self.use_vision = use_vision
-
+        self.debug = debug
         # check if multi-gpu is enabled
         self._configure_multi_gpu()
 
@@ -276,7 +276,8 @@ class OnPolicyRunner:
                         privileged_obs = obs
 
                     # process the step
-                    self.alg.process_env_step(rewards, dones, infos)
+                    if not self.debug:
+                        self.alg.process_env_step(rewards, dones, infos)
 
                     # Extract intrinsic rewards (only for logging)
                     intrinsic_rewards = self.alg.intrinsic_rewards if self.alg.rnd else None
@@ -339,7 +340,8 @@ class OnPolicyRunner:
                     self.alg.compute_returns(privileged_obs)
 
             # update policy
-            loss_dict = self.alg.update()
+            if not self.debug:
+                loss_dict = self.alg.update()
 
             stop = time.time()
             learn_time = stop - start
