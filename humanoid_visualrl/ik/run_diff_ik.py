@@ -1,4 +1,11 @@
 import argparse
+import os
+import sys
+
+# Add workspace root to Python path for roboverse_pack imports
+workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if workspace_root not in sys.path:
+    sys.path.insert(0, workspace_root)
 
 from isaaclab.app import AppLauncher
 
@@ -89,7 +96,7 @@ def load_robot_cfg():
     )
     robot = ArticulationCfg(
         spawn=sim_utils.UsdFileCfg(
-            usd_path="/home/panwei/RoboVerse/roboverse_data/robots/vega/vega_root_rot_finger_tip_flattened_mimic_enhanced.usd",
+            usd_path="roboverse_data/robots/vega/vega_root_rot_finger_tip_flattened_mimic_enhanced.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=False,
@@ -115,6 +122,7 @@ def load_robot_cfg():
         actuators=actuators,
         init_state=init_state,
     )
+
     return robot
 
 
@@ -144,6 +152,20 @@ class TableTopSceneCfg(InteractiveSceneCfg):
     else:
         raise ValueError(f"Robot {args_cli.robot} is not supported. Valid: franka_panda, ur10")
 
+    table = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Table",
+        spawn=sim_utils.UsdFileCfg(
+            usd_path="roboverse_data/scenes/tritable.usd",
+            scale=(1.0, 1.0, 1.0),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=True,
+                kinematic_enabled=True,  # This fixes the rigid body
+            ),
+            articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=True),
+        ),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.20, 0.0, 0.50), rot=(1.0, 0.0, 0.0, 0.0)),
+    )
+
 
 def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     """Runs the simulation loop."""
@@ -169,7 +191,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     # ]
     ee_goals = [
         # [0.3, 0.1, 0.7, 0, 0, -0.7071, 0.7071],
-        [0.3, -0.3, 0.65, 0, 0, -0.7071, 0.7071],
+        [0.5, -0.3, 0.65, 0, 0, -0.7071, 0.7071],
         # [0.3, 0, 0.8, 0, 0, -0.7071, 0.7071],
     ]
     ee_goals = torch.tensor(ee_goals, device=sim.device)
@@ -280,7 +302,7 @@ def main():
     # Set main camera
     sim.set_camera_view([2.5, 2.5, 2.5], [0.0, 0.0, 0.0])
     # Design scene
-    scene_cfg = TableTopSceneCfg(num_envs=args_cli.num_envs, env_spacing=2.0)
+    scene_cfg = TableTopSceneCfg(num_envs=args_cli.num_envs, env_spacing=5.0)
     scene = InteractiveScene(scene_cfg)
     # Play the simulator
     sim.reset()
