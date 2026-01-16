@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 from typing import Literal
-
 from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
-from metasim.utils import configclass
+
+from isaaclab.utils import configclass
 
 
 @configclass
@@ -88,7 +86,7 @@ class VegaCfg(RobotCfg):
     #     "R_th_j0": 0.35,
     #     "R_th_j1": 0.80,
     # }
-    scale_factor = 0.25 # for all scale tuning
+    scale_factor = 0.25  # for all scale tuning
     action_scale = {
         "base_yaw_joint": 0.25 * scale_factor,
         "head_j2": 0.05 * scale_factor,
@@ -132,9 +130,9 @@ class VegaCfg(RobotCfg):
         "head_j3": (-0.52, 0.0),
         "head_j2": (-0.71, 0.71),
         "base_yaw_joint": (-1.5708, 1.5708),
-        "R_arm_j1": (-2.50, -1.25), #(-3.071, 3.071),
+        "R_arm_j1": (-2.50, -1.25),  # (-3.071, 3.071),
         "R_arm_j2": (-1.553, 0.453),
-        "R_arm_j3": (-0.45, 0.45), #(-3.071, 3.071),
+        "R_arm_j3": (-0.45, 0.45),  # (-3.071, 3.071),
         "R_arm_j4": (-3.071, 0.244),
         "R_arm_j5": (-3.071, 3.071),
         "R_arm_j6": (-1.396, 1.396),
@@ -241,7 +239,7 @@ class VegaCfg(RobotCfg):
     # ==================== Default Joint Positions ====================
     # Default home positions (can be customized based on use case)
     default_joint_positions: dict[str, float] = {
-        "base_yaw_joint": 0.0,
+        "base_yaw_joint": -0.3,
         "head_j2": 0.0,
         "head_j3": 0.0,
         "R_arm_j1": -2.06,
@@ -249,14 +247,14 @@ class VegaCfg(RobotCfg):
         "R_arm_j3": -0.13,
         "R_arm_j4": -2.59,
         "R_arm_j5": -0.3,
-        "R_arm_j6": 0.05,
+        "R_arm_j6": 0.51,
         "R_arm_j7": 0.0,
         "R_ff_j1": 0.0,
         "R_lf_j1": 0.0,
         "R_mf_j1": 0.0,
         "R_rf_j1": 0.0,
         "R_th_j0": 1.47,
-        "R_th_j1": -0.10,
+        "R_th_j1": 0.15,
         # tight initial pose
         "L_arm_j1": 3.06,
         "L_arm_j2": 0.00,
@@ -266,14 +264,6 @@ class VegaCfg(RobotCfg):
         "L_arm_j6": -0.71,
         "L_arm_j7": -0.13,
         # "torso_j1": 0.38,
-        # open initial pose
-        # "L_arm_j1": 0.0,
-        # "L_arm_j2": 0.0,
-        # "L_arm_j3": 0.0,
-        # "L_arm_j4": 0.0,
-        # "L_arm_j5": 0.0,
-        # "L_arm_j6": -0.63,
-        # "L_arm_j7": 0.0,
         "torso_j1": 0.15,
         "torso_j2": 0.00,
         "torso_j3": -0.88,
@@ -284,10 +274,6 @@ class VegaCfg(RobotCfg):
         "R_th_j2": 0.0,
         "R_wheel_j1": -0.63783,
         "L_wheel_j1": 0.63783,
-        # "R_wheel_j2": 0.0,
-        # "L_wheel_j2": 0.0,
-        # "B_wheel_j1": 0.0,
-        # "B_wheel_j2": 0.0,
     }
     # joints that need to change default joint positions but not be actuated and fixed
     default_fixed_joints: list[str] = {
