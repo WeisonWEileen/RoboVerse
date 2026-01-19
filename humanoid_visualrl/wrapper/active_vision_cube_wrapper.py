@@ -196,7 +196,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.recorded_qpos = None
             self.recorded_cube_pos = None
 
-        self._reset(list(range(self.num_envs)))
+        # self._reset(list(range(self.num_envs)))
         self._update_camera_pose = False
 
         # get segmatic id
