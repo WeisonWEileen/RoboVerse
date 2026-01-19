@@ -9,12 +9,12 @@ import cv2
 import numpy as np
 import torch
 
+from humanoid_visualrl.cfg.active_vision_cube_cfg import BaseTableHumanoidTaskCfg
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
-from metasim.types import TensorState
-from metasim.utils.math import quat_apply, quat_mul
-from loguru import logger as log
 from metasim.task.registry import register_task
+from metasim.types import TensorState
+from metasim.utils.math import quat_apply
 
 
 @register_task("booster_racket")
@@ -234,7 +234,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             if not window_open:
                 # User closed the window, disable further display
                 self.enable_opencv_display = False
-                print("OpenCV display window closed by user")
 
     def _compute_observations(self) -> None:
         q = (self.dof_pos - self.default_joint_pd_target) * self.cfg.normalization.obs_scales.dof_pos

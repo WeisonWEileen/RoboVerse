@@ -2,7 +2,6 @@ import torch
 
 from humanoid_visualrl.cfg.humanoidVisualRLCfg import BaseTableHumanoidTaskCfg
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
-from humanoid_visualrl.utils.opencv_renderer import OpenCVRenderer
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
 
@@ -13,8 +12,6 @@ class WalkingWrapperCNN(HumanoidBaseWrapper):
     def __init__(self, scenario: ScenarioCfg):
         super().__init__(scenario)
         self._prepare_ref_indices()
-
-
 
     def _prepare_ref_indices(self):
         joint_names = self.env.get_joint_names(self.robot.name)
@@ -53,7 +50,6 @@ class WalkingWrapperCNN(HumanoidBaseWrapper):
             if not window_open:
                 # User closed the window, disable further display
                 self.enable_opencv_display = False
-                print("OpenCV display window closed by user")
 
     def _compute_ref_state(self):
         phase = self._get_phase()
@@ -226,7 +222,6 @@ class WalkingWrapperCNN(HumanoidBaseWrapper):
             self.opencv_renderer.destroy_window()
             self.opencv_renderer = None
             self.enable_opencv_display = False
-            print("OpenCV display closed and resources cleaned up")
 
     def __del__(self):
         """Cleanup when wrapper is destroyed."""

@@ -88,7 +88,7 @@ class VegaCfg(RobotCfg):
     #     "R_th_j0": 0.35,
     #     "R_th_j1": 0.80,
     # }
-    scale_factor = 0.25 # for all scale tuning
+    scale_factor = 0.25  # for all scale tuning
     action_scale = {
         "base_yaw_joint": 0.25 * scale_factor,
         "head_j2": 0.05 * scale_factor,
@@ -132,9 +132,9 @@ class VegaCfg(RobotCfg):
         "head_j3": (-0.52, 0.0),
         "head_j2": (-0.71, 0.71),
         "base_yaw_joint": (-1.5708, 1.5708),
-        "R_arm_j1": (-2.50, -1.25), #(-3.071, 3.071),
+        "R_arm_j1": (-2.50, -1.25),  # (-3.071, 3.071),
         "R_arm_j2": (-1.553, 0.453),
-        "R_arm_j3": (-0.45, 0.45), #(-3.071, 3.071),
+        "R_arm_j3": (-0.45, 0.45),  # (-3.071, 3.071),
         "R_arm_j4": (-3.071, 0.244),
         "R_arm_j5": (-3.071, 3.071),
         "R_arm_j6": (-1.396, 1.396),
@@ -267,13 +267,6 @@ class VegaCfg(RobotCfg):
         "L_arm_j7": -0.13,
         # "torso_j1": 0.38,
         # open initial pose
-        # "L_arm_j1": 0.0,
-        # "L_arm_j2": 0.0,
-        # "L_arm_j3": 0.0,
-        # "L_arm_j4": 0.0,
-        # "L_arm_j5": 0.0,
-        # "L_arm_j6": -0.63,
-        # "L_arm_j7": 0.0,
         "torso_j1": 0.15,
         "torso_j2": 0.00,
         "torso_j3": -0.88,
@@ -360,17 +353,12 @@ class VegaCfg(RobotCfg):
         # + len(velocity_joints)
         # + len(origial_config_joint)
     )
-    print(
-        f"Joints Length INFO: {num_joints_all} != {len(default_joint_positions)}, With actuators length: {len(actuators)} + mimic joints length: {len(mimic_joints)} + default fixed joints length: {len(default_fixed_joints)}"
-    )
 
     assert num_joints_all == len(default_joint_positions), (
         f"num_joints_all: {num_joints_all} != len(default_joint_positions): {len(default_joint_positions)}"
     )
 
     right_arm_joints = {
-        # "R_arm_j1",
-        # "R_arm_j2",
         "R_arm_j3",
         "R_arm_j4",
         "R_arm_j5",

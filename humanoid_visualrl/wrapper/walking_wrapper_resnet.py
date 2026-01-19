@@ -1,11 +1,11 @@
 import torch
 
-
+from humanoid_visualrl.utils.opencv_renderer import OpenCVRenderer
+from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 from humanoid_visualrl.wrapper.walking_wrapper import WalkingWrapper
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import TensorState
-from humanoid_visualrl.utils.opencv_renderer import OpenCVRenderer
-from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
+
 
 class WalkingWrapperResNet(WalkingWrapper):
     """Walking wrapper with ResNet-18 visual feature extraction.
@@ -36,15 +36,11 @@ class WalkingWrapperResNet(WalkingWrapper):
         self.vision_buf = None
         self.resnet_features = None
 
-
-
         # ResNet-18 encoder initialized with frozen weights
-
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         """Process tensor state and extract visual features."""
         super()._refreshed_tensors(tensor_state)
-
 
         camera_data = tensor_state.cameras[self.camera_name]
         self.vision_buf = camera_data.rgb
@@ -61,7 +57,6 @@ class WalkingWrapperResNet(WalkingWrapper):
             if not window_open:
                 # User closed the window, disable further display
                 self.enable_opencv_display = False
-                print("OpenCV display window closed by user")
 
     def close_opencv_display(self):
         """Close OpenCV display window and cleanup resources."""
@@ -69,13 +64,12 @@ class WalkingWrapperResNet(WalkingWrapper):
             self.opencv_renderer.destroy_window()
             self.opencv_renderer = None
             self.enable_opencv_display = False
-            print("OpenCV display closed and resources cleaned up")
 
     def __del__(self):
         """Cleanup when wrapper is destroyed."""
         if hasattr(self, "opencv_renderer") and self.opencv_renderer is not None:
             self.close_opencv_display()
-            
+
     def _compute_observations(self):
         phase = self._get_phase()
 

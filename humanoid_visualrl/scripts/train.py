@@ -2,27 +2,27 @@
 
 from __future__ import annotations
 
+import random
 
+import numpy as np
 import rootutils
 import torch
-import numpy as np
-import random
-from metasim.scenario.lights import DomeLightCfg
-from metasim.scenario.objects import PrimitiveCubeCfg
-
 from loguru import logger as log
 from rich.logging import RichHandler
 
+from metasim.scenario.lights import DomeLightCfg
+from metasim.scenario.objects import PrimitiveCubeCfg
+
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
-from metasim.scenario.scenario import ScenarioCfg
-from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
-from humanoid_visualrl.utils.utils import get_log_dir, get_args, get_load_path, dump_instance_file
-from metasim.constants import PhysicStateType
-
 import os
-from metasim.task.registry import get_task_class, get_task_cfg_class
 import shutil
+
+from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
+from humanoid_visualrl.utils.utils import dump_instance_file, get_args, get_load_path, get_log_dir
+from metasim.constants import PhysicStateType
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.registry import get_task_cfg_class, get_task_class
 
 if __name__ == "__main__":
     args = get_args()
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(args.seed)
             torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark =False
+            torch.backends.cudnn.benchmark = False
         log.info(f"Random seed set to: {args.seed}")
     else:
         log.info("Using random seed (seed=-1)")
@@ -58,15 +58,17 @@ if __name__ == "__main__":
     # cfg.phase = args.phase
 
     task_cfg = task_cfg_cls(
-        finetune=args.resume, actor_critic_class=args.actor_critic_class, enable_grasp=args.enable_grasp, vision4times_slowdown=args.vision4times_slowdown,
-        phase=args.phase
+        finetune=args.resume,
+        actor_critic_class=args.actor_critic_class,
+        enable_grasp=args.enable_grasp,
+        vision4times_slowdown=args.vision4times_slowdown,
+        phase=args.phase,
     )
 
     if hasattr(task_cfg, "randomize_material"):
         task_cfg.randomize_material = args.randomize_material
     if hasattr(task_cfg, "occlude_cube"):
         task_cfg.occlude_cube = args.occlude_cube
-
 
     if args.occlude_cube:
         task_cfg.occlude_cube = True
@@ -94,14 +96,21 @@ if __name__ == "__main__":
     assert task_cfg.env_spacing > 4.9, "env_spacing must be greater than 5"
     if args.resume:
         log.info(f"Finetuning Model from: {args.load_run}")
+    from metasim.utils.setup_util import get_robot
+
+    robot = get_robot(task_cfg.robot)
+
+    if args.task == "active_vision_insertion":
+        robot.modified_joint_limits.update({"base_yaw_joint": (-0.5708, 0.5708)})
 
     # initialize scenario
     scenario = ScenarioCfg(
-        robots=[task_cfg.robot],
+        robots=[robot],
         simulator=args.sim,
         headless=args.headless,
         num_envs=args.num_envs,
     )
+
     scenario.lights = [
         DomeLightCfg(
             intensity=1000.0,
@@ -115,7 +124,7 @@ if __name__ == "__main__":
     # task assign and override
     scenario.sim_params = task_cfg.sim_params
     scenario.decimation = task_cfg.decimation
-    scenario.render_interval = scenario.decimation 
+    scenario.render_interval = scenario.decimation
     scenario.task = task_cfg
     if hasattr(task_cfg, "filter_pairs"):
         scenario.filter_pairs = task_cfg.filter_pairs
@@ -133,7 +142,10 @@ if __name__ == "__main__":
         # scenario.num_envs = 1
         scenario.sim_params.num_threads = 1
         task_cfg.objects[1].mass = 0.1
-        task_cfg.curriculum_object_mass_range = (task_cfg.curriculum_object_mass_range[0],task_cfg.curriculum_object_mass_range[0])
+        task_cfg.curriculum_object_mass_range = (
+            task_cfg.curriculum_object_mass_range[0],
+            task_cfg.curriculum_object_mass_range[0],
+        )
 
     log.info(f"Using simulator: {args.sim}")
     env_cls = get_task_class(args.task)

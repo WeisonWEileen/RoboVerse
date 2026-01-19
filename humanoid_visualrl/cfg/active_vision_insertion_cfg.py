@@ -117,8 +117,7 @@ class LeggedRobotRunnerCfg:
     empirical_normalization = False
 
 
-# @register_task("g1_static_dex1_fixed_gazing")
-@configclass(name="active_vision_cube")
+@configclass(name="active_vision_insertion")
 class BaseTableHumanoidTaskCfg:
     """Base class for legged-gym style humanoid tasks.
 
@@ -192,6 +191,8 @@ class BaseTableHumanoidTaskCfg:
         """Normalization constants for observations and actions."""
 
         class obs_scales:
+            """Observation scales for normalization."""
+
             lin_vel = 2.0
             ang_vel = 1.0
             dof_pos = 1.0
@@ -262,7 +263,6 @@ class BaseTableHumanoidTaskCfg:
     dt = decimation * sim_params.dt
     """simulation time step in s"""
 
-    objects = ["33o1zhw3", "cube", "270o9y3w"]
     objects = [
         RigidObjCfg(
             name="table",
@@ -280,16 +280,6 @@ class BaseTableHumanoidTaskCfg:
             # urdf_path="metasim/example/example_assets/bbq_sauce/urdf/bbq_sauce.urdf",
             # mjcf_path="metasim/example/example_assets/bbq_sauce/mjcf/bbq_sauce.xml",
         ),
-        # RigidObjCfg(
-        #     name="wall",
-        #     scale=(4.0, 4.0, 1.8),
-        #     physics=PhysicStateType.GEOM,
-        #     usd_path="roboverse_data/wall.usd",
-        #     fix_base_link=True,
-        #     default_position=(0.0, 0.0, 0.3),
-        #     collision_enabled=False,
-        #     enable_gyroscopic_forces=False,
-        # ),
         PrimitiveCubeCfg(
             name="object",
             size=(0.05, 0.05, 0.05),
@@ -298,31 +288,20 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
-            mass=20,  # 增加质量以确保更好的物理行为
+            mass=20,
         ),
-        # PrimitiveCylinderCfg(
-        #     name="object",
-        #     radius=0.025,
-        #     height=0.05,
-        #     color=[1.0, 0.0, 0.0],
-        #     collision_enabled=True,
-        #     default_position=(0.55, 0.1, 0.9 + 0.05 / 2 + 0.01),
-        #     mass=20.0,
-        # ),
-        # RigidObjCfg(
-        #     name="object",
-        #     # size=(0.09, 0.09, 0.09),
-        #     # color=[1.0, 0.0, 0.0],
-        #     scale=(1.2, 1.2, 1.2),
-        #     physics=PhysicStateType.RIGIDBODY,
-        #     usd_path="roboverse_data/objects/visdex_objects/USD/2h0dnrqc/2h0dnrqc.usd",
-        #     collision_enabled=True,
-        #     fix_base_link=False,
-        #     default_position=(0.3, 0.1, 0.951),
-        #     enable_gyroscopic_forces=True,
-        #     mass_density=500.0,
-        #     randomize_material=True,
-        # ),
+        RigidObjCfg(
+            name="insertion_female_box",
+            scale=(1, 1, 1),
+            physics=PhysicStateType.RIGIDBODY,
+            usd_path="roboverse_data/objects/female_box_bigger_flattened.usd",
+            fix_base_link=False,
+            default_position=(0.55, 0.1, 0.51),
+            # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
+            default_orientation=(1.0, 0.0, 0.0, 0.0),
+            collision_enabled=True,
+            mass_density=100,
+        ),
     ]
 
     # cameras
@@ -365,10 +344,13 @@ class BaseTableHumanoidTaskCfg:
     init_states = [
         {
             "objects": {
-                # "cube": {
                 "object": {
                     "pos": torch.tensor([0.58, 0.0, 0.50 + 0.06 / 2 + 0.01]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                },
+                "insertion_female_box": {
+                    "pos": torch.tensor([0.55, 0.1, 0.51]),
+                    "rot": torch.tensor([0.7071, 0.0, 0.0, 0.7071]),
                 },
             },
             "robots": {},
@@ -528,7 +510,7 @@ class BaseTableHumanoidTaskCfg:
     occlude_cube = False
     occlude_cube_yaw_range = 0.8
 
-    # initially give large mass to encourage contact, and then linearly decrease to 0.05
+    # tially give large mass to encourage contact, and then linearly decrease to 0.05
     curriculum_object_mass_flag = True
     curriculum_object_mass_range = (0.1, objects[1].mass)
     curriculum_object_mass_begin_iter = 0
@@ -537,6 +519,9 @@ class BaseTableHumanoidTaskCfg:
     stage_finger_close_to_object_change_thres = 0.25
     vision4times_slowdown = False
     vision_slow_down_scale = 4
+
+    randomize_box_xy_range_scale = 0.07
+    randomize_box_rot_range_scale = 3.14 / 3  # pi / 2
 
     def __post_init__(self):
         if self.phase == 0:
@@ -560,32 +545,6 @@ class BaseTableHumanoidTaskCfg:
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
         self.randomize_object_radius_range = 0.0
 
-        # if self.finetune:
-        #     # for finetuning, use less frequent curriculum update and less yaw range
-        #     # self.update_curriculum_iteration = 100
-        #     # self.randomize_object_yaw_range = 1.8
-        #     # self.randomize_object_yaw_range = 1.8
-        #     self.randomize_object_yaw_range = 0.57
-        #     self.curriculum_object_yaw = False
-
-        #     self.reward_weights = {
-        #         "pixel_norm_at_object": 1.4,
-        #         "finger_close_to_object": 5.0,
-        #         "grasp_binary": 50.0,
-        #         "right_arm_default_joint_pos": 0.17,
-        #     }
-        #     if self.enable_grasp:
-        #         self.reward_weights["grasp_binary"] = 5.0
-        #         # reduce randomize
-        #         self.randomize_object_radius_range = 0.05
-        #         self.randomize_object_radius = self.randomize_object_radius - 0.04
-
-        # else:
-        # self.update_curriculum_iteration = 400
-        # self.randomize_object_yaw_range = 2.3
-        # self.randomize_object_yaw_range = 3.14
-        # self.randomize_object_yaw_range = 3.06
-        # self.randomize_object_yaw_range = 2.14
         self.curriculum_object_yaw = True
         self.curriculum_initial_object_yaw_range = 0.3
         # self.randomize_object_yaw_range = 1.8
@@ -595,18 +554,11 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_avg_thres_lower = 0.85
         self.curriculum_randomize_iteration_interval = 100
 
-        # self.randomize_object_radius = 0.85  # max
-        # self.randomize_object_radius = 0.55
-        # self.randomize_object_radius -= 0.07
-        # if self.finetune:
-        #     self.randomize_object_radius -= 0.07
-
         self.curriculum_object_yaw_stages = [0.2, 0.5, 1.0]  # Multipliers for randomize_object_yaw_range
         self.curriculum_object_yaw_thresholds = [0.8, 0.8]  # Success rate thresholds to advance stages
         self.curriculum_object_yaw_min_episodes = [500, 500]  # Minimum episodes before considering advancement
 
-        # self.actor_critic_class = "use_rnn_foveated"
-        # self.actor_critic_class = "use_rnn_foveated"
+        self.randomize_box = True
 
         if self.actor_critic_class == "use_vision":
             self.ppo_cfg.policy.class_name = "ActorCriticCNN"
@@ -786,24 +738,12 @@ class BaseTableHumanoidTaskCfg:
             self.init_states[0]["robots"] = {
                 "vega": {
                     "pos": torch.tensor([0.0, 0.0, 0.06]),
-                    # "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
-                    # same the torso 27 degress
-                    # "rot": torch.tensor([0.9701373249726354 0.0, 0.24255632478857206, 0.0]),
                     "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
                     "dof_pos": {
                         # "head_j1": 0.0,
                         "base_yaw_joint": 0.0,
                         "head_j2": 0.0,
-                        "head_j3": 0.0,  # pitch\
-                        # "L_arm_j2": 0.0,
-                        # "L_arm_j3": 0.307,
-                        # "L_arm_j4": -0.305,
-                        # "L_arm_j5": -1.69,
-                        # "L_arm_j6": 0.0,
-                        # "L_arm_j7": -0.84,
-                        # "torso_j1": 0.38,
-                        # "torso_j2": 0.95,
-                        # "torso_j3": 0.00,
+                        "head_j3": 0.0,  # pitch
                         # Right arm - neutral pose
                         "R_arm_j1": -2.06,
                         "R_arm_j2": -0.21,

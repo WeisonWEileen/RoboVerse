@@ -1,12 +1,10 @@
 """A wrapper for fixed upper body and use cnn inside the policy class."""
 
-# TODO success filter
-# TODO add vision buf into HumanoidBaseWrapper
-# render reset frame to before compute obs
 from __future__ import annotations
 
 import os
 
+import cv2
 import numpy as np
 import torch
 from loguru import logger as log
@@ -19,13 +17,11 @@ from humanoid_visualrl.utils.utils import (
 )
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from metasim.task.registry import register_task
-
-# from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 from metasim.types import TensorState
 from metasim.utils.math import euler_xyz_from_quat, quat_apply, quat_from_euler_xyz, quat_mul
 
 
-@register_task("active_vision_cube")
+@register_task("active_vision_insertion")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
     """Wraps Metasim environments to be compatible with rsl_rl OnPolicyRunner.
 
@@ -61,20 +57,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             )
         else:
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
-
-        # if self.cfg.phase == 2:
-        #     if self.robot.name == "vega":
-        #         sorted_joint_names = self.env.get_joint_names(self.robot.name, sort=True)
-        #         joint1_idx = sorted_joint_names.index("R_arm_j1")
-        #         joint2_idx = sorted_joint_names.index("R_arm_j2")
-        #         joint3_idx = sorted_joint_names.index("R_arm_j3")
-        #         joint4_idx = sorted_joint_names.index("R_arm_j4")
-        #         joint5_idx = sorted_joint_names.index("R_arm_j5")
-        #         joint6_idx = sorted_joint_names.index("R_arm_j6")
-        #         joint7_idx = sorted_joint_names.index("R_arm_j7")
-
-        # self.init_states.robots["vega"].joint_pos[:, joint1_idx] += 0.7
-        # self.init_states.robots["vega"].joint_pos[:, joint4_idx] -= 0.2
 
         # Initialize episode_metrics if it doesn't exist
         if "episode_metrics" not in self.extra_buf:
@@ -195,6 +177,9 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             log.warning(f"NPZ file not found at {npz_path}, using default stretch pose")
             self.recorded_qpos = None
             self.recorded_cube_pos = None
+
+        self.box_center_x = self.cfg.init_states[0]["objects"]["insertion_female_box"]["pos"][0]
+        self.box_center_y = self.cfg.init_states[0]["objects"]["insertion_female_box"]["pos"][1]
 
         self._reset(list(range(self.num_envs)))
         self._update_camera_pose = False
@@ -321,9 +306,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.right_hand_palm_indices = get_body_reindexed_indices_from_substring(
                 self.env, self.robot.name, self.robot.right_hand_palm_links, device=self.device
             )
-            # self.right_index_intermediate_link_indices = get_body_cyreindexed_indices_from_substring(
-            #     self.env, self.robot.name, self.robot.right_index_intermediate_link, device=self.device
-            # )
         elif self.robot.name == "vega":
             self.left_index_intermediate_link_indices = get_body_reindexed_indices_from_substring(
                 self.env,
@@ -381,15 +363,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # ====== update object pose ======
         self.object_pose_buf = tensor_state.objects["object"].root_state[:, :7]
-
-        # ======update vision rgb and seg======
-        # Convert from HWC (H, W, C) to CHW (C, H, W) format for PyTorch CNN
-        # Convert from uint8 to float and normalize to [0, 1]
-        # vision_rgb = tensor_state.cameras[self.cfg.cameras[0].name].rgb
-        # TODO: normalize it to get better results?
-        # # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
-        # vision_rgb -= 0.5
-
         # mean_tensor = torch.mean(vision_rgb, dim=(1, 2), keepdim=True)
 
         # self.vision_rgb_buf = vision_rgb.permute(0, 3, 1, 2)
@@ -490,59 +463,32 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 center_x = int(self.center_x[env_pos].item())
                 center_y = int(self.center_y[env_pos].item())
 
-                # if rgb_image.dtype != np.uint8:
-                #     rgb_image = (rgb_image * 255).astype(np.uint8)
+                if rgb_image.dtype != np.uint8:
+                    rgb_image = (rgb_image * 255).astype(np.uint8)
 
-                # cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
+                cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
 
-                # # 绘制中空绿色圆圈（半径15像素）
-                # cv2.circle(
-                #     rgb_image,
-                #     (int(self.image_center_x), int(self.image_center_y)),
-                #     self.cfg.thres_radius,
-                #     (0, 255, 0),
-                #     2,
-                # )
+                # 绘制中空绿色圆圈（半径15像素）
+                cv2.circle(
+                    rgb_image,
+                    (int(self.image_center_x), int(self.image_center_y)),
+                    self.cfg.thres_radius,
+                    (0, 255, 0),
+                    2,
+                )
 
-                # # 绘制图像中心点（绿色圆圈）
-                # cv2.circle(
-                #     rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
-                # )  # 绿色实心圆
+                # 绘制图像中心点（绿色圆圈）
+                cv2.circle(
+                    rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+                )  # 绿色实心圆
 
-                # cv2.line(
-                #     rgb_image,
-                #     (center_x, center_y),
-                #     (int(self.image_center_x), int(self.image_center_y)),
-                #     (255, 255, 0),
-                #     1,
-                # )
-
-            # 在图像正中间绘制红色方框（高度50，宽度80）
-            # box_width = 80
-            # box_height = 50
-            # top_left = (int(self.image_center_x - box_width / 2), int(self.image_center_y - box_height / 2))
-            # bottom_right = (int(self.image_center_x + box_width / 2), int(self.image_center_y + box_height / 2))
-            # cv2.rectangle(rgb_image, top_left, bottom_right, (0, 0, 255), 2)  # 红色方框，线宽2
-
-            # # 在图像正中间绘制红色方框（高度25，宽度40）
-            # box_width2 = 40
-            # box_height2 = 25
-            # top_left2 = (int(self.image_center_x - box_width2 / 2), int(self.image_center_y - box_height2 / 2))
-            # bottom_right2 = (int(self.image_center_x + box_width2 / 2), int(self.image_center_y + box_height2 / 2))
-            # cv2.rectangle(rgb_image, top_left2, bottom_right2, (0, 232, 99), 2)  # 红色方框，线宽2
-
-            # # 在图像正中间绘制红色方框（高度25，宽度40）
-            # box_width2 = 120
-            # box_height2 = 75
-            # top_left2 = (int(self.image_center_x - box_width2 / 2), int(self.image_center_y - box_height2 / 2))
-            # bottom_right2 = (int(self.image_center_x + box_width2 / 2), int(self.image_center_y + box_height2 / 2))
-            # cv2.rectangle(rgb_image, top_left2, bottom_right2, (0, 155, 255), 2)  # 红色方框，线宽2
-
-            # box_width2 = 160
-            # box_height2 = 100
-            # top_left2 = (int(self.image_center_x - box_width2 / 2), int(self.image_center_y - box_height2 / 2))
-            # bottom_right2 = (int(self.image_center_x + box_width2 / 2), int(self.image_center_y + box_height2 / 2))
-            # cv2.rectangle(rgb_image, top_left2, bottom_right2, (155, 0, 255), 2)  # 红色方框，线宽2
+                cv2.line(
+                    rgb_image,
+                    (center_x, center_y),
+                    (int(self.image_center_x), int(self.image_center_y)),
+                    (255, 255, 0),
+                    1,
+                )
 
             window_open = self.opencv_renderer.display(rgb_image)
 
@@ -639,6 +585,27 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             )
             self.init_states.objects["object"].root_state[env_ids, 3:7] = quat
 
+            # randomize box xy position
+            # if self.cfg.randomize_box:
+            noise_xy = torch.empty(len(env_ids), 2, device=self.device).uniform_(
+                -self.cfg.randomize_box_xy_range_scale, self.cfg.randomize_box_xy_range_scale
+            )
+            self.init_states.objects["insertion_female_box"].root_state[env_ids, 0:2] = (
+                torch.tensor([self.box_center_x, self.box_center_y], device=self.device)
+                + noise_xy * self.cfg.occlude_cube_yaw_range
+            )
+
+            # add randomize around the yaw in the initialize state of the box
+            box_rotation_yaw = torch.empty(len(env_ids), device=self.device).uniform_(
+                -self.cfg.randomize_box_rot_range_scale, self.cfg.randomize_box_rot_range_scale
+            )
+            quat = quat_from_euler_xyz(
+                torch.zeros(len(env_ids), device=self.device),
+                torch.zeros(len(env_ids), device=self.device),
+                box_rotation_yaw,
+            )
+            self.init_states.objects["insertion_female_box"].root_state[env_ids, 3:7] = quat
+
             # if robot is in the phase 2, align robot base yaw joint to face the object
             # 使用物体相对于机器人的方位角来对齐机器人base yaw joint
             if self.cfg.phase == 2:
@@ -699,17 +666,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         )
 
     def _post_reset_hook(self, env_ids):
-        # if self.cfg.phase == 2:
-        #     # set object close to the hand
-        #     body_reindex = self.env.get_body_reindex('vega')
-        #     body_state = self.env.scene.articulations["vega"].data.body_state_w[:, body_reindex]
-        #     finger_tip_pos = body_state[:, self.left_index_intermediate_link_indices, :3]
-
-        #     self.env._set_object_pose(
-        #         self.cfg.objects[1], finger_tip_pos, torch.zeros(len(env_ids), 4, device=self.device), env_ids=env_ids
-        #     )
-        # self.accumulated_actions[env_ids] = self.init_states.robots["vega"].joint_pos[env_ids, :][:, self.actuated_local_index].clone()
-
         self.stage[env_ids] = 0
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
@@ -727,17 +683,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _check_reset(self):
         terminate = self.cfg.init_states[0]["objects"]["object"]["pos"][2] - self.object_pose_buf[:, 2] > 0.1
-        # move 0.05 to config
-        # if self.cfg.phase == 2:
-        #     terminate = terminate | (torch.abs(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z) < 0.1)
 
         too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
-        # self.reset_buf = self.timeout_buf
-        # too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
-        # two far from reset_point
-        # too_far = (
-        #     torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.2
-        # )
 
         self.reset_buf = self.timeout_buf | terminate | too_far
         return self.reset_buf
@@ -902,19 +849,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         return -torch.clamp(self.upward_force, min=-25.0, max=0.0)
         # return self.upward_force
 
-    # def _reward_contact_force_two_much_penalty(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-    #     contact_force_1 = self.env.contact_sensor_1.data.net_forces_w
-    #     contact_force_2 = self.env.contact_sensor_2.data.net_forces_w
-    #     contact_force_3 = self.env.contact_sensor_3.data.net_forces_w
-    #     contact_force_4 = self.env.contact_sensor_4.data.net_forces_w
-    #     contact_force_5 = self.env.contact_sensor_5.data.net_forces_w
-    #     contact_force_6 = self.env.contact_sensor_6.data.net_forces_w
-    #     # contact_force_matrix_sum = torch.sum
-    #     return 1
-
-    # def _reward_curl_pose(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-    #     # TODO: define curl pose
-    #     pass
     def _reward_action_smoothness(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         action_smoothness = torch.sum(torch.square(self.last_actions - self.actions), dim=1)
         return action_smoothness
@@ -927,13 +861,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # world_pos[:, 2] += 0.7
         pos = world_pos
 
-        # 准备两组标记：相机方向（蓝色）和指向立方体的方向（红色）
-        # 相机方向使用 camera_quat（已为 (N,4) 形状）
         camera_ori = orientation
 
-        # 指向立方体的方向：从 direction_vec 创建四元数
-        # direction_vec 已经是归一化的，我们需要将其转换为四元数
-        # 假设默认方向是 +X 轴，计算从 +X 轴到 direction_vec 的旋转四元数
         default_forward = torch.tensor([1.0, 0.0, 0.0], device=self.device).expand(self.num_envs, 3)
 
         # 计算旋转轴 (cross product)
@@ -1025,30 +954,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             occlusion_cube_state[too_close_env_ids, 1] = (
                 torch.sin(yaw_too_close) * occlusion_cube_radius[too_close_env_ids]
             )
-            # occlusion_cube_state[too_close_env_ids, 3:7] = quat_from_euler_xyz(
-            #     torch.zeros(too_close_env_ids.shape[0], device=env_wrapper.device),
-            #     torch.zeros(too_close_env_ids.shape[0], device=env_wrapper.device),
-            #     yaw_too_close,
-            #
+
             self.env._set_object_pose(
                 self.cfg.objects[3],
                 occlusion_cube_state[too_close_env_ids, :3],
                 occlusion_cube_state[too_close_env_ids, 3:7],
                 env_ids=too_close_env_ids,
             )
-
-    # def _reward_lift_object(self, tensor_state, robot_name, cfg):
-    #     finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]
-    #     # get mean
-    #     dist = torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
-
-    #     close = (dist < self.cfg.reward_lift_object_z).float()  # e.g. 0.06 m
-
-    #     lift = self.object_pose_buf[:, 2] - self.init_states.objects["object"].root_state[:, 2]
-    #     lifted = (lift > self.cfg.reward_lift_object_z).float()  # e.g. 0.10 m
-
-    #     reward = self.see_flag_float * close * lifted * self.cfg.reward_lift_object_z  # e.g. 10.0
-    #     return reward
 
     def _reward_right_arm_default_joint_pos(
         self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
@@ -1085,17 +997,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
     def _update_curriculum_object_yaw_range(self, current_iteration):
         if self.cfg.curriculum_object_yaw:
-            # Only check and log once per 100 iterations, and only at the exact iteration boundary
-            # if (self.common_step_counter % self.cfg.ppo_cfg.num_steps_per_env) == 0:
-            # reward = self.episode_sums["pixel_norm_at_object"].mean()
-            # Always update last_reward to track current performance
-            # reward_improvement_ratio = (reward - self.last_reward) / (self.last_reward + 1e-8)
-            # self.last_reward = reward
-
-            # iterations_since_last_update = current_iteration - (
-            #     self.last_curriculum_update_step / self.cfg.ppo_cfg.num_steps_per_env
-            # )
-
             if self._ema_reward > self.cfg.ema_reward_threshold:
                 if self.curriculum_object_yaw_range < self.cfg.randomize_object_yaw_range:
                     self._ema_reward = 0
