@@ -54,10 +54,10 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
                 scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/objects/female_box_bigger_flattened_convex.usd",
-                fix_base_link=False,
+                fix_base_link=True,
                 default_position=(0.55, 0.1, 0.51),
                 # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
-                default_orientation=(1.0, 0.0, 0.0, 0.0),
+                default_orientation=(0.8660254, 0.0, 0.0, 0.5),
                 collision_enabled=True,
                 mass_density=10000,
             )
