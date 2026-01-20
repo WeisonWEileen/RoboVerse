@@ -18,6 +18,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
     feet_indices: indices of the feet joints
     penalised_contact_indices: indices of the contact joints
     """
+
     scale = 1.0
     reward_weights_phase0 = {
         "pixel_norm_at_object": 0.8 * scale,
@@ -45,7 +46,6 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
     def __post_init__(self):
         super().__post_init__()
-
         self.objects.append(
             RigidObjCfg(
                 name="insertion_female_box",
@@ -106,15 +106,12 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
             "torso_j2": 1000.0,
         })
 
-        self.robot.num_joints = len(self.robot.actuators) + len(self.robot.mimic_joints) 
+        self.robot.num_joints = len(self.robot.actuators) + len(self.robot.mimic_joints)
 
         self.robot.modified_joint_limits.update({"base_yaw_joint": (-math.pi / 6, math.pi / 6)})
 
-
-
         self.num_observations = self.robot.num_joints * 2 + self.num_actions
         self.num_privileged_obs = self.robot.num_joints * 2 + self.num_actions
-
 
         self.robot.action_scale["head_j2"] = 0.2 * self.robot.scale_factor
 

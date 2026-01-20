@@ -284,7 +284,8 @@ class BaseTableHumanoidTaskCfg:
             name="object",
             size=(0.05, 0.05, 0.05),
             color=[1.0, 0.0, 0.0],
-            physics=PhysicStateType.RIGIDBODY,collision_enabled=True,
+            physics=PhysicStateType.RIGIDBODY,
+            collision_enabled=True,
             fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
             mass=20,  # 增加质量以确保更好的物理行为
@@ -505,7 +506,12 @@ class BaseTableHumanoidTaskCfg:
     vision_slow_down_scale = 4
 
     def __post_init__(self):
-c
+        if self.phase == 0:
+            self.reward_weights = self.reward_weights_phase0
+        elif self.phase == 1:
+            self.reward_weights = self.reward_weights_phase1
+        elif self.phase == 2:
+            self.reward_weights = self.reward_weights_phase2
         else:
             raise ValueError(f"Invalid phase: {self.phase}")
 
