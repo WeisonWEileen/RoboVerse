@@ -435,7 +435,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         ik_commands[:, 3:7] = ik_target_quat.unsqueeze(0).repeat(scene.num_envs, 1)
 
         # reset
-        if count % 150000 == 0:
+        if count % 200 == 0:
             # reset time
             count = 0
             # reset joint state
@@ -487,10 +487,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         # obtain quantities from simulation
         ee_pose_w = robot.data.body_state_w[:, robot_entity_cfg.body_ids[0], 0:7]
         # update marker positions
-        # ee_marker.visualize(ee_pose_w[:, 0:3], ee_pose_w[:, 3:7])
-        # goal_marker.visualize(
-        #     ik_commands[:, 0:3] + delta[:, 0:3] + scene.env_origins + offset, ik_commands[:, 3:7] + delta[:, 3:7]
-        # )
+        ee_marker.visualize(ee_pose_w[:, 0:3], ee_pose_w[:, 3:7])
+        goal_marker.visualize(ik_commands[:, 0:3] + scene.env_origins + offset, ik_commands[:, 3:7])
 
         # Check if ee_pose_w xyz difference is less than 0.05 and record qpos
         if (count + 1) % 150 == 0:

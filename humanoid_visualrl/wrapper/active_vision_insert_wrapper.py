@@ -8,6 +8,8 @@ from humanoid_visualrl.wrapper.active_vision_cube_wrapper import ActiveVisionWra
 from metasim.task.registry import register_task
 from metasim.utils.math import quat_from_euler_xyz
 import math
+from metasim.types import TensorState
+
 
 @register_task("active_vision_insertion")
 class ActiveVisionWrapper(ActiveVisionCubeWrapper):
@@ -27,7 +29,6 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
 
         self.recorded_cube_pos = torch.tensor([0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522], device=self.device)
 
-
     # def _pre_reset_hook(self, env_ids=None):
     #     super()._pre_reset_hook(env_ids=env_ids)
 
@@ -45,7 +46,6 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
     #     #     box_rotation_yaw = torch.empty(len(env_ids), device=self.device).uniform_(
     #     #         -self.cfg.randomize_box_rot_range_scale, self.cfg.randomize_box_rot_range_scale
     #     #     )
-
 
     #     #     # yaw_offset + random yaw
     #     #     self.init_states.objects["insertion_female_box"].root_state[env_ids, 3:7] = quat_from_euler_xyz(
@@ -116,7 +116,13 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
                             self.recorded_cube_pos.repeat(num_stretch, 1)
                         )
 
-
-
-
-
+    def success_checker(self, tensor_state: TensorState):
+        if self.cfg.phase == 2:
+            # check if the object is in the hand
+            object_pos = tensor_state.objects["object"].root_state[:, :3]
+            hand_pos = tensor_state.robots["vega"].body_state[:, self.hand_index, :3]
+            object_in_hand = torch.norm(object_pos - hand_pos, dim=1) < 0.05
+            return object_in_hand
+        else:
+            # num envs false tensor
+            return torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)

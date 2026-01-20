@@ -67,10 +67,10 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
             "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.5]),
         }
 
-        self.init_states[0]["objects"]["object"] = {
-            "pos": torch.tensor([0.55, 0.1, 0.51]),
-            "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.5]),
-        }      
+        # self.init_states[0]["objects"]["object"] = {
+        #     "pos": torch.tensor([0.55, 0.1, 0.51]),
+        #     "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.51]),
+        # }      
         self.init_states[0]["robots"]["vega"]["dof_pos"].update({
             "torso_j2": 0.3,
         })
