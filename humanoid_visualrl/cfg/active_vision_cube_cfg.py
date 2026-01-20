@@ -505,12 +505,7 @@ class BaseTableHumanoidTaskCfg:
     vision_slow_down_scale = 4
 
     def __post_init__(self):
-        if self.phase == 0:
-            self.reward_weights = self.reward_weights_phase0
-        elif self.phase == 1:
-            self.reward_weights = self.reward_weights_phase1
-        elif self.phase == 2:
-            self.reward_weights = self.reward_weights_phase2
+c
         else:
             raise ValueError(f"Invalid phase: {self.phase}")
 

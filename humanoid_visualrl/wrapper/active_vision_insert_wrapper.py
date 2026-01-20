@@ -23,7 +23,7 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
         self.box_center_x = self.cfg.init_states[0]["objects"]["insertion_female_box"]["pos"][0]
         self.box_center_y = self.cfg.init_states[0]["objects"]["insertion_female_box"]["pos"][1]
 
-        self.yaw_offset = math.pi / 2
+        self.yaw_offset = math.pi / 3
 
 
     def _pre_reset_hook(self, env_ids=None):

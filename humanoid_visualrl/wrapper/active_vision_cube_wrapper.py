@@ -24,6 +24,8 @@ from metasim.task.registry import register_task
 from metasim.types import TensorState
 from metasim.utils.math import euler_xyz_from_quat, quat_apply, quat_from_euler_xyz, quat_mul
 
+import cv2
+
 
 @register_task("active_vision_cube")
 class ActiveVisionWrapper(HumanoidBaseWrapper):
@@ -490,32 +492,32 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 center_x = int(self.center_x[env_pos].item())
                 center_y = int(self.center_y[env_pos].item())
 
-                # if rgb_image.dtype != np.uint8:
-                #     rgb_image = (rgb_image * 255).astype(np.uint8)
+                if rgb_image.dtype != np.uint8:
+                    rgb_image = (rgb_image * 255).astype(np.uint8)
 
-                # cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
+                cv2.circle(rgb_image, (center_x, center_y), 5, (0, 0, 255), -1)  # 红色实心
 
-                # # 绘制中空绿色圆圈（半径15像素）
-                # cv2.circle(
-                #     rgb_image,
-                #     (int(self.image_center_x), int(self.image_center_y)),
-                #     self.cfg.thres_radius,
-                #     (0, 255, 0),
-                #     2,
-                # )
+                # 绘制中空绿色圆圈（半径15像素）
+                cv2.circle(
+                    rgb_image,
+                    (int(self.image_center_x), int(self.image_center_y)),
+                    self.cfg.thres_radius,
+                    (0, 255, 0),
+                    2,
+                )
 
-                # # 绘制图像中心点（绿色圆圈）
-                # cv2.circle(
-                #     rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
-                # )  # 绿色实心圆
+                # 绘制图像中心点（绿色圆圈）
+                cv2.circle(
+                    rgb_image, (int(self.image_center_x), int(self.image_center_y)), 3, (0, 255, 0), -1
+                )  # 绿色实心圆
 
-                # cv2.line(
-                #     rgb_image,
-                #     (center_x, center_y),
-                #     (int(self.image_center_x), int(self.image_center_y)),
-                #     (255, 255, 0),
-                #     1,
-                # )
+                cv2.line(
+                    rgb_image,
+                    (center_x, center_y),
+                    (int(self.image_center_x), int(self.image_center_y)),
+                    (255, 255, 0),
+                    1,
+                )
 
             # 在图像正中间绘制红色方框（高度50，宽度80）
             # box_width = 80

@@ -18,6 +18,30 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
     feet_indices: indices of the feet joints
     penalised_contact_indices: indices of the contact joints
     """
+    scale = 1.0
+    reward_weights_phase0 = {
+        "pixel_norm_at_object": 0.8 * scale,
+        "action_smoothness": -0.1 * scale,
+        # "energy_consumption": -3e-7,
+    }
+
+    reward_weights_phase1 = {
+        "pixel_norm_at_object": 0.4 * scale,
+        "action_smoothness": -0.1 * scale,
+        "energy_consumption": -3e-7,
+        "finger_close_to_object": 1.3 * scale,
+    }
+
+    # cube ready in hand. reward for holding the cube not falling down
+    reward_weights_phase2 = {
+        "pixel_norm_at_object": 0.4 * scale,
+        "action_smoothness": -0.1 * scale,
+        "energy_consumption": -3e-7,
+        "finger_close_to_object": 0.7 * scale,
+        "contact_force": 0.8 * scale,
+        "contact_force_upward": 0.8 * scale,
+        "lift_object": 200.0 * scale,
+    }
 
     def __post_init__(self):
         super().__post_init__()
@@ -27,7 +51,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
                 name="insertion_female_box",
                 scale=(1, 1, 1),
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/objects/female_box_bigger_flattened.usd",
+                usd_path="roboverse_data/objects/female_box_bigger_flattened_convex.usd",
                 fix_base_link=False,
                 default_position=(0.55, 0.1, 0.51),
                 # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
@@ -39,14 +63,14 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
         self.init_states[0]["objects"]["insertion_female_box"] = {
             "pos": torch.tensor([0.55, 0.1, 0.51]),
-            "rot": torch.tensor([0.7071, 0.0, 0.0, 0.7071]),
+            "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.5]),
         }
         self.init_states[0]["robots"]["vega"]["dof_pos"].update({
             "torso_j2": 0.3,
         })
 
         self.randomize_box = True
-        self.randomize_box_xy_range_scale = 0.04
+        self.randomize_box_xy_range_scale = 0.02
         self.randomize_box_rot_range_scale = math.pi / 20  # pi / 2
 
         self.robot = get_robot("vega")
@@ -93,3 +117,10 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
 
         self.robot.action_scale["head_j2"] = 0.2 * self.robot.scale_factor
+
+        if self.phase == 0:
+            self.reward_weights = self.reward_weights_phase0
+        elif self.phase == 1:
+            self.reward_weights = self.reward_weights_phase1
+        elif self.phase == 2:
+            self.reward_weights = self.reward_weights_phase2
