@@ -98,14 +98,14 @@ if __name__ == "__main__":
         log.info(f"Finetuning Model from: {args.load_run}")
     from metasim.utils.setup_util import get_robot
 
-    robot = get_robot(task_cfg.robot)
+    # robot = get_robot(task_cfg.robot)
 
-    if args.task == "active_vision_insertion":
-        robot.modified_joint_limits.update({"base_yaw_joint": (-0.5708, 0.5708)})
+    # if args.task == "active_vision_insertion":
+    #     robot.modified_joint_limits.update({"base_yaw_joint": (-0.5708, 0.5708)})
 
     # initialize scenario
     scenario = ScenarioCfg(
-        robots=[robot],
+        robots=[task_cfg.robot],
         simulator=args.sim,
         headless=args.headless,
         num_envs=args.num_envs,

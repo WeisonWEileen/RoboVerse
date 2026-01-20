@@ -311,8 +311,8 @@ class IsaacsimHandler(BaseSimHandler):
         self._is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
         a = self.none_static_joint_idx_original
         for robot in self.robots:
-            if hasattr(robot, "joint_limits") and robot.joint_limits is not None:
-                self._set_joint_limits(robot.name, robot.joint_limits)
+            if hasattr(robot, "modified_joint_limits") and robot.modified_joint_limits is not None:
+                self._set_joint_limits(robot.name, robot.modified_joint_limits)
 
     # for ac
     @property
@@ -737,8 +737,8 @@ class IsaacsimHandler(BaseSimHandler):
                     enabled_self_collisions=False,
                     solver_position_iteration_count=32,
                     solver_velocity_iteration_count=0,
-                    sleep_threshold=0.005,  
-                    stabilization_threshold=0.0005, 
+                    sleep_threshold=0.005,
+                    stabilization_threshold=0.0005,
                 ),
                 collision_props=sim_utils.CollisionPropertiesCfg(
                     collision_enabled=True, contact_offset=0.02, rest_offset=0.0

@@ -10,7 +10,7 @@ from metasim.utils import configclass
 class VegaCfg(RobotCfg):
     """Configuration for the Vega Humanoid Robot (vega-1).
 
-    The Vega is a full-body humanoid robot with:
+    The Vega is a full-bdy humanoid robot with:
     - Mobile base with wheels
     - Torso with 3 DOF
     - Head (fixed)
