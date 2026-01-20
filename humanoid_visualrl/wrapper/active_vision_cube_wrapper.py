@@ -304,7 +304,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
         # self.init_states.
         # half init from stretch pose
-        if self.cfg.phase == 2:
+        if self.cfg.phase == 2 and self.cfg.task_name == "active_vision_cube":
             self.init_states.robots["vega"].joint_pos[: self.num_envs // 2] = self.vega_stretch_joint_pos.repeat(
                 self.num_envs // 2, 1
             )

@@ -46,6 +46,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
     def __post_init__(self):
         super().__post_init__()
+        self.objects[1].size = (0.045, 0.045, 0.045)
         self.objects.append(
             RigidObjCfg(
                 name="insertion_female_box",
@@ -65,6 +66,11 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
             "pos": torch.tensor([0.55, 0.1, 0.51]),
             "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.5]),
         }
+
+        self.init_states[0]["objects"]["object"] = {
+            "pos": torch.tensor([0.55, 0.1, 0.51]),
+            "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.5]),
+        }      
         self.init_states[0]["robots"]["vega"]["dof_pos"].update({
             "torso_j2": 0.3,
         })
