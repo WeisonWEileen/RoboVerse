@@ -38,10 +38,11 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
         "energy_consumption": -3e-7,
-        "finger_close_to_object": 0.7 * scale,
+        "finger_close_to_object": 1.0 * scale,
         "contact_force": 0.8 * scale,
         "contact_force_upward": 0.8 * scale,
-        "lift_object": 200.0 * scale,
+        # "lift_object": 100.0 * scale,
+        "success": 100.0 * scale,
     }
 
     def __post_init__(self):
@@ -58,7 +59,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
                 # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
                 default_orientation=(1.0, 0.0, 0.0, 0.0),
                 collision_enabled=True,
-                mass_density=100,
+                mass_density=10000,
             )
         )
 

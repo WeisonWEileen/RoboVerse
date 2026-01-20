@@ -116,13 +116,28 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
                             self.recorded_cube_pos.repeat(num_stretch, 1)
                         )
 
-    def success_checker(self, tensor_state: TensorState):
+    def success_checker(self, object_pose_buf: torch.Tensor):
         if self.cfg.phase == 2:
             # check if the object is in the hand
-            object_pos = tensor_state.objects["object"].root_state[:, :3]
-            hand_pos = tensor_state.robots["vega"].body_state[:, self.hand_index, :3]
-            object_in_hand = torch.norm(object_pos - hand_pos, dim=1) < 0.05
-            return object_in_hand
+            object_x_thres = object_pose_buf[:, 0] > 0.50
+            object_z_thres = object_pose_buf[:, 2] > 0.55
+            success = object_x_thres & object_z_thres
+            return success
         else:
             # num envs false tensor
             return torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+
+    def _check_reset(self):
+        terminate = self.cfg.init_states[0]["objects"]["object"]["pos"][2] - self.object_pose_buf[:, 2] > 0.1
+        too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
+        self.success = self.success_checker(self.object_pose_buf)
+        self.reset_buf = self.timeout_buf | terminate | too_far | self.success
+
+    
+    def _reward_success(self, tensor_state: TensorState, robot_name: str, cfg):
+        # if self.cfg.phase == 2:
+        return self.success.float()
+
+
+    
+
