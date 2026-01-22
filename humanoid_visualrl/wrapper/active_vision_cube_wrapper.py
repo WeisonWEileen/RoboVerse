@@ -302,8 +302,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             device="cuda:0",
             # get indices of the arms joints
         )
-        # self.init_states.
-        # half init from stretch pose
         if self.cfg.phase == 2 and self.cfg.task_name == "active_vision_cube":
             self.init_states.robots["vega"].joint_pos[: self.num_envs // 2] = self.vega_stretch_joint_pos.repeat(
                 self.num_envs // 2, 1
@@ -631,8 +629,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             object_y = torch.sin(object_relative_yaw) * radius
             self.init_states.objects["object"].root_state[env_ids, 0] = object_x
             self.init_states.objects["object"].root_state[env_ids, 1] = object_y
-            # self.done_buf[env_ids] = False
-            # randomize object's own rotation yaw (物体自身的旋转角度)
             object_rotation_yaw = 2 * (torch.rand(len(env_ids), device=self.device) - 0.5) * 3.14
             quat = quat_from_euler_xyz(
                 torch.zeros(len(env_ids), device=self.device),

@@ -52,14 +52,14 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
             RigidObjCfg(
                 name="insertion_female_box",
                 scale=(1, 1, 1),
-                physics=PhysicStateType.RIGIDBODY,
+                physics=PhysicStateType.GEOM,  # 改为 GEOM 以固定物体（RIGIDBODY 会强制 fix_base_link=False）
                 usd_path="roboverse_data/objects/female_box_bigger_flattened_convex.usd",
                 fix_base_link=True,
                 default_position=(0.55, 0.1, 0.51),
                 # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
                 default_orientation=(0.8660254, 0.0, 0.0, 0.5),
                 collision_enabled=True,
-                mass_density=10000,
+                # mass_density=10000,
             )
         )
 
@@ -71,7 +71,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         # self.init_states[0]["objects"]["object"] = {
         #     "pos": torch.tensor([0.55, 0.1, 0.51]),
         #     "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.51]),
-        # }      
+        # }
         self.init_states[0]["robots"]["vega"]["dof_pos"].update({
             "torso_j2": 0.3,
         })
@@ -97,7 +97,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         })
 
         self.robot.action_scale.update({
-            "torso_j2": 0.008 * self.robot.scale_factor,
+            "torso_j2": 0.004 * self.robot.scale_factor,
         })
 
         self.robot.default_joint_positions.update({
@@ -110,7 +110,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         })
 
         self.robot.torque_limits.update({
-            "torso_j2": 1000.0,
+            "torso_j2": 10000.0,
         })
 
         self.robot.num_joints = len(self.robot.actuators) + len(self.robot.mimic_joints)

@@ -24,12 +24,13 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --run_name "insertion" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
-    --enable_opencv_display \
     --phase 2 \
     --resume \
     --load_run "2026_0120_155642" \
     --checkpoint 1600 \
-    --wandb \
+    --headless \
+    --wandb 
+    # --enable_opencv_display \
 
     # --resume \
     # --checkpoint 2700 \

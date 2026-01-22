@@ -66,9 +66,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             self._update_opencv_status_text()
         self._load_actuator_indices(scenario.robots[0])
 
-        # self.accumulated_actions =
-        # self.accumulated_actions = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
-
         if self.cfg.delta_control:
             self.accumulated_actions = self._scale_actions_to_normalized(
                 self.default_joint_pd_target[:, self.actuated_index].clone()
