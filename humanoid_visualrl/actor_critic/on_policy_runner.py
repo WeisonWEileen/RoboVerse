@@ -137,15 +137,6 @@ class OnPolicyRunner:
         else:
             obs_vision_shape = None
             self.record_video = False
-
-        # self.action_masking = action_masking
-        # if action_masking:
-        #     self.masks = torch.ones(num_actions)
-        #     for mask_id in masks_ids:
-        #         self.masks[mask_id] = 0
-        # else:
-        #     self.masks = False
-
         # check if cfg have
         if "empirical_normalization" in self.cfg:
             self.empirical_normalization = self.cfg["empirical_normalization"]

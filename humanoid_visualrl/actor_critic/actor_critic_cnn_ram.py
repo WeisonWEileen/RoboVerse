@@ -85,7 +85,7 @@ class ActorCritic(nn.Module):
         # disable args validation for speedup
         Normal.set_default_validate_args(False)
 
-        self.mask = action_masking.clone()
+        self.mask = action_masking
         from loguru import logger as log
 
         log.info(f"Action Masking: {self.mask}")

@@ -203,7 +203,7 @@ from metasim.scenario.scenario import ScenarioCfg
 
 def get_log_dir(args: argparse.Namespace, scenario: ScenarioCfg) -> str:
     """Get the log directory."""
-    task_name = scenario.task.task_name
+    task_name = args.task
     now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
     log_dir = f"./outputs/{task_name}/{now}/"
     if not args.debug:
@@ -342,10 +342,9 @@ def get_args():
         seed: int = -1
         enable_grasp: bool = False
         vision4times_slowdown: bool = False
-        phase: int = 0 
-        
-        """Random seed for reproducibility. -1 means random seed."""
+        phase: int = 0
 
+        """Random seed for reproducibility. -1 means random seed."""
 
         def __post_init__(self):
             """Post-initialization configuration."""
@@ -385,7 +384,7 @@ def load_task_cfg(args):
         sys.modules[module_name] = cfg_module
         spec.loader.exec_module(cfg_module)
         # Get the task configuration class instance
-        return  cfg_module.BaseTableHumanoidTaskCfg
+        return cfg_module.BaseTableHumanoidTaskCfg
         # return task_cfg
     finally:
         # Clean up: remove from sys.modules and sys.path

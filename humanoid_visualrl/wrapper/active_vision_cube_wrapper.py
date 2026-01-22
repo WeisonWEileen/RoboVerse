@@ -839,9 +839,13 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                         self.start_mass_curriculum_iter + self.cfg.curriculum_object_mass_update_interval
                     )
                     self.mass_curriculum_trigger = True
+
                     log.info(
                         f"UPDATE curriculum_object_mass: start_mass_curriculum_iter: {self.start_mass_curriculum_iter}, end_mass_curriculum_iter: {self.end_mass_curriculum_iter}"
                     )
+
+                    # release finger mask, set all finger mask to 1.0
+                    self.mask.fill_(1.0)
 
         dist_close_to_object = dist < self.cfg.stage_finger_close_to_object_change_thres
         # assign those both are stage 0 and dist_close_to_object to stage 1

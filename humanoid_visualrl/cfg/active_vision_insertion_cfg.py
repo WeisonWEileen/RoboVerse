@@ -31,6 +31,8 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         "action_smoothness": -0.1 * scale,
         "energy_consumption": -3e-7,
         "finger_close_to_object": 1.3 * scale,
+        "success": 100.0 * scale,
+        "lift_object": 100.0 * scale,
     }
 
     # cube ready in hand. reward for holding the cube not falling down
@@ -44,6 +46,8 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         # "lift_object": 100.0 * scale,
         "success": 100.0 * scale,
     }
+
+    stage_finger_close_to_object_change_thres = 0.05
 
     def __post_init__(self):
         super().__post_init__()
