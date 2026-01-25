@@ -33,6 +33,20 @@ import typing
 from typing import Literal
 from isaaclab.app import AppLauncher
 
+# 全局上下文变量，用于存储 app_launcher 实例
+_app_launcher_context: AppLauncher | None = None
+
+
+def set_app_launcher_context(app_launcher: AppLauncher) -> None:
+    """设置全局 app_launcher 上下文"""
+    global _app_launcher_context
+    _app_launcher_context = app_launcher
+
+
+def get_app_launcher_context() -> AppLauncher | None:
+    """从全局上下文获取 app_launcher"""
+    return _app_launcher_context
+
 
 class IsaacsimHandler(BaseSimHandler):
     """
@@ -142,20 +156,23 @@ class IsaacsimHandler(BaseSimHandler):
     def _init_scene(self) -> None:
         """
         Initializes the isaacsim simulation environment.
-        """
 
-        parser = argparse.ArgumentParser()
-        AppLauncher.add_app_launcher_args(parser)
-        args = parser.parse_args([])
-        args.device = self.scenario_cfg.device
-        args.enable_cameras = True if len(self.cameras) > 0 else False
-        args.headless = self.headless
-        app_launcher = AppLauncher(args)
+        Args:
+            app_launcher: AppLauncher instance. If None, will be retrieved from global context.
+        """
+        app_launcher = get_app_launcher_context()
+        if app_launcher is None:
+            raise RuntimeError(
+                "app_launcher is required. Either pass it as parameter or set it using "
+                "set_app_launcher_context() before calling launch()."
+            )
+
         self.simulation_app = app_launcher.app
         print("=======!!!=====")
 
         import isaaclab.sim as sim_utils
 
+        # TODO here to control high quality rendering
         render_cfg = sim_utils.RenderCfg(
             rendering_mode="performance",
             # user friendly setting overwrites
@@ -163,13 +180,14 @@ class IsaacsimHandler(BaseSimHandler):
             enable_reflections=False,  # defaults to False in performance mode
             dlss_mode="1",  # defaults to 1 in performance mode
         )
+
         # physics context
         from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
         from isaaclab.sim import PhysxCfg, SimulationCfg, SimulationContext
 
         sim_config: SimulationCfg = SimulationCfg(
             dt=self.physics_dt,
-            device=args.device,
+            device=self.scenario_cfg.device,
             render_interval=self.scenario.decimation,  # TODO divide into render interval and control decimation
             # render=render_cfg,
             physx=PhysxCfg(

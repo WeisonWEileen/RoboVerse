@@ -471,7 +471,7 @@ class BaseTableHumanoidTaskCfg:
     randomize_material = False
     randomize_cfg = {
         "enable_floor": True,
-        "enable_walls": True,
+        "enable_walls": False,
         "enable_ceiling": False,
         "floor_materials": ["roboverse_data/materials/arnold/Wood/Oak_Planks.mdl"],
         "light_randomize_freq": 100,
@@ -483,8 +483,8 @@ class BaseTableHumanoidTaskCfg:
         "randomize_cfg": {
             "light": {
                 "intensity_range": (0.25, 2.0),
-                "randomize_orientation": True,
-                "randomize_position": True,
+                "randomize_orientation": False,
+                "randomize_position": False,
                 "position_range": ((-100.0, 100.0), (-100.0, 100.0), (-0.0, 0.0)),
             }
         },

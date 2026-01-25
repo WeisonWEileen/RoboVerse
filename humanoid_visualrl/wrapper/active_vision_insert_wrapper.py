@@ -94,9 +94,15 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
     def success_checker(self, object_pose_buf: torch.Tensor):
         if self.cfg.phase == 2:
             # check if the object is in the hand
-            object_x_thres = object_pose_buf[:, 0] > 0.50
-            object_z_thres = object_pose_buf[:, 2] > 0.55
+            object_x_thres = object_pose_buf[:, 0] > self.cfg.x_threshold
+            object_z_thres = object_pose_buf[:, 2] > self.cfg.z_threshold
             success = object_x_thres & object_z_thres
+            return success
+        if self.cfg.phase == 1:
+            # hight enough and in the hand
+            # object_x_thres = object_pose_buf[:, 0] > 0.50
+            object_z_thres = object_pose_buf[:, 2] > self.cfg.z_threshold
+            success = object_z_thres
             return success
         else:
             # num envs false tensor

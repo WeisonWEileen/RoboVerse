@@ -24,9 +24,23 @@ from metasim.constants import PhysicStateType
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import get_task_cfg_class, get_task_class
 
-if __name__ == "__main__":
-    args = get_args()
+import argparse
+from isaaclab.app import AppLauncher
+from metasim.sim.isaacsim.isaacsim import set_app_launcher_context
 
+args = get_args()
+
+parser = argparse.ArgumentParser()
+AppLauncher.add_app_launcher_args(parser)
+args_isaac = parser.parse_args([])
+args_isaac.device = args.device
+args_isaac.enable_cameras = True
+args_isaac.headless = args.headless
+app_launcher = AppLauncher(args_isaac)
+# 设置全局上下文，这样 launch 函数就可以从上下文获取 app_launcher
+set_app_launcher_context(app_launcher)
+
+if __name__ == "__main__":
     # Set random seed for reproducibility
     if args.seed != -1:
         random.seed(args.seed)
@@ -136,7 +150,6 @@ if __name__ == "__main__":
 
     if args.debug:
         # do not log, faster reset
-
         log_dir = None
         task_cfg.max_episode_length_s = 1.5
         # scenario.num_envs = 1

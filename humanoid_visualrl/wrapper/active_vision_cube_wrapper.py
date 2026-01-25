@@ -124,7 +124,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.device,
             )
             # randomize all
-            self.domain_randomization_helper.scene_randomizer(env_ids=list(range(self.num_envs)))
+            if self.domain_randomization_helper.scene_randomizer is not None:
+                self.domain_randomization_helper.scene_randomizer(env_ids=list(range(self.num_envs)))
         # for mimic waist yaw joint control
         self.robot_yaw_buffer = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.float)
         # for pd control

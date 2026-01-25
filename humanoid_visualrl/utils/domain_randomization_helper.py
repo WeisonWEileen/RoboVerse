@@ -29,20 +29,47 @@ from metasim.randomization.camera_randomizer import (
     CameraRandomizer,
 )
 from metasim.randomization.light_randomizer import LightRandomCfg, LightRandomizer, LightPositionRandomCfg
-from metasim.randomization.material_randomizer import MaterialRandomCfg, MaterialRandomizer, MDLMaterialCfg, PhysicalMaterialCfg, PBRMaterialCfg
+from metasim.randomization.material_randomizer import (
+    MaterialRandomCfg,
+    MaterialRandomizer,
+    MDLMaterialCfg,
+    PhysicalMaterialCfg,
+    PBRMaterialCfg,
+)
 from metasim.randomization.object_randomizer import ObjectRandomCfg, ObjectRandomizer, PhysicsRandomCfg, PoseRandomCfg
-from metasim.randomization.presets import CameraPresets, LightPresets, MaterialPresets, ObjectPresets, ScenePresets, MaterialProperties, CameraProperties, LightProperties, MDLCollections 
-from metasim.randomization.scene_randomizer import SceneGeometryCfg, SceneMaterialPoolCfg, SceneRandomCfg, SceneRandomizer
-from metasim.randomization.light_randomizer import LightColorRandomCfg, LightIntensityRandomCfg, LightOrientationRandomCfg
+from metasim.randomization.presets import (
+    CameraPresets,
+    LightPresets,
+    MaterialPresets,
+    ObjectPresets,
+    ScenePresets,
+    MaterialProperties,
+    CameraProperties,
+    LightProperties,
+    MDLCollections,
+)
+from metasim.randomization.scene_randomizer import (
+    SceneGeometryCfg,
+    SceneMaterialPoolCfg,
+    SceneRandomCfg,
+    SceneRandomizer,
+)
+from metasim.randomization.light_randomizer import (
+    LightColorRandomCfg,
+    LightIntensityRandomCfg,
+    LightOrientationRandomCfg,
+)
 from metasim.randomization.presets.scene_presets import SceneMaterialCollections
 from metasim.utils import configclass
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
+
 class DomainRandomizationHelper:
     """Helper class for domain randomization tasks."""
+
     # def __init__(self, cfg, num_envs, lights, robots, objects, cameras, handler, env_spacing, seed, device):
-    def __init__(self, mode, cfg, objects,lights, num_envs, handler, env_spacing, seed, device):
+    def __init__(self, mode, cfg, objects, lights, num_envs, handler, env_spacing, seed, device):
         assert mode in ["train", "test"], "Mode must be either train or test"
         self.mode = mode
         self.cfg = cfg
@@ -53,7 +80,7 @@ class DomainRandomizationHelper:
         self.handler = handler
         self.env_spacing = env_spacing
         self.seed = seed
-        
+
         self.enable_table = cfg.get("enable_table", False)
         self.table_cfg = cfg.get("table_cfg", None)
         self.randomizer = {}
@@ -160,44 +187,46 @@ class DomainRandomizationHelper:
                 )
                 material_randomizer.bind_handler(handler)
                 self.randomizer[f"material_{obj.name}"] = material_randomizer
-                
-        for light in lights:
-            light_randomize_cfg = self.randomize_cfg.get(light.name, None)
-            intensity_range = light_randomize_cfg.get("intensity_range", (1.0, 1.0)) if light_randomize_cfg else (1.0, 1.0)
-            intensity_range = (light.intensity * intensity_range[0], light.intensity * intensity_range[1])
-            if light_randomize_cfg:
-                light_randomizer = LightRandomizer(
-                    LightRandomCfg(
-                        light_name=light.name,
-                        intensity=LightIntensityRandomCfg(
-                            intensity_range=intensity_range,
-                            distribution="uniform",
-                            enabled=True,
-                        ),
-                        color=LightColorRandomCfg(
-                            color_range=light_randomize_cfg.get("color_range", ((1.0, 1.0), (1.0, 1.0), (1.0, 1.0))),
-                        ),
-                        orientation=LightOrientationRandomCfg(
-                            angle_range=LightProperties.ORIENTATION_LARGE,
-                            relative_to_origin=True,
-                            distribution="uniform",
-                            enabled=light_randomize_cfg.get("randomize_orientation", False),
-                        ),
-                        position=LightPositionRandomCfg(
-                            position_range=light_randomize_cfg.get(
-                                "position_range", ((0.0, 0.0), (0.0, 0.0), (0.0, 0.0))
-                            ),
-                            relative_to_origin=True,
-                            distribution="uniform",
-                            enabled=light_randomize_cfg.get("randomize_position", False),
-                        ),
-                    ),
-                    seed=seed,
-                    device=device,
-                )
-                light_randomizer.bind_handler(handler)
-                self.randomizer[light.name] = light_randomizer
-        
+
+        # for light in lights:
+        #     light_randomize_cfg = self.randomize_cfg.get(light.name, None)
+        #     intensity_range = (
+        #         light_randomize_cfg.get("intensity_range", (1.0, 1.0)) if light_randomize_cfg else (1.0, 1.0)
+        #     )
+        #     intensity_range = (light.intensity * intensity_range[0], light.intensity * intensity_range[1])
+        #     if light_randomize_cfg:
+        #         light_randomizer = LightRandomizer(
+        #             LightRandomCfg(
+        #                 light_name=light.name,
+        #                 intensity=LightIntensityRandomCfg(
+        #                     intensity_range=intensity_range,
+        #                     distribution="uniform",
+        #                     enabled=True,
+        #                 ),
+        #                 color=LightColorRandomCfg(
+        #                     color_range=light_randomize_cfg.get("color_range", ((1.0, 1.0), (1.0, 1.0), (1.0, 1.0))),
+        #                 ),
+        #                 orientation=LightOrientationRandomCfg(
+        #                     angle_range=LightProperties.ORIENTATION_LARGE,
+        #                     relative_to_origin=True,
+        #                     distribution="uniform",
+        #                     enabled=light_randomize_cfg.get("randomize_orientation", False),
+        #                 ),
+        #                 position=LightPositionRandomCfg(
+        #                     position_range=light_randomize_cfg.get(
+        #                         "position_range", ((0.0, 0.0), (0.0, 0.0), (0.0, 0.0))
+        #                     ),
+        #                     relative_to_origin=True,
+        #                     distribution="uniform",
+        #                     enabled=light_randomize_cfg.get("randomize_position", False),
+        #                 ),
+        #             ),
+        #             seed=seed,
+        #             device=device,
+        #         )
+        #         light_randomizer.bind_handler(handler)
+        #         self.randomizer[light.name] = light_randomizer
+
         # for camera in cameras:
         #     camera_randomize_cfg = self.randomize_cfg.get(camera.name, None)
         #     if camera_randomize_cfg:
@@ -237,10 +266,8 @@ class DomainRandomizationHelper:
         self.enable_floor = cfg.get("enable_floor", True)
         self.enable_walls = cfg.get("enable_walls", False)
         self.enable_ceiling = cfg.get("enable_ceiling", False)
-        
 
         if self.enable_floor or self.enable_walls or self.enable_ceiling or self.enable_table:
-
             log.info("Initializing Scene Randomizer")
 
             floor_cfg = walls_cfg = ceiling_cfg = table_cfg = None
@@ -259,7 +286,9 @@ class DomainRandomizationHelper:
                 )
                 floor_materials_cfg = SceneMaterialPoolCfg(
                     # material_paths=self.cfg.get("floor_materials", SceneMaterialCollections.floor_materials()),
-                    material_paths=SceneMaterialCollections.floor_train_materials() if self.mode == "train" else SceneMaterialCollections.floor_test_materials(),
+                    material_paths=SceneMaterialCollections.floor_train_materials()
+                    if self.mode == "train"
+                    else SceneMaterialCollections.floor_test_materials(),
                     selection_strategy="random",
                 )
                 log.info(f"  - Floor enabled, {len(floor_materials_cfg.material_paths)} materials)")
@@ -273,7 +302,9 @@ class DomainRandomizationHelper:
                 )
                 wall_materials_cfg = SceneMaterialPoolCfg(
                     # material_paths=self.cfg.get("wall_materials", SceneMaterialCollections.wall_materials()),
-                    material_paths=SceneMaterialCollections.wall_train_materials() if self.mode == "train" else SceneMaterialCollections.wall_test_materials(),
+                    material_paths=SceneMaterialCollections.wall_train_materials()
+                    if self.mode == "train"
+                    else SceneMaterialCollections.wall_test_materials(),
                     selection_strategy="random",
                 )
                 log.info(f"  - Walls enabled, {len(wall_materials_cfg.material_paths)} materials)")
@@ -298,17 +329,18 @@ class DomainRandomizationHelper:
             # table_thickness = table_cfg_dict.get("thickness", 0.1)
             # table_center_z = table_cfg_dict["height"] - table_thickness / 2
 
-
             # in this setting, we always have table
             table_cfg = SceneGeometryCfg(
-                enabled=False, # self.define table
+                enabled=False,  # self.define table
                 # size=(table_cfg_dict["width"], table_cfg_dict["depth"], table_thickness),
                 # position=(table_cfg_dict["x_pos"], table_cfg_dict["y_pos"], table_center_z),
                 material_randomization=True,
             )
             table_materials_cfg = SceneMaterialPoolCfg(
                 # material_paths=self.cfg.get("table_materials", SceneMaterialCollections.table_materials()),
-                material_paths=SceneMaterialCollections.table_train_materials() if self.mode == "train" else SceneMaterialCollections.table_test_materials(),
+                material_paths=SceneMaterialCollections.table_train_materials()
+                if self.mode == "train"
+                else SceneMaterialCollections.table_test_materials(),
                 selection_strategy="random",
             )
 
@@ -328,7 +360,7 @@ class DomainRandomizationHelper:
             self.scene_randomizer = SceneRandomizer(scene_cfg, seed=self.seed, device=device)
             self.scene_randomizer.bind_handler(handler)
             log.info("Scene randomizer initialized successfully")
-    
+
     def _apply_material_to_prim(self, material_path, root_prim, env_ids):
         """Apply material to a given prim across specified environments."""
         for env_id in env_ids:
@@ -338,12 +370,12 @@ class DomainRandomizationHelper:
                 log.debug(f"Applied material {material_path} to {prim_path}")
             except Exception as e:
                 log.warning(f"Failed to apply material {material_path} to {prim_path}: {e}")
-        
+
     def should_randomize(self, env_ids):
         """Return env_ids that should be randomized this step."""
         self.env_reset_num[env_ids] = (self.env_reset_num[env_ids] + 1) % self.env_setting_randomize_freq
         return [eid for eid in env_ids if self.env_reset_num[eid] == 0]
-        
+
     # def randomization(self, env_ids, step_count=0):
     # def randomization(self, env_ids):
     #     self.env_reset_num[env_ids] += 1
@@ -351,7 +383,7 @@ class DomainRandomizationHelper:
     #     if np.any(self.env_reset_num[env_ids] == 0):
     #         mask = self.env_reset_num[env_ids] == 0
     #         env_ids_to_randomize = np.array(env_ids)[mask].tolist()
-            
+
     #         # randomize_envs -> [0, 2]
     #         # for obj in self.objects:
     #         #     if obj.name in self.randomizer:
@@ -372,7 +404,6 @@ class DomainRandomizationHelper:
     #     #     for light in self.lights:
     #     #         if light.name in self.randomizer:
     #     #             self.randomizer[light.name]()
-
 
     def randomization(self, env_ids, force_randomize=False, step_count=0):
         """Perform domain randomization on selected environments."""
@@ -398,8 +429,6 @@ class DomainRandomizationHelper:
                     self.randomizer[f"material_{obj.name}"](envs_to_randomize)
 
         if step_count % self.light_randomize_freq == 0:
-
             for light in self.lights:
                 if light.name in self.randomizer:
                     self.randomizer[light.name]()
-

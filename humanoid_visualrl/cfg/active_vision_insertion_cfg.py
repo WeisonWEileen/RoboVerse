@@ -48,6 +48,9 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
     }
 
     stage_finger_close_to_object_change_thres = 0.05
+    # success threshold
+    x_threshold = 0.50
+    z_threshold = 0.55
 
     def __post_init__(self):
         super().__post_init__()

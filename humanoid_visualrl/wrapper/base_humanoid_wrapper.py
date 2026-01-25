@@ -583,12 +583,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
             # default pd target: action is relative offset (scaled), need to add default position
             self.env.set_dof_targets(action + self.default_joint_pd_target[:, self.actuated_index])
         # self.robot_yaw_buffer_action[0] = 1.575
-        # velocity = self._compute_velocity(self.robot_yaw_buffer_action)
-        # velocity = torch.ones((self.num_envs, 2), device=self.device, dtype=torch.float) * 10
-        # velocity[:,1] *= -1
-        # self.env.scene.articulations[self.robot.name].set_joint_velocity_target(
-        #     -velocity, joint_ids=self._wheel_idx_original
-        # )
         for _ in range(self.cfg.decimation):
             # refresh dof states
             # tensor_state = self.env.get_states()
@@ -823,11 +817,6 @@ class HumanoidBaseWrapper(RslRlWrapper):
         actionable_joint_names_indices = [actionable_joint_names_sorted.index(jn) for jn in mask_joint_names_sorted]
 
         self.mask_joint_indices = actionable_joint_names_indices
-
-        # self.mask_joint_indices = get_joint_reindexed_indices_from_substring(
-        #     self.env, self.robot.name, mask_joint_names, device=self.device
-        # )
-        # compress to actionable indices
 
         self.action_masking = torch.ones(self.num_actions, device=self.device, dtype=torch.float)
         self.action_masking[self.mask_joint_indices] = 0.0
