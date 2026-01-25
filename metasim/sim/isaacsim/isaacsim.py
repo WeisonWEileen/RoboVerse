@@ -776,14 +776,16 @@ class IsaacsimHandler(BaseSimHandler):
         cfg.prim_path = f"/World/envs/env_.*/{robot.name}"
         cfg.spawn.usd_path = os.path.abspath(robot.usd_path)
         cfg.spawn.rigid_props.disable_gravity = not robot.enabled_gravity
+
         init_state = ArticulationCfg.InitialStateCfg(
             # TODO hard code here
             pos=[0.0, 0.0, 0.8],
             # add + {"L_arm_j2": 0.3}
-            joint_pos={jn: robot.default_joint_positions[jn] for jn in robot.actuators.keys()},
+            joint_pos={jn: robot.default_joint_positions[jn] for jn in robot.default_joint_positions.keys()},
             joint_vel={".*": 0.0},
         )
         if robot.name == "vega":
+            # HACK fix hard code issue here
             init_state.pos = [0.0, 0.0, 0.07]
         cfg.init_state = init_state
         for joint_name, actuator in robot.actuators.items():

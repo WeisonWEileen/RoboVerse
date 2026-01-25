@@ -13,15 +13,19 @@ from loguru import logger as log
 try:
     from isaaclab.controllers import DifferentialIKController, DifferentialIKControllerCfg
     from isaaclab.managers import SceneEntityCfg
+    from isaaclab.markers import VisualizationMarkers
+    from isaaclab.markers.config import FRAME_MARKER_CFG
     from isaaclab.utils.math import subtract_frame_transforms
 
     ISAACLAB_AVAILABLE = True
 except ImportError:
     ISAACLAB_AVAILABLE = False
-    log.warning("IsaacLab not available, IK inverse curriculum will be skipped")
+    log.error("IsaacLab not available, IK inverse curriculum will be skipped")
+
+from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 
 
-def generate_ik_curriculum_data(env, task_cfg, num_samples=200, threshold=0.1, max_iterations=150):
+def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=200, threshold=0.1, max_iterations=150):
     """Generate IK curriculum data by inverse kinematics to cube positions.
 
     This function uses differential IK to move the robot's end-effector to various
@@ -29,7 +33,7 @@ def generate_ik_curriculum_data(env, task_cfg, num_samples=200, threshold=0.1, m
     that can be used as initial states for curriculum learning.
 
     Args:
-        env: The environment instance (must have handler.scene and handler.sim)
+        env: The environment instance (wrapper with env.env.handler.scene or handler.scene)
         task_cfg: The task configuration (must have robot name and object info)
         num_samples: Number of successful IK samples to collect
         threshold: Position error threshold for success (meters)
@@ -44,49 +48,34 @@ def generate_ik_curriculum_data(env, task_cfg, num_samples=200, threshold=0.1, m
         log.warning("IsaacLab not available, skipping IK curriculum generation")
         return []
 
+    # Handle different environment structures (wrapper vs direct handler)
+    handler = env.env
+
     # Check if handler has scene (IsaacSim/IsaacLab)
-    if not hasattr(env.handler, "scene"):
+    if not hasattr(handler, "scene"):
         log.warning("Handler does not have scene attribute, skipping IK curriculum generation")
         return []
 
-    scene = env.handler.scene
-    sim = env.handler.sim
+    env._reset(env_ids=list(range(env.num_envs)))
 
-    # Get robot and object names from task_cfg
+    scene = handler.scene
+    sim = handler.sim
+
     robot_name = task_cfg.robot
-    # Find object name (usually "object" or "cube")
-    object_name = None
-    if hasattr(task_cfg, "objects") and len(task_cfg.objects) > 0:
-        # Find the first non-robot object
-        for obj in task_cfg.objects:
-            if hasattr(obj, "name") and obj.name != robot_name:
-                object_name = obj.name
-                break
+    object_name = "object"
 
-    if object_name is None:
-        # Try to infer from init_states
-        if hasattr(task_cfg, "init_states") and len(task_cfg.init_states) > 0:
-            objects_dict = task_cfg.init_states[0].get("objects", {})
-            if objects_dict:
-                object_name = next(iter(objects_dict.keys()))
-
-    if object_name is None:
-        log.warning("Could not find object name, skipping IK curriculum generation")
-        return []
-
-    log.info(f"Generating IK curriculum data for robot: {robot_name}, object: {object_name}")
-
-    # Get robot and cube from scene
-    try:
-        robot = scene.articulations[robot_name]
-        cube = scene.rigid_objects[object_name]
-    except KeyError as e:
-        log.warning(f"Could not find robot or object in scene: {e}, skipping IK curriculum generation")
-        return []
+    robot = scene.articulations[robot_name]
+    cube = scene.rigid_objects[object_name]
 
     # Create IK controller
     diff_ik_cfg = DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls")
     diff_ik_controller = DifferentialIKController(diff_ik_cfg, num_envs=scene.num_envs, device=sim.device)
+
+    # Markers
+    frame_marker_cfg = FRAME_MARKER_CFG.copy()
+    frame_marker_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
+    ee_marker = VisualizationMarkers(frame_marker_cfg.replace(prim_path="/Visuals/ee_current"))
+    goal_marker = VisualizationMarkers(frame_marker_cfg.replace(prim_path="/Visuals/ee_goal"))
 
     # Robot-specific configuration for Vega
     robot_entity_cfg = SceneEntityCfg(robot_name, joint_names=["R_arm_j.*"], body_names=["R_mf_l1"])
@@ -104,19 +93,24 @@ def generate_ik_curriculum_data(env, task_cfg, num_samples=200, threshold=0.1, m
     robot_cfg = VegaCfg()
     fixed_joint_ids = []
     fixed_joint_pos = []
+
+    robot_joint_names = robot.joint_names
     for jn in robot_cfg.default_joint_positions.keys():
         if jn not in robot_entity_cfg.joint_names and "R_arm_" not in jn:
-            fixed_joint_ids.append(robot.joint_names.index(jn))
+            fixed_joint_ids.append(robot_joint_names.index(jn))
             fixed_joint_pos.append(robot_cfg.default_joint_positions[jn])
+
     fixed_joint_ids = torch.tensor(fixed_joint_ids, device=robot.device)
     fixed_joint_pos = torch.tensor(fixed_joint_pos, device=robot.device)
+    # Broadcast to all environments: [num_fixed_joints] -> [num_envs, num_fixed_joints]
+    fixed_joint_pos = fixed_joint_pos.unsqueeze(0).repeat(scene.num_envs, 1)
 
     # Initialize data collection
     recorded_qpos = []
     recorded_cube_pos = []
     # Get physics dt from handler or use default
-    if hasattr(env.handler, "physics_dt"):
-        sim_dt = env.handler.physics_dt
+    if hasattr(handler, "physics_dt"):
+        sim_dt = handler.physics_dt
     elif hasattr(sim, "get_physics_dt"):
         sim_dt = sim.get_physics_dt()
     else:
@@ -161,6 +155,9 @@ def generate_ik_curriculum_data(env, task_cfg, num_samples=200, threshold=0.1, m
             joint_pos_des = joint_pos[:, robot_entity_cfg.joint_ids].clone()
             diff_ik_controller.reset()
 
+            # Set fixed joint positions immediately after reset
+            # robot.set_joint_position_target(fixed_joint_pos, joint_ids=fixed_joint_ids)
+
             # Add random noise to target position
             delta = torch.zeros_like(ik_commands)
             delta[:, 0] += torch.randn_like(ik_commands[:, 0]) * 0.08
@@ -197,7 +194,7 @@ def generate_ik_curriculum_data(env, task_cfg, num_samples=200, threshold=0.1, m
 
             # Compute joint commands
             joint_pos_des = diff_ik_controller.compute(ee_pos_b, ee_quat_b, jacobian, joint_pos)
-
+            # pass
         # Apply actions
         robot.set_joint_position_target(joint_pos_des, joint_ids=robot_entity_cfg.joint_ids)
         robot.set_joint_position_target(fixed_joint_pos, joint_ids=fixed_joint_ids)
@@ -205,6 +202,11 @@ def generate_ik_curriculum_data(env, task_cfg, num_samples=200, threshold=0.1, m
         scene.write_data_to_sim()
         sim.step()
         scene.update(sim_dt)
+
+        # Update marker visualization
+        ee_pose_w_current = robot.data.body_pose_w[:, robot_entity_cfg.body_ids[0]]
+        ee_marker.visualize(ee_pose_w_current[:, 0:3], ee_pose_w_current[:, 3:7])
+        goal_marker.visualize(ik_commands[:, 0:3] + delta[:, 0:3] + scene.env_origins, ik_commands[:, 3:7])
 
         # Check for success and record
         if (count + 1) % max_iterations == 0:
@@ -234,3 +236,50 @@ def generate_ik_curriculum_data(env, task_cfg, num_samples=200, threshold=0.1, m
 
     # Return as list of tuples
     return list(zip(recorded_qpos, recorded_cube_pos))
+
+
+def save_ik_curriculum_data(curriculum_data, output_path):
+    """Save IK curriculum data to npz file.
+
+    Args:
+        curriculum_data: List of (qpos, cube_pos) tuples
+        output_path: Path to save the npz file
+    """
+    import numpy as np
+
+    if not curriculum_data:
+        log.warning("No curriculum data to save")
+        return
+
+    # Unpack the data
+    qpos_list, cube_pos_list = zip(*curriculum_data)
+
+    # Stack into arrays
+    qpos_array = np.stack(qpos_list, axis=0)  # [num_samples, num_joints]
+    cube_pos_array = np.stack(cube_pos_list, axis=0)  # [num_samples, 7]
+
+    # Save to npz
+    np.savez(output_path, qpos=qpos_array, cube_pos=cube_pos_array)
+    log.info(f"Saved {len(curriculum_data)} IK curriculum samples to {output_path}")
+    log.info(f"qpos shape: {qpos_array.shape}, cube_pos shape: {cube_pos_array.shape}")
+
+
+def load_ik_curriculum_data(input_path):
+    """Load IK curriculum data from npz file.
+
+    Args:
+        input_path: Path to the npz file
+
+    Returns:
+        Tuple of (qpos_array, cube_pos_array) where:
+        - qpos_array: numpy array [num_samples, num_joints]
+        - cube_pos_array: numpy array [num_samples, 7]
+    """
+    import numpy as np
+
+    data = np.load(input_path)
+    qpos_array = data["qpos"]
+    cube_pos_array = data["cube_pos"]
+    log.info(f"Loaded IK curriculum data from {input_path}")
+    log.info(f"qpos shape: {qpos_array.shape}, cube_pos shape: {cube_pos_array.shape}")
+    return qpos_array, cube_pos_array

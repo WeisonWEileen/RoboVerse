@@ -636,6 +636,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
             env_ids = list(range(self.num_envs))
         if len(env_ids) == 0:
             return
+
         self._pre_reset_hook(env_ids)
         self.env.set_states(self.init_states, env_ids)
         self._resample_commands(env_ids)
@@ -720,12 +721,14 @@ class HumanoidBaseWrapper(RslRlWrapper):
             (len(env_ids), 1),
             device=self.device,
         ).squeeze(1)
+        
         self.commands[env_ids, 1] = torch_rand_float(
             self.command_ranges.lin_vel_y[0],
             self.command_ranges.lin_vel_y[1],
             (len(env_ids), 1),
             device=self.device,
         ).squeeze(1)
+        
         if self.cfg.commands.heading_command:
             self.commands[env_ids, 3] = torch_rand_float(
                 self.command_ranges.heading[0],
@@ -750,7 +753,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
     def _push_robots(self):
         """Randomly set robot's root velocity to simulate a push."""
         if self.cfg.random_push.enabled and self.common_step_counter % self.cfg.random_push.push_interval == 0:
-            pass  # due to performace issue, we generally not use get_states
+            pass  
+            # due to performace issue, we generally not use get_states
             # max_vel = self.cfg.random_push.max_push_vel_xy
             # max_push_angular = self.cfg.random_push.max_push_ang_vel
             # tensor_states = self.env.get_states()

@@ -15,18 +15,18 @@ from metasim.scenario.objects import PrimitiveCubeCfg
 
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
+import argparse
 import os
 import shutil
+
+from isaaclab.app import AppLauncher
 
 from humanoid_visualrl.actor_critic.on_policy_runner import OnPolicyRunner
 from humanoid_visualrl.utils.utils import dump_instance_file, get_args, get_load_path, get_log_dir
 from metasim.constants import PhysicStateType
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.task.registry import get_task_cfg_class, get_task_class
-
-import argparse
-from isaaclab.app import AppLauncher
 from metasim.sim.isaacsim.isaacsim import set_app_launcher_context
+from metasim.task.registry import get_task_cfg_class, get_task_class
 
 args = get_args()
 
@@ -37,8 +37,11 @@ args_isaac.device = args.device
 args_isaac.enable_cameras = True
 args_isaac.headless = args.headless
 app_launcher = AppLauncher(args_isaac)
-# 设置全局上下文，这样 launch 函数就可以从上下文获取 app_launcher
 set_app_launcher_context(app_launcher)
+from humanoid_visualrl.utils.inverse_state_generator import (
+    generate_ik_curriculum_data,
+    save_ik_curriculum_data,
+)
 
 if __name__ == "__main__":
     # Set random seed for reproducibility
@@ -104,19 +107,11 @@ if __name__ == "__main__":
         }
         task_cfg.filter_pairs.append((task_cfg.robot, "occlusion_cube"))
         task_cfg.filter_pairs.append(("object", "occlusion_cube"))
-    # if not args.debug:
-    #  assert args.num_envs == 64
 
     assert task_cfg.env_spacing > 4.9, "env_spacing must be greater than 5"
     if args.resume:
         log.info(f"Finetuning Model from: {args.load_run}")
-    from metasim.utils.setup_util import get_robot
-
-    # robot = get_robot(task_cfg.robot)
-
-    # if args.task == "active_vision_insertion":
-    #     robot.modified_joint_limits.update({"base_yaw_joint": (-0.5708, 0.5708)})
-
+    # from metasim.utils.setup_util import get_robot
     # initialize scenario
     scenario = ScenarioCfg(
         robots=[task_cfg.robot],
@@ -195,6 +190,35 @@ if __name__ == "__main__":
         log.info(f"Loading model from: {resume_path}")
         ppo_runner.load(resume_path, load_optimizer=False)
 
-ppo_runner.learn(num_learning_iterations=args.num_learning_iterations, run_name=f"{args.run_name}_{now}")
+    # Generate IK curriculum data before training (for reverse curriculum)
+    if hasattr(args, "generate_ik_curriculum") and args.generate_ik_curriculum:
+        num_samples = getattr(args, "ik_curriculum_samples", 200)
+        threshold = getattr(args, "ik_curriculum_threshold", 0.1)
+        max_iterations = getattr(args, "ik_curriculum_max_iterations", 150)
 
-ppo_runner.env.env.simulation_app.close()
+        log.info(
+            f"Generating IK curriculum data: {num_samples} samples, threshold={threshold}, max_iterations={max_iterations}"
+        )
+        curriculum_data = generate_ik_curriculum_data(
+            env=env,
+            task_cfg=task_cfg,
+            num_samples=num_samples,
+            threshold=threshold,
+            max_iterations=max_iterations,
+        )
+
+        if curriculum_data and log_dir is not None:
+            curriculum_path = os.path.join(log_dir, "ik_curriculum_data.npz")
+            save_ik_curriculum_data(curriculum_data, curriculum_path)
+            log.info(f"IK curriculum data saved to {curriculum_path}")
+        elif curriculum_data:
+            # If no log_dir (debug mode), save to current directory
+            curriculum_path = "ik_curriculum_data.npz"
+            save_ik_curriculum_data(curriculum_data, curriculum_path)
+            log.info(f"IK curriculum data saved to {curriculum_path}")
+        else:
+            log.warning("No IK curriculum data generated")
+
+    ppo_runner.learn(num_learning_iterations=args.num_learning_iterations, run_name=f"{args.run_name}_{now}")
+
+    ppo_runner.env.env.simulation_app.close()

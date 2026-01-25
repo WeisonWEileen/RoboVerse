@@ -343,6 +343,12 @@ def get_args():
         enable_grasp: bool = False
         vision4times_slowdown: bool = False
         phase: int = 0
+        generate_ik_curriculum: bool = False  # Enable IK curriculum data generation
+        ik_curriculum_samples: int = 200  # Number of IK samples to collect
+        ik_curriculum_threshold: float = 0.1  # Position error threshold for success (meters)
+        ik_curriculum_max_iterations: int = 150  # Maximum iterations per IK attempt
+        
+        """Random seed for reproducibility. -1 means random seed."""
 
         """Random seed for reproducibility. -1 means random seed."""
 
