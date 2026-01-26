@@ -25,6 +25,18 @@ except ImportError:
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 
 
+# 四元数乘法 (IsaacSim: wxyz)
+def quat_mul(q, r):
+    # q, r: [..., 4], [w, x, y, z]
+    w1, x1, y1, z1 = q.unbind(-1)
+    w2, x2, y2, z2 = r.unbind(-1)
+    w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+    x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+    y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+    z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
+    return torch.stack([w, x, y, z], dim=-1)
+
+
 def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=10, threshold=0.1, max_iterations=150):
     """Generate IK curriculum data by inverse kinematics to cube positions.
 
@@ -67,13 +79,55 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
     robot = scene.articulations[robot_name]
     cube = scene.rigid_objects[object_name]
 
+    # Save original cube state and fix it for IK generation
+    # We'll restore it at the end of the function
+    # Get original fix_base_link state from task_cfg
+    cube_original_fixed = False
+    for obj_cfg in task_cfg.objects:
+        if obj_cfg.name == object_name and hasattr(obj_cfg, "fix_base_link"):
+            cube_original_fixed = obj_cfg.fix_base_link
+            break
+
+    try:
+        # Fix the cube for IK generation using UsdPhysics API
+        import omni.usd
+        from pxr import UsdPhysics
+
+        stage = omni.usd.get_context().get_stage()
+        if stage:
+            # Fix the cube for IK generation
+            # Set kinematic_enabled=True and disable_gravity=True for all environments
+            for env_id in range(scene.num_envs):
+                env_cube_prim_path = f"/World/envs/env_{env_id}/{object_name}"
+                env_cube_prim = stage.GetPrimAtPath(env_cube_prim_path)
+                if env_cube_prim.IsValid():
+                    # Use UsdPhysics.RigidBodyAPI instead of PhysxSchema
+                    env_rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(env_cube_prim)
+                    if env_rigid_body_api:
+                        # Create or set kinematic enabled attribute
+                        kinematic_attr = env_rigid_body_api.GetKinematicEnabledAttr()
+                        if not kinematic_attr:
+                            kinematic_attr = env_rigid_body_api.CreateKinematicEnabledAttr(True)
+                        else:
+                            kinematic_attr.Set(True)
+
+                        # Create or set disable gravity attribute
+                        gravity_attr = env_rigid_body_api.GetDisableGravityAttr()
+                        if not gravity_attr:
+                            gravity_attr = env_rigid_body_api.CreateDisableGravityAttr(True)
+                        else:
+                            gravity_attr.Set(True)
+            log.info("Fixed cube for IK generation (kinematic=True, gravity disabled)")
+    except Exception as e:
+        log.warning(f"Could not fix cube via PhysX API: {e}. Cube may move during IK generation.")
+
     # Create IK controller
     diff_ik_cfg = DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls")
     diff_ik_controller = DifferentialIKController(diff_ik_cfg, num_envs=scene.num_envs, device=sim.device)
 
     # Markers
     frame_marker_cfg = FRAME_MARKER_CFG.copy()
-    frame_marker_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
+    frame_marker_cfg.markers["frame"].scale = (0.05, 0.05, 0.05)
     ee_marker = VisualizationMarkers(frame_marker_cfg.replace(prim_path="/Visuals/ee_current"))
     goal_marker = VisualizationMarkers(frame_marker_cfg.replace(prim_path="/Visuals/ee_goal"))
 
@@ -128,6 +182,11 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
 
     log.info(f"Starting IK curriculum generation, collecting {num_samples} samples...")
 
+    angle = torch.tensor(-torch.pi / 2, device=robot.device)
+
+    x_axis_quat = torch.tensor(
+            [torch.cos(angle / 2), torch.sin(angle / 2), 0.0, 0.0], device=robot.device
+    )
     while len(recorded_qpos) < num_samples and iteration < num_samples * 10:
         # Reset every max_iterations steps
         if count % max_iterations == 0:
@@ -146,9 +205,9 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
 
             # Randomly set cube position
             cube_pos_local = torch.zeros(scene.num_envs, 3, device=robot.device)
-            cube_pos_local[:, 0] = torch.rand(scene.num_envs, device=robot.device) * 0.3 + 0.4  # x: 0.4-0.7
-            cube_pos_local[:, 1] = torch.rand(scene.num_envs, device=robot.device) * 0.4 - 0.2  # y: -0.2-0.2
-            cube_pos_local[:, 2] = torch.rand(scene.num_envs, device=robot.device) * 0.1 + 0.6  # z: 0.6-0.7
+            cube_pos_local[:, 0] = torch.rand(scene.num_envs, device=robot.device) * 0.1 + 0.4  # x: 0.4-0.7
+            cube_pos_local[:, 1] = torch.rand(scene.num_envs, device=robot.device) * 0.13 - 0.2  # y: -0.2-0.2
+            cube_pos_local[:, 2] = torch.rand(scene.num_envs, device=robot.device) * 0.0 + 0.65  # z: 0.6-0.7
 
             # Random cube orientation
             cube_quat_local = torch.zeros(scene.num_envs, 4, device=robot.device)
@@ -168,6 +227,9 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         # Get real-time cube position and update IK command
         cube_pos_w = cube.data.root_pos_w  # World coordinates
         cube_quat_w = cube.data.root_quat_w  # World quaternion
+
+        x_axis_quat_expand = x_axis_quat.unsqueeze(0).expand_as(cube_quat_w)
+        cube_quat_w = quat_mul(cube_quat_w, x_axis_quat_expand)
 
         # Get robot root pose
         root_pose_w = robot.data.root_pose_w
@@ -212,43 +274,24 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         # Update marker visualization
         ee_pose_w_current = robot.data.body_pose_w[:, robot_entity_cfg.body_ids[0]].clone()
         # 旋转45度(π/4)绕自身x轴（IsaacSim四元数顺序为wxyz）
-        angle = torch.tensor(torch.pi / 4, device=ee_pose_w_current.device)
         # x轴四元数: [w, x, y, z]
-        x_axis_quat = torch.tensor(
-            [torch.cos(angle / 2), torch.sin(angle / 2), 0.0, 0.0], device=ee_pose_w_current.device
-        )
 
-        # 四元数乘法 (IsaacSim: wxyz)
-        def quat_mul(q, r):
-            # q, r: [..., 4], [w, x, y, z]
-            w1, x1, y1, z1 = q.unbind(-1)
-            w2, x2, y2, z2 = r.unbind(-1)
-            w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
-            x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
-            y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
-            z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
-            return torch.stack([w, x, y, z], dim=-1)
 
-        if ee_pose_w_current.dim() == 2:
-            # [N, 7]
-            pos = ee_pose_w_current[:, :3]
-            quat = ee_pose_w_current[:, 3:7]
-            x_axis_quat_expand = x_axis_quat.unsqueeze(0).expand_as(quat)
-            new_quat = quat_mul(quat, x_axis_quat_expand)
-            ee_pose_w_current = torch.cat([pos, new_quat], dim=1)
-        else:
-            pos = ee_pose_w_current[:3]
-            quat = ee_pose_w_current[3:7]
-            new_quat = quat_mul(quat, x_axis_quat)
-            ee_pose_w_current = torch.cat([pos, new_quat], dim=0)
+        # [N, 7]
+        # pos = ee_pose_w_current[:, :3]
+        # quat = ee_pose_w_current[:, 3:7]
+        # x_axis_quat_expand = x_axis_quat.unsqueeze(0).expand_as(quat)
+        # new_quat = quat_mul(quat, x_axis_quat_expand)
+        # ee_pose_w_current = torch.cat([pos, new_quat], dim=1)
+
         # apply 90 degree rotation about x axis to pose of ee_pose_w_current
         # ee_pose_w
 
         ee_marker.visualize(ee_pose_w_current[:, 0:3], ee_pose_w_current[:, 3:7])
+        # x_axis_quat_expand = x_axis_quat.unsqueeze(0).expand_as(cube_quat_w)
+        # cube_quat_w = quat_mul(cube_quat_w, x_axis_quat_expand)
 
-        # Visualize target (cube position + offset)
-        cube_pos_w = cube.data.root_pos_w
-        cube_quat_w = cube.data.root_quat_w
+
         target_ee_pos_w = cube_pos_w + cube_hand_offset.unsqueeze(0)
         goal_marker.visualize(target_ee_pos_w, cube_quat_w)
 
@@ -279,6 +322,37 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         count += 1
 
     log.info(f"Completed IK curriculum generation: {len(recorded_qpos)} samples collected")
+
+    # Restore cube to original state based on task_cfg
+    try:
+        import omni.usd
+        from pxr import UsdPhysics
+
+        stage = omni.usd.get_context().get_stage()
+        if stage:
+            # Restore original kinematic state for all environments
+            for env_id in range(scene.num_envs):
+                env_cube_prim_path = f"/World/envs/env_{env_id}/{object_name}"
+                env_cube_prim = stage.GetPrimAtPath(env_cube_prim_path)
+                if env_cube_prim.IsValid():
+                    # Use UsdPhysics.RigidBodyAPI instead of PhysxSchema
+                    env_rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(env_cube_prim)
+                    if env_rigid_body_api:
+                        # Restore original state from task_cfg
+                        kinematic_attr = env_rigid_body_api.GetKinematicEnabledAttr()
+                        if kinematic_attr:
+                            kinematic_attr.Set(cube_original_fixed)
+                        else:
+                            env_rigid_body_api.CreateKinematicEnabledAttr(cube_original_fixed)
+
+                        gravity_attr = env_rigid_body_api.GetDisableGravityAttr()
+                        if gravity_attr:
+                            gravity_attr.Set(cube_original_fixed)
+                        else:
+                            env_rigid_body_api.CreateDisableGravityAttr(cube_original_fixed)
+            log.info(f"Restored cube to original state (kinematic={cube_original_fixed})")
+    except Exception as e:
+        log.warning(f"Could not restore cube state via PhysX API: {e}")
 
     # remove visualize markers
     import omni.usd
