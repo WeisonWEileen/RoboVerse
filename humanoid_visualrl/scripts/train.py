@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
     # Generate IK curriculum data before training (for reverse curriculum)
     if hasattr(args, "generate_ik_curriculum") and args.generate_ik_curriculum:
-        num_samples = getattr(args, "ik_curriculum_samples", 200)
+        num_samples = getattr(args, "ik_curriculum_samples", 10)
         threshold = getattr(args, "ik_curriculum_threshold", 0.1)
         max_iterations = getattr(args, "ik_curriculum_max_iterations", 150)
 

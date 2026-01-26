@@ -25,7 +25,7 @@ except ImportError:
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 
 
-def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=200, threshold=0.1, max_iterations=150):
+def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=10, threshold=0.1, max_iterations=150):
     """Generate IK curriculum data by inverse kinematics to cube positions.
 
     This function uses differential IK to move the robot's end-effector to various
@@ -234,7 +234,15 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
 
     log.info(f"Completed IK curriculum generation: {len(recorded_qpos)} samples collected")
 
-    # Return as list of tuples
+    # remove visualize markers
+    import omni.usd
+    stage = omni.usd.get_context().get_stage()
+    if stage:
+        # Remove marker prims if they exist
+        for prim_path in ["/Visuals/ee_current", "/Visuals/ee_goal"]:
+            prim = stage.GetPrimAtPath(prim_path)
+            if prim.IsValid():
+                stage.RemovePrim(prim_path)
     return list(zip(recorded_qpos, recorded_cube_pos))
 
 
