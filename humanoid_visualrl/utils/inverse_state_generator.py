@@ -126,7 +126,7 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
     goal_marker = VisualizationMarkers(frame_marker_cfg.replace(prim_path="/Visuals/ee_goal"))
 
     # Robot-specific configuration for Vega
-    robot_entity_cfg = SceneEntityCfg(robot_name, joint_names=["R_arm_j.*"], body_names=["R_mf_l1"])
+    robot_entity_cfg = SceneEntityCfg(robot_name, joint_names=["R_arm_j.*", "base_yaw_joint"], body_names=["R_mf_l1"])
 
     robot_entity_cfg.resolve(scene)
 
@@ -202,9 +202,18 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
             cube_pos_local[:, 1] = torch.rand(scene.num_envs, device=robot.device) * 0.13 - 0.2  # y: -0.2-0.2
             cube_pos_local[:, 2] = torch.rand(scene.num_envs, device=robot.device) * 0.0 + 0.65  # z: 0.6-0.7
 
-            recorded_cube_pos = torch.tensor(
-                [0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522], device=robot.device
-            ).repeat(scene.num_envs, 1)
+            # apply 90 degree rotation about z axis to 0.5650, 0.9677, 0.0, 0.0, -0.2522
+            q_cube = torch.tensor([0.9677, 0.0, 0.0, -0.2522], device=robot.device)
+            r = torch.tensor([0.7071, 0.0, 0.0, 0.7071], device=robot.device)
+            # cube_quat_local = cube_quat_local.repeat(scene.num_envs, 1)
+            q____ = quat_mul(q_cube, r)
+
+            # recorded_cube_pos = torch.tensor(
+            #     [0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522], device=robot.device
+            # ).repeat(scene.num_envs, 1)
+            recorded_cube_pos = torch.tensor([0.488, 0.142, 0.5650, q____[0], q____[1], q____[2], q____[3]], device=robot.device).repeat(
+                scene.num_envs, 1
+            )
             # recorded_cube_pos = torch.tensor(
             #     [0.488, 0.142, 0.5650, 1.0, 0.0, 0.0, 0.0], device=robot.device
             # ).repeat(scene.num_envs, 1)
@@ -218,8 +227,8 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
             cube_pos_w = cube_pos_local + scene.env_origins
             cube_pose = torch.cat([cube_pos_w, cube_quat_local], dim=-1)
             env_ids = torch.arange(scene.num_envs, device=sim.device)
-            cube.write_root_pose_to_sim(cube_pose, env_ids=env_ids)
-            # cube.write_root_pose_to_sim(recorded_cube_pos, env_ids=env_ids)
+            # cube.write_root_pose_to_sim(cube_pose, env_ids=env_ids)
+            cube.write_root_pose_to_sim(recorded_cube_pos, env_ids=env_ids)
             cube.write_root_velocity_to_sim(
                 torch.zeros((scene.num_envs, 6), device=sim.device, dtype=torch.float32),
                 env_ids=env_ids,
@@ -231,13 +240,19 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         cube_quat_w = cube.data.root_quat_w  # World quaternion
 
         x_axis_quat_expand = x_axis_quat.unsqueeze(0).expand_as(cube_quat_w)
+        # cube_quat_w = quat_mul(cube_quat_w, x_axis_quat_expand)
 
+        # Get robot root pose
         root_pose_w = robot.data.root_pose_w
         root_pos_w = root_pose_w[:, 0:3]
         root_quat_w = root_pose_w[:, 3:7]
+
+        # Compute target end-effector position relative to cube (with offset)
+        # target_ee_pos_w = cube_pos_w + cube_hand_offset.unsqueeze(0)
         target_ee_pos_w = cube_pos_w
         target_ee_quat_w = cube_quat_w  # Use cube orientation
 
+        # Convert target EE pose from world frame to root frame (for IK controller)
         target_ee_pos_b, target_ee_quat_b = subtract_frame_transforms(
             root_pos_w, root_quat_w, target_ee_pos_w, target_ee_quat_w
         )
@@ -245,6 +260,8 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         # Set IK command (in root frame) based on real-time cube position
         ik_commands[:, 0:3] = target_ee_pos_b
         ik_commands[:, 3:7] = target_ee_quat_b
+        # dummy for ik commands
+        # ik_commands[:, 3:7] = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device).repeat(scene.num_envs, 1)
 
         diff_ik_controller.set_command(ik_commands)
 
@@ -259,8 +276,11 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         ee_pose_w_current = torch.cat([pos, new_quat], dim=1)
         ee_pose_w = ee_pose_w_current
 
+
+
         joint_pos = robot.data.joint_pos[:, robot_entity_cfg.joint_ids]
 
+        # Compute current EE frame in root frame
         ee_pos_b, ee_quat_b = subtract_frame_transforms(
             root_pose_w[:, 0:3], root_pose_w[:, 3:7], ee_pose_w[:, 0:3], ee_pose_w[:, 3:7]
         )
@@ -273,6 +293,10 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
 
         scene.write_data_to_sim()
         sim.step()
+        scene.update(sim_dt)
+
+
+        ee_marker.visualize(ee_pose_w_current[:, 0:3], ee_pose_w_current[:, 3:7])
         target_ee_pos_w = cube_pos_w
         goal_marker.visualize(target_ee_pos_w, cube_quat_w)
 
