@@ -87,6 +87,9 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         self.init_states[0]["robots"]["vega"]["dof_pos"].update({
             "torso_j2": 0.3,
         })
+        self.init_states[0]["robots"]["vega"]["dof_pos"].update({
+            "R_arm_j4": -2.798,
+        })
 
         self.randomize_box = True
         self.randomize_box_xy_range_scale = 0.02
