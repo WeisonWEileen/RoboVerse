@@ -127,7 +127,7 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
 
     # Robot-specific configuration for Vega
     robot_entity_cfg = SceneEntityCfg(
-        robot_name, joint_names=["base_yaw_joint", "R_arm_j.*"], body_names=["R_mf_l1"]
+        robot_name, joint_names=[ "R_arm_j.*"], body_names=["R_mf_l1"]
     )
     
     robot_entity_cfg.resolve(scene)
@@ -253,7 +253,11 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
 
         # Set IK command (in root frame) based on real-time cube position
         ik_commands[:, 0:3] = target_ee_pos_b
-        ik_commands[:, 3:7] = target_ee_quat_b
+        ik_commands[:, 3:7] = target_ee_quat_b 
+        # dummy for ik commands
+        # ik_commands[:, 3:7] = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device).repeat(scene.num_envs, 1)
+
+
         diff_ik_controller.set_command(ik_commands)
 
         # Compute IK
@@ -277,7 +281,7 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         joint_pos_des = diff_ik_controller.compute(ee_pos_b, ee_quat_b, jacobian, joint_pos)
         # Apply actions
         robot.set_joint_position_target(joint_pos_des, joint_ids=robot_entity_cfg.joint_ids)
-        robot.set_joint_position_target(fixed_joint_pos, joint_ids=fixed_joint_ids)
+        # robot.set_joint_position_target(fixed_joint_pos, joint_ids=fixed_joint_ids)
 
         scene.write_data_to_sim()
         sim.step()
