@@ -55,30 +55,35 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
     def __post_init__(self):
         super().__post_init__()
         self.objects[1].size = (0.045, 0.045, 0.045)
-        self.objects.append(
-            RigidObjCfg(
-                name="insertion_female_box",
-                scale=(1, 1, 1),
-                physics=PhysicStateType.GEOM,  # 改为 GEOM 以固定物体（RIGIDBODY 会强制 fix_base_link=False）
-                usd_path="roboverse_data/objects/female_box_bigger_flattened_convex.usd",
-                fix_base_link=True,
-                default_position=(0.55, 0.1, 0.51),
-                # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
-                default_orientation=(0.8660254, 0.0, 0.0, 0.5),
-                collision_enabled=True,
-                # mass_density=10000,
-            )
-        )
+        # self.objects.append(
+        #     RigidObjCfg(
+        #         name="insertion_female_box",
+        #         scale=(1, 1, 1),
+        #         physics=PhysicStateType.GEOM,  # 改为 GEOM 以固定物体（RIGIDBODY 会强制 fix_base_link=False）
+        #         usd_path="roboverse_data/objects/female_box_bigger_flattened_convex.usd",
+        #         fix_base_link=True,
+        #         default_position=(0.55, 0.1, 0.51),
+        #         # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
+        #         default_orientation=(0.8660254, 0.0, 0.0, 0.5),
+        #         collision_enabled=True,
+        #         # mass_density=10000,
+        #     )
+        # )
 
-        self.init_states[0]["objects"]["insertion_female_box"] = {
-            "pos": torch.tensor([0.55, 0.1, 0.51]),
-            "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.5]),
-        }
-
-        # self.init_states[0]["objects"]["object"] = {
-        #     "pos": torch.tensor([0.55, 0.1, 0.51]),
-        #     "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.51]),
+        # self.init_states[0]["objects"]["insertion_female_box"] = {
+        #     "pos": torch.tensor([0.55, 0.1, 0.53]),
+        #     "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.5]),
         # }
+
+        self.recorded_cube_pos = torch.tensor([0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522])
+
+        self.init_states[0]["objects"]["object"] = {
+            # "pos": torch.tensor([0.55, 0.1, 0.54]),
+            "pos": self.recorded_cube_pos[:3],
+            # "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.51]),
+            "rot": self.recorded_cube_pos[3:7],
+        }
+        
         self.init_states[0]["robots"]["vega"]["dof_pos"].update({
             "torso_j2": 0.3,
         })

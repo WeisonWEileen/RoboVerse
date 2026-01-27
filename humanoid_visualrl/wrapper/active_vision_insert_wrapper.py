@@ -22,8 +22,8 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
         super().__init__(*args, **kwargs)
 
         # Initialize box center positions for insertion task
-        self.box_center_x = self.cfg.init_states[0]["objects"]["insertion_female_box"]["pos"][0]
-        self.box_center_y = self.cfg.init_states[0]["objects"]["insertion_female_box"]["pos"][1]
+        # self.box_center_x = self.cfg.init_states[0]["objects"]["insertion_female_box"]["pos"][0]
+        # self.box_center_y = self.cfg.init_states[0]["objects"]["insertion_female_box"]["pos"][1]
 
         self.yaw_offset = math.pi / 3
 

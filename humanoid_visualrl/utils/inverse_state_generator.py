@@ -73,7 +73,7 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
     scene = handler.scene
     sim = handler.sim
 
-    robot_name = task_cfg.robot
+    robot_name = "vega"
     object_name = "object"
 
     robot = scene.articulations[robot_name]
@@ -88,38 +88,32 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
             cube_original_fixed = obj_cfg.fix_base_link
             break
 
-    try:
-        # Fix the cube for IK generation using UsdPhysics API
-        import omni.usd
-        from pxr import UsdPhysics
+    # try:
+    # Fix the cube for IK generation using UsdPhysics API
+    import omni.usd
+    from pxr import UsdPhysics
 
-        stage = omni.usd.get_context().get_stage()
-        if stage:
-            # Fix the cube for IK generation
-            # Set kinematic_enabled=True and disable_gravity=True for all environments
-            for env_id in range(scene.num_envs):
-                env_cube_prim_path = f"/World/envs/env_{env_id}/{object_name}"
-                env_cube_prim = stage.GetPrimAtPath(env_cube_prim_path)
-                if env_cube_prim.IsValid():
-                    # Use UsdPhysics.RigidBodyAPI instead of PhysxSchema
-                    env_rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(env_cube_prim)
-                    if env_rigid_body_api:
-                        # Create or set kinematic enabled attribute
-                        kinematic_attr = env_rigid_body_api.GetKinematicEnabledAttr()
-                        if not kinematic_attr:
-                            kinematic_attr = env_rigid_body_api.CreateKinematicEnabledAttr(True)
-                        else:
-                            kinematic_attr.Set(True)
-
-                        # Create or set disable gravity attribute
-                        gravity_attr = env_rigid_body_api.GetDisableGravityAttr()
-                        if not gravity_attr:
-                            gravity_attr = env_rigid_body_api.CreateDisableGravityAttr(True)
-                        else:
-                            gravity_attr.Set(True)
-            log.info("Fixed cube for IK generation (kinematic=True, gravity disabled)")
-    except Exception as e:
-        log.warning(f"Could not fix cube via PhysX API: {e}. Cube may move during IK generation.")
+    stage = omni.usd.get_context().get_stage()
+    if stage:
+        # Fix the cube for IK generation
+        # Set kinematic_enabled=True and disable_gravity=True for all environments
+        for env_id in range(scene.num_envs):
+            env_cube_prim_path = f"/World/envs/env_{env_id}/{object_name}"
+            env_cube_prim = stage.GetPrimAtPath(env_cube_prim_path)
+            if env_cube_prim.IsValid():
+                # Use UsdPhysics.RigidBodyAPI instead of PhysxSchema
+                env_rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(env_cube_prim)
+                if env_rigid_body_api:
+                    # Create or set kinematic enabled attribute
+                    # When kinematic is enabled, gravity is automatically disabled
+                    kinematic_attr = env_rigid_body_api.GetKinematicEnabledAttr()
+                    if not kinematic_attr:
+                        kinematic_attr = env_rigid_body_api.CreateKinematicEnabledAttr(True)
+                    else:
+                        kinematic_attr.Set(True)
+        log.info("Fixed cube for IK generation (kinematic=True, gravity disabled)")
+    # except Exception as e:
+    #     log.warning(f"Could not fix cube via PhysX API: {e}. Cube may move during IK generation.")
 
     # Create IK controller
     diff_ik_cfg = DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls")
@@ -132,7 +126,10 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
     goal_marker = VisualizationMarkers(frame_marker_cfg.replace(prim_path="/Visuals/ee_goal"))
 
     # Robot-specific configuration for Vega
-    robot_entity_cfg = SceneEntityCfg(robot_name, joint_names=["R_arm_j.*"], body_names=["R_mf_l1"])
+    robot_entity_cfg = SceneEntityCfg(
+        robot_name, joint_names=["base_yaw_joint", "R_arm_j.*"], body_names=["R_mf_l1"]
+    )
+    
     robot_entity_cfg.resolve(scene)
 
     # Get end-effector index
@@ -182,11 +179,9 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
 
     log.info(f"Starting IK curriculum generation, collecting {num_samples} samples...")
 
-    angle = torch.tensor(-torch.pi / 2, device=robot.device)
+    angle = torch.tensor( torch.pi / 2, device=robot.device)
 
-    x_axis_quat = torch.tensor(
-            [torch.cos(angle / 2), torch.sin(angle / 2), 0.0, 0.0], device=robot.device
-    )
+    x_axis_quat = torch.tensor([ 0.0, 0.0, torch.cos(angle / 2), -torch.sin(angle / 2)], device=robot.device)
     while len(recorded_qpos) < num_samples and iteration < num_samples * 10:
         # Reset every max_iterations steps
         if count % max_iterations == 0:
@@ -209,6 +204,15 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
             cube_pos_local[:, 1] = torch.rand(scene.num_envs, device=robot.device) * 0.13 - 0.2  # y: -0.2-0.2
             cube_pos_local[:, 2] = torch.rand(scene.num_envs, device=robot.device) * 0.0 + 0.65  # z: 0.6-0.7
 
+            recorded_cube_pos = torch.tensor(
+                [0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522], device=robot.device
+            ).repeat(scene.num_envs, 1)
+            # recorded_cube_pos = torch.tensor(
+            #     [0.488, 0.142, 0.5650, 1.0, 0.0, 0.0, 0.0], device=robot.device
+            # ).repeat(scene.num_envs, 1)
+            recorded_cube_pos[:, :3] += scene.env_origins
+            
+
             # Random cube orientation
             cube_quat_local = torch.zeros(scene.num_envs, 4, device=robot.device)
             cube_quat_local[:, 3] = 1.0  # Default quaternion (w=1)
@@ -217,7 +221,8 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
             cube_pos_w = cube_pos_local + scene.env_origins
             cube_pose = torch.cat([cube_pos_w, cube_quat_local], dim=-1)
             env_ids = torch.arange(scene.num_envs, device=sim.device)
-            cube.write_root_pose_to_sim(cube_pose, env_ids=env_ids)
+            # cube.write_root_pose_to_sim(cube_pose, env_ids=env_ids)
+            cube.write_root_pose_to_sim(recorded_cube_pos, env_ids=env_ids)
             cube.write_root_velocity_to_sim(
                 torch.zeros((scene.num_envs, 6), device=sim.device, dtype=torch.float32),
                 env_ids=env_ids,
@@ -229,7 +234,7 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         cube_quat_w = cube.data.root_quat_w  # World quaternion
 
         x_axis_quat_expand = x_axis_quat.unsqueeze(0).expand_as(cube_quat_w)
-        cube_quat_w = quat_mul(cube_quat_w, x_axis_quat_expand)
+        # cube_quat_w = quat_mul(cube_quat_w, x_axis_quat_expand)
 
         # Get robot root pose
         root_pose_w = robot.data.root_pose_w
@@ -237,8 +242,8 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         root_quat_w = root_pose_w[:, 3:7]
 
         # Compute target end-effector position relative to cube (with offset)
-        # Target EE position in world frame = cube_pos_w + cube_hand_offset
-        target_ee_pos_w = cube_pos_w + cube_hand_offset.unsqueeze(0)
+        # target_ee_pos_w = cube_pos_w + cube_hand_offset.unsqueeze(0)
+        target_ee_pos_w = cube_pos_w 
         target_ee_quat_w = cube_quat_w  # Use cube orientation
 
         # Convert target EE pose from world frame to root frame (for IK controller)
@@ -254,6 +259,13 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         # Compute IK
         jacobian = robot.root_physx_view.get_jacobians()[:, ee_jacobi_idx, :, robot_entity_cfg.joint_ids]
         ee_pose_w = robot.data.body_pose_w[:, robot_entity_cfg.body_ids[0]]
+
+        pos = ee_pose_w[:, :3]
+        quat = ee_pose_w[:, 3:7]
+        x_axis_quat_expand = x_axis_quat.unsqueeze(0).expand_as(quat)
+        new_quat = quat_mul(quat, x_axis_quat_expand)
+        ee_pose_w_current = torch.cat([pos, new_quat], dim=1)
+
         joint_pos = robot.data.joint_pos[:, robot_entity_cfg.joint_ids]
 
         # Compute current EE frame in root frame
@@ -272,10 +284,9 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         scene.update(sim_dt)
 
         # Update marker visualization
-        ee_pose_w_current = robot.data.body_pose_w[:, robot_entity_cfg.body_ids[0]].clone()
+        # ee_pose_w_current = robot.data.body_pose_w[:, robot_entity_cfg.body_ids[0]].clone()
         # 旋转45度(π/4)绕自身x轴（IsaacSim四元数顺序为wxyz）
         # x轴四元数: [w, x, y, z]
-
 
         # [N, 7]
         # pos = ee_pose_w_current[:, :3]
@@ -291,8 +302,8 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
         # x_axis_quat_expand = x_axis_quat.unsqueeze(0).expand_as(cube_quat_w)
         # cube_quat_w = quat_mul(cube_quat_w, x_axis_quat_expand)
 
-
-        target_ee_pos_w = cube_pos_w + cube_hand_offset.unsqueeze(0)
+        # target_ee_pos_w = cube_pos_w + cube_hand_offset.unsqueeze(0)
+        target_ee_pos_w = cube_pos_w 
         goal_marker.visualize(target_ee_pos_w, cube_quat_w)
 
         # Check for success and record
@@ -300,7 +311,8 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
             ee_pose_w = robot.data.body_state_w[:, robot_entity_cfg.body_ids[0], 0:7]
             # Target position is cube position + offset
             cube_pos_w_current = cube.data.root_pos_w
-            target_pos = cube_pos_w_current + cube_hand_offset.unsqueeze(0)
+            # target_pos = cube_pos_w_current + cube_hand_offset.unsqueeze(0)
+            target_pos = cube_pos_w_current 
             current_pos = ee_pose_w[:, 0:3]
             pos_diff = torch.norm(current_pos - target_pos, dim=1)
 
@@ -324,35 +336,30 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
     log.info(f"Completed IK curriculum generation: {len(recorded_qpos)} samples collected")
 
     # Restore cube to original state based on task_cfg
-    try:
-        import omni.usd
-        from pxr import UsdPhysics
+    # try:
+    import omni.usd
+    from pxr import UsdPhysics
 
-        stage = omni.usd.get_context().get_stage()
-        if stage:
-            # Restore original kinematic state for all environments
-            for env_id in range(scene.num_envs):
-                env_cube_prim_path = f"/World/envs/env_{env_id}/{object_name}"
-                env_cube_prim = stage.GetPrimAtPath(env_cube_prim_path)
-                if env_cube_prim.IsValid():
-                    # Use UsdPhysics.RigidBodyAPI instead of PhysxSchema
-                    env_rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(env_cube_prim)
-                    if env_rigid_body_api:
-                        # Restore original state from task_cfg
-                        kinematic_attr = env_rigid_body_api.GetKinematicEnabledAttr()
-                        if kinematic_attr:
-                            kinematic_attr.Set(cube_original_fixed)
-                        else:
-                            env_rigid_body_api.CreateKinematicEnabledAttr(cube_original_fixed)
-
-                        gravity_attr = env_rigid_body_api.GetDisableGravityAttr()
-                        if gravity_attr:
-                            gravity_attr.Set(cube_original_fixed)
-                        else:
-                            env_rigid_body_api.CreateDisableGravityAttr(cube_original_fixed)
-            log.info(f"Restored cube to original state (kinematic={cube_original_fixed})")
-    except Exception as e:
-        log.warning(f"Could not restore cube state via PhysX API: {e}")
+    stage = omni.usd.get_context().get_stage()
+    if stage:
+        # Restore original kinematic state for all environments
+        for env_id in range(scene.num_envs):
+            env_cube_prim_path = f"/World/envs/env_{env_id}/{object_name}"
+            env_cube_prim = stage.GetPrimAtPath(env_cube_prim_path)
+            if env_cube_prim.IsValid():
+                # Use UsdPhysics.RigidBodyAPI instead of PhysxSchema
+                env_rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(env_cube_prim)
+                if env_rigid_body_api:
+                    # Restore original state from task_cfg
+                    # When kinematic is disabled, gravity will be re-enabled automatically
+                    kinematic_attr = env_rigid_body_api.GetKinematicEnabledAttr()
+                    if kinematic_attr:
+                        kinematic_attr.Set(cube_original_fixed)
+                    else:
+                        env_rigid_body_api.CreateKinematicEnabledAttr(cube_original_fixed)
+        log.info(f"Restored cube to original state (kinematic={cube_original_fixed})")
+    # except Exception as e:
+    #     log.warning(f"Could not restore cube state via PhysX API: {e}")
 
     # remove visualize markers
     import omni.usd

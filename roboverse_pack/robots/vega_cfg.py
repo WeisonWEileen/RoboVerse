@@ -262,7 +262,7 @@ class VegaCfg(RobotCfg):
         "L_arm_j1": 3.06,
         "L_arm_j2": 0.00,
         "L_arm_j3": 0.0,
-        "L_arm_j4": -2.1,
+        "L_arm_j4": -2.2,
         "L_arm_j5": 0.0,
         "L_arm_j6": -0.71,
         "L_arm_j7": -0.13,
