@@ -9,6 +9,8 @@ from metasim.task.registry import register_task
 from metasim.utils.math import quat_from_euler_xyz
 import math
 from metasim.types import TensorState
+import numpy as np
+import os
 
 
 @register_task("active_vision_insertion")
@@ -28,6 +30,22 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
         self.yaw_offset = math.pi / 3
 
         self.recorded_cube_pos = torch.tensor([0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522], device=self.device)
+
+        npz_path = "/home/panwei/RoboVerse/ik_curriculum_data_merged.npz"
+        if os.path.exists(npz_path):
+            data = np.load(npz_path)
+            recorded_qpos_raw = torch.tensor(data["qpos"], device=self.device, requires_grad=False)  # [400, num_joints]
+            # from isaacsim deleted joint version to none deleted version
+            self.recorded_qpos = recorded_qpos_raw[:, self.env._none_static_joint_idx_reindexed]
+            self.recorded_cube_pos = torch.tensor(data["cube_pos"], device=self.device, requires_grad=False)  # [400, 7]
+
+            # # Filter out data where sqrt(x^2 + y^2) < threshold
+            # threshold = self.cfg.init_states[0]["objects"]["object"]["pos"][0]
+            # cube_xy_dist = torch.sqrt(self.recorded_cube_pos[:, 0] ** 2 + self.recorded_cube_pos[:, 1] ** 2)
+            # mask = cube_xy_dist >= threshold
+            # original_count = len(self.recorded_qpos)
+            # self.recorded_qpos = self.recorded_qpos[mask]
+            # self.recorded_cube_pos = self.recorded_cube_pos[mask]
 
     def _pre_reset_hook(self, env_ids=None):
         # return
@@ -76,43 +94,38 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
                         # Randomly select indices from recorded poses
                         selected_indices = torch.randint(0, len(self.recorded_qpos), (num_stretch,), device=self.device)
 
-                        # Set joint positions from recorded data
-                        # self.init_states.robots["vega"].joint_pos[stretch_env_ids, :][:, self.actuated_local_index] = (
-                        #     self.recorded_qpos[selected_indices, :]
-                        # )
-
-                        # Override base_joint_index with object_relative_yaw
-                        # self.init_states.robots["vega"].joint_pos[stretch_env_ids, self.base_joint_index] = (
-                        #     object_relative_yaw[mask] - 0.3
-                        # )
 
                         # Directly copy recorded cube positions to object init_state
                         self.init_states.objects["object"].root_state[stretch_env_ids, :7] = (
-                            self.recorded_cube_pos.repeat(num_stretch, 1)
+                            self.recorded_cube_pos[selected_indices, :]
                         )
 
+                        self.init_states.robots["vega"].joint_pos[stretch_env_ids, :]=self.recorded_qpos[selected_indices, :]
+
     def success_checker(self, object_pose_buf: torch.Tensor):
-        if self.cfg.phase == 2:
-            # check if the object is in the hand
-            object_x_thres = object_pose_buf[:, 0] > self.cfg.x_threshold
-            object_z_thres = object_pose_buf[:, 2] > self.cfg.z_threshold
-            success = object_x_thres & object_z_thres
-            return success
-        if self.cfg.phase == 1:
-            # hight enough and in the hand
-            # object_x_thres = object_pose_buf[:, 0] > 0.50
-            object_z_thres = object_pose_buf[:, 2] > self.cfg.z_threshold
-            success = object_z_thres
-            return success
-        else:
-            # num envs false tensor
-            return torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        with torch.no_grad():
+        
+            if self.cfg.phase == 2:
+                # check if the object is in the hand
+                object_x_thres = object_pose_buf[:, 1] > self.cfg.y_threshold
+                object_z_thres = object_pose_buf[:, 2] > self.cfg.z_threshold
+                success = object_x_thres & object_z_thres
+                return success
+            if self.cfg.phase == 1:
+                # hight enough and in the hand
+                # object_x_thres = object_pose_buf[:, 0] > 0.50
+                object_z_thres = object_pose_buf[:, 2] > self.cfg.z_threshold
+                success = object_z_thres
+                return success
+            else:
+                # num envs false tensor
+                return torch.zeros(self.num_envs, device=self.device, dtype=torch.bool, requires_grad=False)
 
     def _check_reset(self):
         terminate = self.cfg.init_states[0]["objects"]["object"]["pos"][2] - self.object_pose_buf[:, 2] > 0.1
         too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
         self.success = self.success_checker(self.object_pose_buf)
-        self.reset_buf = self.timeout_buf | terminate | too_far | self.success
+        self.reset_buf = self.timeout_buf | terminate | too_far  | self.success
 
     
     def _reward_success(self, tensor_state: TensorState, robot_name: str, cfg):

@@ -31,7 +31,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         "action_smoothness": -0.1 * scale,
         "energy_consumption": -3e-7,
         "finger_close_to_object": 1.3 * scale,
-        "success": 100.0 * scale,
+        # "success": 100.0 * scale,
         "lift_object": 100.0 * scale,
     }
 
@@ -43,39 +43,39 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         "finger_close_to_object": 1.0 * scale,
         "contact_force": 0.8 * scale,
         "contact_force_upward": 0.8 * scale,
-        # "lift_object": 100.0 * scale,
+        "lift_object": 100.0 * scale,
         "success": 100.0 * scale,
     }
 
     stage_finger_close_to_object_change_thres = 0.05
     # success threshold
-    x_threshold = 0.50
+    y_threshold = 0.50
     z_threshold = 0.55
 
     def __post_init__(self):
         super().__post_init__()
         self.objects[1].size = (0.045, 0.045, 0.045)
-        # self.objects.append(
-        #     RigidObjCfg(
-        #         name="insertion_female_box",
-        #         scale=(1, 1, 1),
-        #         physics=PhysicStateType.GEOM,  # 改为 GEOM 以固定物体（RIGIDBODY 会强制 fix_base_link=False）
-        #         usd_path="roboverse_data/objects/female_box_bigger_flattened_convex.usd",
-        #         fix_base_link=True,
-        #         default_position=(0.55, 0.1, 0.51),
-        #         # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
-        #         default_orientation=(0.8660254, 0.0, 0.0, 0.5),
-        #         collision_enabled=True,
-        #         # mass_density=10000,
-        #     )
-        # )
+        self.objects.append(
+            RigidObjCfg(
+                name="insertion_female_box",
+                scale=(1, 1, 1),
+                physics=PhysicStateType.GEOM,  # 改为 GEOM 以固定物体（RIGIDBODY 会强制 fix_base_link=False）
+                usd_path="roboverse_data/objects/female_box_bigger_flattened_convex.usd",
+                fix_base_link=True,
+                default_position=(0.55, 0.1, 0.51),
+                # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
+                default_orientation=(0.8660254, 0.0, 0.0, 0.5),
+                collision_enabled=True,
+                # mass_density=10000,
+            )
+        )
 
-        # self.init_states[0]["objects"]["insertion_female_box"] = {
-        #     "pos": torch.tensor([0.55, 0.1, 0.53]),
-        #     "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.5]),
-        # }
+        self.init_states[0]["objects"]["insertion_female_box"] = {
+            "pos": torch.tensor([0.55, 0.1, 0.53], requires_grad=False),
+            "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.5], requires_grad=False),
+        }
 
-        self.recorded_cube_pos = torch.tensor([0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522])
+        self.recorded_cube_pos = torch.tensor([0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522], requires_grad=False)
 
         self.init_states[0]["objects"]["object"] = {
             # "pos": torch.tensor([0.55, 0.1, 0.54]),
@@ -83,6 +83,9 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
             # "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.51]),
             "rot": self.recorded_cube_pos[3:7],
         }
+
+        # self.curriculum_object_mass_flag = False
+        # self.objects[1].mass = 0.1
         
         self.init_states[0]["robots"]["vega"]["dof_pos"].update({
             "torso_j2": 0.3,
@@ -109,6 +112,10 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
         self.robot.modified_joint_limits.update({
             "torso_j2": (0.00, 0.60),
+        })
+
+        self.robot.action_scale.update({
+            "R_th_j1": 0.6 * self.robot.scale_factor,
         })
 
         self.robot.action_scale.update({

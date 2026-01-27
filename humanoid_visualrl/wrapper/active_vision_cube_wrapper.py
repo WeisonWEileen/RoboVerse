@@ -136,6 +136,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.mass_curriculum_trigger_count = 0
 
         # Load recorded qpos and cube_pos from npz file
+        # the data that cube embedded into the box
         npz_path = "/home/panwei/RoboVerse/humanoid_visualrl/ik/qpos/recorded_qpos_1.npz"
         if os.path.exists(npz_path):
             data = np.load(npz_path)
