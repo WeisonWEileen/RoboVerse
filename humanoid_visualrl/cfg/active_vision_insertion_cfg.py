@@ -49,7 +49,8 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
     stage_finger_close_to_object_change_thres = 0.05
     # success threshold
-    y_threshold = 0.50
+    y_threshold = 0.158
+    # x_threshold = 0.55
     z_threshold = 0.55
 
     def __post_init__(self):
@@ -60,7 +61,9 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
                 name="insertion_female_box",
                 scale=(1, 1, 1),
                 physics=PhysicStateType.GEOM,  # 改为 GEOM 以固定物体（RIGIDBODY 会强制 fix_base_link=False）
-                usd_path="roboverse_data/objects/female_box_bigger_flattened_convex.usd",
+                usd_path="Part_new.usd",
+                # usd_path="roboverse_data/objects/female_box_bigger_hole.usd",
+                # usd_path="roboverse_data/objects/female_box_bigger_flattened_convex.usd",
                 fix_base_link=True,
                 default_position=(0.55, 0.1, 0.51),
                 # default_orientation=(0.7071, 0.0, 0.0, 0.7071),
@@ -84,8 +87,8 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
             "rot": self.recorded_cube_pos[3:7],
         }
 
-        # self.curriculum_object_mass_flag = False
-        # self.objects[1].mass = 0.1
+        self.curriculum_object_mass_flag = False
+        self.objects[1].mass = 0.1
         
         self.init_states[0]["robots"]["vega"]["dof_pos"].update({
             "torso_j2": 0.3,

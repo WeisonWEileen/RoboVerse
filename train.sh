@@ -27,9 +27,9 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --enable_opencv_display \
     --phase 2 \
     --wandb \
-    # --resume \
-    # --checkpoint 2400 \
-    # --load_run 2026_0122_221516 \
+    --resume \
+    --checkpoint 1000 \
+    --load_run 2026_0127_161220 \
 
     # --resume \
     # --checkpoint 2700 \

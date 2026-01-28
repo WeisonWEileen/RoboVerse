@@ -19,14 +19,14 @@ else
 fi
 
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
-    --num_envs 124 \
+    --num_envs 128 \
     --task "active_vision_insertion" \
     --run_name "insertion" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
     --phase 2 \
-    --enable_opencv_display 
-    # --wandb \
+    --enable_opencv_display \
+    --wandb 
 
     # --resume \
     # --load_run "2026_0122_221516" \
