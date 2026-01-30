@@ -288,7 +288,7 @@ class BaseTableHumanoidTaskCfg:
             collision_enabled=True,
             fix_base_link=False,
             default_position=(0.55, 0.1, 0.9 + 0.06 / 2 + 0.01),
-            mass=20,  # 增加质量以确保更好的物理行为
+            mass=0.1,  # 增加质量以确保更好的物理行为
         ),
     ]
 
@@ -385,9 +385,10 @@ class BaseTableHumanoidTaskCfg:
         "action_smoothness": -0.1 * scale,
         "energy_consumption": -3e-7,
         "finger_close_to_object": 0.7 * scale,
-        "contact_force": 0.8 * scale,
-        "contact_force_upward": 0.8 * scale,
-        "lift_object": 200.0 * scale,
+        "contact_force": 0.3 * scale,
+        "contact_force_upward": 0.3 * scale,
+        "lift_object": 100.0 * scale,
+        "success": 200.0 * scale,
     }
 
     frame_stack = 1
@@ -415,7 +416,7 @@ class BaseTableHumanoidTaskCfg:
     delta_control: bool = True
     """Whether to use delta control mode. If True, actions are accumulated. If False, actions are absolute positions."""
 
-    task_name = "active_vision"
+    task_name = "active_vision_cube"
 
     from metasim.scenario.cameras import PinholeCameraCfg
 
@@ -496,14 +497,23 @@ class BaseTableHumanoidTaskCfg:
     occlude_cube_yaw_range = 0.8
 
     # initially give large mass to encourage contact, and then linearly decrease to 0.05
-    curriculum_object_mass_flag = True
+    curriculum_object_mass_flag = False
     curriculum_object_mass_range = (0.1, objects[1].mass)
     curriculum_object_mass_begin_iter = 0
     curriculum_object_mass_end_iter = 200
     curriculum_object_mass_update_interval = 200
-    stage_finger_close_to_object_change_thres = 0.25
+    stage_finger_close_to_object_change_thres = 0.30
     vision4times_slowdown = False
     vision_slow_down_scale = 4
+
+
+    # success threshold
+    success_thres_z = 0.65
+    # curriculum 
+    inverse_curriculum_thres_down_z_range = (0.55, 0.59)
+
+
+
 
     def __post_init__(self):
         if self.phase == 0:
@@ -527,6 +537,8 @@ class BaseTableHumanoidTaskCfg:
         self.randomize_object_radius = self.init_states[0]["objects"]["object"]["pos"][0]
         self.randomize_object_radius_range = 0.0
 
+
+
         # if self.finetune:
         #     # for finetuning, use less frequent curriculum update and less yaw range
         #     # self.update_curriculum_iteration = 100
@@ -545,7 +557,7 @@ class BaseTableHumanoidTaskCfg:
         #         self.reward_weights["grasp_binary"] = 5.0
         #         # reduce randomize
         #         self.randomize_object_radius_range = 0.05
-        #         self.randomize_object_radius = self.randomize_object_radius - 0.04
+        #         self.randomize_object_radius 6= self.randomize_object_radius - 0.04
 
         # else:
         # self.update_curriculum_iteration = 400
@@ -556,7 +568,7 @@ class BaseTableHumanoidTaskCfg:
         self.curriculum_object_yaw = True
         self.curriculum_initial_object_yaw_range = 0.3
         # self.randomize_object_yaw_range = 1.8
-        self.randomize_object_yaw_range = 0.0
+        self.randomize_object_yaw_range = 1.8
         self.warm_up_beforecurriculum = 1000  #  10000 / 96 =  104 iteration
         self.curriculum_avg_thres_higher = 0.93
         self.curriculum_avg_thres_lower = 0.85
@@ -772,7 +784,7 @@ class BaseTableHumanoidTaskCfg:
                         # "torso_j2": 0.95,
                         # "torso_j3": 0.00,
                         # Right arm - neutral pose
-                        "R_arm_j1": -2.06,
+                        "R_arm_j1": -1.86,
                         "R_arm_j2": -0.21,
                         "R_arm_j3": -0.13,
                         # "R_arm_j4": -2.59,

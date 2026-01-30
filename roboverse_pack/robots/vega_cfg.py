@@ -245,7 +245,7 @@ class VegaCfg(RobotCfg):
         "base_yaw_joint": 0.0,
         "head_j2": 0.0,
         "head_j3": 0.0,
-        "R_arm_j1": -2.06,
+        "R_arm_j1": -1.86,
         "R_arm_j2": -0.21,
         "R_arm_j3": -0.13,
         # "R_arm_j4": -2.59,
@@ -361,6 +361,8 @@ class VegaCfg(RobotCfg):
     )
 
     right_arm_joints = {
+        "R_arm_j1",
+        "R_arm_j2",
         "R_arm_j3",
         "R_arm_j4",
         "R_arm_j5",

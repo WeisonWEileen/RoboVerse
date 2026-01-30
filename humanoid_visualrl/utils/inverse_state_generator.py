@@ -6,6 +6,9 @@ which can be used for curriculum learning in reinforcement learning tasks.
 
 from __future__ import annotations
 
+import os
+import time
+
 import torch
 from loguru import logger as log
 
@@ -23,6 +26,8 @@ except ImportError:
     log.error("IsaacLab not available, IK inverse curriculum will be skipped")
 
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
+
+from metasim.utils.math import quat_from_euler_xyz
 
 
 # 四元数乘法 (IsaacSim: wxyz)
@@ -128,6 +133,10 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
     # Robot-specific configuration for Vega
     robot_entity_cfg = SceneEntityCfg(robot_name, joint_names=["R_arm_j.*", "base_yaw_joint"], body_names=["R_mf_l1"])
 
+    # robot_base_yaw_cfg = SceneEntityCfg(robot_name, joint_names=["base_yaw_joint"], body_names=["base_link"])
+
+    robot_base_yaw_joint_ids = robot.joint_names.index("base_yaw_joint")
+
     robot_entity_cfg.resolve(scene)
 
     # Get end-effector index
@@ -186,8 +195,45 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
             count = 0
             iteration += 1
 
+            # Randomly set cube position
+            if task_cfg.task_name == "active_vision_cube":
+                object_relative_yaw = (
+                    2 * (torch.rand(scene.num_envs, device=robot.device) - 0.5) * task_cfg.randomize_object_yaw_range
+                )
+                cube_pos_local = torch.zeros(scene.num_envs, 3, device=robot.device)
+                cube_pos_local[:, 0] = torch.cos(object_relative_yaw) * task_cfg.randomize_object_radius
+                cube_pos_local[:, 1] = torch.sin(object_relative_yaw) * task_cfg.randomize_object_radius
+                # randomize between inverse_curriculum_thres_down_z_range[0] and inverse_curriculum_thres_down_z_range[1]
+                cube_pos_local[:, 2] = (
+                    torch.rand(scene.num_envs, device=robot.device)
+                    * (
+                        task_cfg.inverse_curriculum_thres_down_z_range[1]
+                        - task_cfg.inverse_curriculum_thres_down_z_range[0]
+                    )
+                    + task_cfg.inverse_curriculum_thres_down_z_range[0]
+                )
+
+                # apply obj's quat to the same as object relative yaw
+                quat = quat_from_euler_xyz(
+                    torch.zeros(scene.num_envs, device=robot.device),
+                    torch.zeros(scene.num_envs, device=robot.device),
+                    object_relative_yaw,
+                )
+                cube_quat_local = quat
+
+            elif task_cfg.name == "active_vision_insertion":
+                cube_pos_local = torch.zeros(scene.num_envs, 3, device=robot.device)
+                # x: 0.48 ± 0.05 -> [0.43, 0.53]
+                cube_pos_local[:, 0] = torch.rand(scene.num_envs, device=robot.device) * (0.53 - 0.43) + 0.43
+                # y: 0.0-0.1 ± 0.03 -> [-0.03, 0.13]
+                cube_pos_local[:, 1] = torch.rand(scene.num_envs, device=robot.device) * (0.10 - (-0.03)) + (-0.03)
+                # z: sample from [0.54, 0.56]
+                cube_pos_local[:, 2] = torch.rand(scene.num_envs, device=robot.device) * (0.56 - 0.54) + 0.54
+
             # Reset joint state
             joint_pos = robot.data.default_joint_pos.clone()
+            if task_cfg.task_name == "active_vision_cube":
+                joint_pos[:, robot_base_yaw_joint_ids] = object_relative_yaw
             joint_vel = robot.data.default_joint_vel.clone()
             robot.write_joint_state_to_sim(joint_pos, joint_vel)
             robot.reset()
@@ -195,15 +241,6 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
             # Reset IK controller
             joint_pos_des = joint_pos[:, robot_entity_cfg.joint_ids].clone()
             diff_ik_controller.reset()
-
-            # Randomly set cube position
-            cube_pos_local = torch.zeros(scene.num_envs, 3, device=robot.device)
-            # x: 0.48 ± 0.05 -> [0.43, 0.53]
-            cube_pos_local[:, 0] = torch.rand(scene.num_envs, device=robot.device) * (0.53 - 0.43) + 0.43
-            # y: 0.0-0.1 ± 0.03 -> [-0.03, 0.13]
-            cube_pos_local[:, 1] = torch.rand(scene.num_envs, device=robot.device) * (0.10 - (-0.03)) + (-0.03)
-            # z: sample from [0.54, 0.56]
-            cube_pos_local[:, 2] = torch.rand(scene.num_envs, device=robot.device) * (0.56 - 0.54) + 0.54
 
             # apply 90 degree rotation about z axis to 0.5650, 0.9677, 0.0, 0.0, -0.2522
             q_cube = torch.tensor([0.9677, 0.0, 0.0, -0.2522], device=robot.device)
@@ -222,16 +259,16 @@ def generate_ik_curriculum_data(env: HumanoidBaseWrapper, task_cfg, num_samples=
             # ).repeat(scene.num_envs, 1)
             recorded_cube_pos[:, :3] += scene.env_origins
 
-            # Random cube orientation
-            cube_quat_local = torch.zeros(scene.num_envs, 4, device=robot.device)
-            cube_quat_local[:, 0] = 1.0  # Default quaternion (w=1)
+            # # Random cube orientation
+            # cube_quat_local = torch.zeros(scene.num_envs, 4, device=robot.device)
+            # cube_quat_local[:, 0] = 1.0  # Default quaternion (w=1)
 
             # Set cube position in world coordinates
             cube_pos_w = cube_pos_local + scene.env_origins
             cube_pose = torch.cat([cube_pos_w, cube_quat_local], dim=-1)
             env_ids = torch.arange(scene.num_envs, device=sim.device)
-            # cube.write_root_pose_to_sim(cube_pose, env_ids=env_ids)
-            cube.write_root_pose_to_sim(recorded_cube_pos, env_ids=env_ids)
+            cube.write_root_pose_to_sim(cube_pose, env_ids=env_ids)
+            # cube.write_root_pose_to_sim(recorded_cube_pos, env_ids=env_ids)
             cube.write_root_velocity_to_sim(
                 torch.zeros((scene.num_envs, 6), device=sim.device, dtype=torch.float32),
                 env_ids=env_ids,
@@ -416,3 +453,212 @@ def load_ik_curriculum_data(input_path):
     log.info(f"Loaded IK curriculum data from {input_path}")
     log.info(f"qpos shape: {qpos_array.shape}, cube_pos shape: {cube_pos_array.shape}")
     return qpos_array, cube_pos_array
+
+
+def filter_ik_curriculum_data(
+    env: HumanoidBaseWrapper,
+    input_path: str,
+    output_path: str | None = None,
+    robot_name: str = "vega",
+    object_name: str = "object",
+):
+    """Manually filter IK curriculum data by reviewing each frame in simulation.
+
+    This function loads an npz file containing IK curriculum data, displays each frame
+    in the simulation, and allows manual filtering via keyboard:
+    - Press 'p' to keep the frame
+    - Press 'z' to discard the frame
+    - Press 'ESC' to quit early
+
+    Args:
+        env: The environment instance (wrapper with env.env.handler.scene)
+        input_path: Path to input npz file
+        output_path: Path to save filtered npz file (default: input_path_filtered.npz)
+        robot_name: Name of the robot in the scene
+        object_name: Name of the object in the scene
+
+    Returns:
+        Tuple of (filtered_qpos_array, filtered_cube_pos_array) if successful, None otherwise
+    """
+    try:
+        import carb
+        import omni
+    except ImportError:
+        log.error("carb and omni modules are required for filtering. Make sure you're running in Isaac Sim.")
+        return None
+
+    # Load npz data
+    if not os.path.exists(input_path):
+        log.error(f"Input file not found: {input_path}")
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    log.info(f"Loading data from {input_path}")
+    qpos_array, cube_pos_array = load_ik_curriculum_data(input_path)
+    num_frames = qpos_array.shape[0]
+    log.info(f"Loaded {num_frames} frames")
+
+    # Setup keyboard input handler
+    app_window = omni.appwindow.get_default_app_window()
+    keyboard = app_window.get_keyboard()
+    input_interface = carb.input.acquire_input_interface()
+
+    key_state = {"p_pressed": False, "z_pressed": False, "quit": False}
+
+    def on_keyboard_event(event, *args, **kwargs):
+        """Handle keyboard events."""
+        if event.type == carb.input.KeyboardEventType.KEY_PRESS:
+            if event.input == carb.input.KeyboardInput.P:
+                key_state["p_pressed"] = True
+            elif event.input == carb.input.KeyboardInput.Z:
+                key_state["z_pressed"] = True
+            elif event.input == carb.input.KeyboardInput.ESCAPE:
+                key_state["quit"] = True
+        elif event.type == carb.input.KeyboardEventType.KEY_RELEASE:
+            if event.input == carb.input.KeyboardInput.P:
+                key_state["p_pressed"] = False
+            elif event.input == carb.input.KeyboardInput.Z:
+                key_state["z_pressed"] = False
+        return True
+
+    keyboard_sub = input_interface.subscribe_to_keyboard_events(keyboard, on_keyboard_event)
+
+    # Get handler and scene (similar to generate_ik_curriculum_data)
+    handler = env.env
+    if not hasattr(handler, "scene"):
+        log.error("Handler does not have scene attribute")
+        raise AttributeError("Handler does not have scene attribute")
+
+    scene = handler.scene
+    sim = handler.sim
+
+    robot = scene.articulations[robot_name]
+    cube = scene.rigid_objects[object_name]
+
+    # Store filtered data
+    filtered_qpos = []
+    filtered_cube_pos = []
+
+    log.info("=" * 60)
+    log.info("Starting manual filtering:")
+    log.info("  Press 'p' to KEEP the current frame")
+    log.info("  Press 'z' to DISCARD the current frame")
+    log.info("  Press 'ESC' to quit early")
+    log.info("=" * 60)
+
+    try:
+        for frame_idx in range(num_frames):
+            # Reset key states
+            key_state["p_pressed"] = False
+            key_state["z_pressed"] = False
+
+            log.info(f"\nFrame {frame_idx + 1}/{num_frames}")
+            log.info(f"  Cube position: {cube_pos_array[frame_idx][:3]}")
+            log.info(f"  Cube quaternion: {cube_pos_array[frame_idx][3:]}")
+
+            # Set robot joint positions (similar to generate_ik_curriculum_data logic)
+            qpos_npz = qpos_array[frame_idx]  # [num_non_static_joints]
+
+            # Map npz qpos to full joint space using handler's reindexing
+            if hasattr(handler, "_none_static_joint_idx_reindexed") and hasattr(handler, "_joint_pos_buffer"):
+                num_total_joints = len(robot.joint_names)
+                qpos_full = handler._joint_pos_buffer[0].clone()  # Get default positions for static joints
+
+                reindexed = handler._none_static_joint_idx_reindexed
+                qpos_npz_tensor = torch.tensor(qpos_npz, device=robot.device)
+
+                # Set non-static joint positions
+                for i, orig_idx in enumerate(reindexed):
+                    if i < len(qpos_npz_tensor) and orig_idx < num_total_joints:
+                        qpos_full[orig_idx] = qpos_npz_tensor[i]
+
+                qpos = qpos_full.unsqueeze(0)  # [1, num_total_joints]
+                joint_vel = torch.zeros_like(qpos)
+                robot.write_joint_state_to_sim(qpos, joint_vel)
+            else:
+                # Fallback
+                qpos = torch.tensor(qpos_npz, device=robot.device).unsqueeze(0)
+                joint_vel = torch.zeros_like(qpos)
+                robot.write_joint_state_to_sim(qpos, joint_vel)
+
+            robot.reset()
+
+            # Set cube position (similar to generate_ik_curriculum_data)
+            cube_pos_local = torch.tensor(cube_pos_array[frame_idx][:3], device=cube.device)
+            cube_quat_local = torch.tensor(cube_pos_array[frame_idx][3:], device=cube.device)
+
+            # Convert to world coordinates
+            # cube_pos_w = cube_pos_local.unsqueeze(0) + scene.env_origins
+            cube_pos_w = cube_pos_local.unsqueeze(0) 
+            cube_quat_w = cube_quat_local.unsqueeze(0)
+            cube_pose = torch.cat([cube_pos_w, cube_quat_w], dim=-1)
+
+            env_ids = torch.arange(scene.num_envs, device=sim.device)
+            cube.write_root_pose_to_sim(cube_pose, env_ids=env_ids)
+            cube.write_root_velocity_to_sim(
+                torch.zeros((scene.num_envs, 6), device=sim.device, dtype=torch.float32),
+                env_ids=env_ids,
+            )
+            cube.write_data_to_sim()
+
+            # Step simulation a few times to stabilize
+            for _ in range(10):
+                scene.write_data_to_sim()
+                sim.step()
+                scene.update(sim.get_physics_dt())
+
+            # Wait for user input
+            log.info("  Waiting for input (p=keep, z=discard)...")
+            decision_made = False
+
+            while not decision_made and not key_state["quit"]:
+                # Check keyboard state
+                if key_state["p_pressed"]:
+                    filtered_qpos.append(qpos_array[frame_idx])
+                    filtered_cube_pos.append(cube_pos_array[frame_idx])
+                    log.info(f"  ✓ KEPT frame {frame_idx + 1}")
+                    decision_made = True
+                elif key_state["z_pressed"]:
+                    log.info(f"  ✗ DISCARDED frame {frame_idx + 1}")
+                    decision_made = True
+
+                # Step simulation to keep it responsive
+                scene.write_data_to_sim()
+                sim.step()
+                scene.update(sim.get_physics_dt())
+
+                # Small delay to avoid busy waiting
+                time.sleep(0.01)
+
+            if key_state["quit"]:
+                log.warning("Early exit requested by user")
+                break
+
+            log.info(f"  Progress: {len(filtered_qpos)}/{frame_idx + 1} frames kept so far")
+
+    except KeyboardInterrupt:
+        log.warning("Interrupted by user")
+    finally:
+        # Cleanup keyboard subscription
+        try:
+            input_interface.unsubscribe_from_keyboard_events(keyboard, keyboard_sub)
+        except Exception:
+            pass
+
+    # Save filtered data
+    if len(filtered_qpos) > 0:
+        filtered_data = list(zip(filtered_qpos, filtered_cube_pos))
+        if output_path is None:
+            # Default: add _filtered suffix before .npz
+            base, ext = os.path.splitext(input_path)
+            output_path = f"{base}_filtered{ext}"
+
+        save_ik_curriculum_data(filtered_data, output_path)
+        log.info("\nFiltering complete!")
+        log.info(f"  Original frames: {num_frames}")
+        log.info(f"  Filtered frames: {len(filtered_qpos)}")
+        log.info(f"  Removed: {num_frames - len(filtered_qpos)} frames")
+        log.info(f"  Saved to: {output_path}")
+        return filtered_qpos, filtered_cube_pos
+    else:
+        log.warning("No frames were kept. Nothing saved.")
+        return None

@@ -1,8 +1,5 @@
 """A wrapper for fixed upper body and use cnn inside the policy class."""
 
-# TODO success filter
-# TODO add vision buf into HumanoidBaseWrapper
-# render reset frame to before compute obs
 from __future__ import annotations
 
 import os
@@ -20,7 +17,6 @@ from humanoid_visualrl.utils.utils import (
 from humanoid_visualrl.wrapper.base_humanoid_wrapper import HumanoidBaseWrapper
 from metasim.task.registry import register_task
 
-# from humanoid_visualrl.wrapper.reset_18_extractor import Reset18Extractor
 from metasim.types import TensorState
 from metasim.utils.math import euler_xyz_from_quat, quat_apply, quat_from_euler_xyz, quat_mul
 
@@ -35,7 +31,25 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     """
 
     def __init__(self, *args, **kwargs):
+        # Extract parameters that are specific to this subclass
+        self.autotune = kwargs.pop("autotune", False)
+        phase = kwargs.pop("phase", None)
+
+        if self.autotune:
+            self.phase = 0
+        else:
+            self.phase = phase if phase is not None else self.cfg.phase
+
+        # Pass remaining kwargs to parent class
         super().__init__(*args, **kwargs)
+
+        # Set phase after parent initialization
+
+        # Re-initialize reward functions with phase-specific weights
+        # Parent's __init__ already called _prepare_reward_function, but we need to update it
+        # with phase-specific weights after phase is set
+        self._prepare_reward_function(self.cfg)
+
         # self.env.filter_collisions(self.robot.name, "object")
         # print(self.env.scene.physics_context.get_filtered_pairs())
 
@@ -57,27 +71,12 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.success_thres = (
             torch.exp(torch.tensor([-10 / 50.0], device=self.device)) - self.pixel_reward_offset
         ).item()
-        if self.cfg.curriculum_object_yaw and self.cfg.phase == 0:
+        if self.cfg.curriculum_object_yaw and self.phase == 0:
             self.curriculum_object_yaw_range = (
                 self.cfg.curriculum_initial_object_yaw_range * self.cfg.randomize_object_yaw_range
             )
         else:
             self.curriculum_object_yaw_range = self.cfg.randomize_object_yaw_range
-
-        # if self.cfg.phase == 2:
-        #     if self.robot.name == "vega":
-        #         sorted_joint_names = self.env.get_joint_names(self.robot.name, sort=True)
-        #         joint1_idx = sorted_joint_names.index("R_arm_j1")
-        #         joint2_idx = sorted_joint_names.index("R_arm_j2")
-        #         joint3_idx = sorted_joint_names.index("R_arm_j3")
-        #         joint4_idx = sorted_joint_names.index("R_arm_j4")
-        #         joint5_idx = sorted_joint_names.index("R_arm_j5")
-        #         joint6_idx = sorted_joint_names.index("R_arm_j6")
-        #         joint7_idx = sorted_joint_names.index("R_arm_j7")
-
-        # self.init_states.robots["vega"].joint_pos[:, joint1_idx] += 0.7
-        # self.init_states.robots["vega"].joint_pos[:, joint4_idx] -= 0.2
-
         # Initialize episode_metrics if it doesn't exist
         if "episode_metrics" not in self.extra_buf:
             self.extra_buf["episode_metrics"] = {}
@@ -86,6 +85,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         self.extra_buf["episode_metrics"]["curriculum_obj_mass"] = self.cfg.objects[1].mass
         # log.info(f"curriculum_object_yaw_range: {self.curriculum_object_yaw_range}")
+        self.extra_buf["episode_metrics"]["finger_dist_buf"] = 0.5
 
         # exit()
         self.see_flag_float = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
@@ -137,68 +137,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
         # Load recorded qpos and cube_pos from npz file
         # the data that cube embedded into the box
-        npz_path = "/home/panwei/RoboVerse/humanoid_visualrl/ik/qpos/recorded_qpos_1.npz"
-        if os.path.exists(npz_path):
-            data = np.load(npz_path)
-            recorded_qpos_raw = torch.tensor(data["qpos"], device=self.device)  # [400, num_joints]
-            # from isaacsim deleted joint version to none deleted version
-            # ids: indices in original joint order (all joints) that correspond to none_static joints
-            ids = [
-                0,
-                2,
-                3,
-                4,
-                8,
-                9,
-                10,
-                11,
-                13,
-                14,
-                15,
-                16,
-                17,
-                18,
-                19,
-                20,
-                21,
-                22,
-                23,
-                24,
-                25,
-                26,
-                32,
-                33,
-                34,
-                35,
-                36,
-                42,
-                43,
-                44,
-                45,
-                46,
-                56,
-            ]
-            self.recorded_qpos = recorded_qpos_raw[:, ids][:, self.env._none_static_joint_idx_reindexed][
-                :, self.actuated_index
-            ]
-            self.recorded_cube_pos = torch.tensor(data["cube_pos"], device=self.device)  # [400, 7]
-
-            # Filter out data where sqrt(x^2 + y^2) < threshold
-            threshold = self.cfg.init_states[0]["objects"]["object"]["pos"][0]
-            cube_xy_dist = torch.sqrt(self.recorded_cube_pos[:, 0] ** 2 + self.recorded_cube_pos[:, 1] ** 2)
-            mask = cube_xy_dist >= threshold
-            original_count = len(self.recorded_qpos)
-            self.recorded_qpos = self.recorded_qpos[mask]
-            self.recorded_cube_pos = self.recorded_cube_pos[mask]
-
-            log.info(
-                f"Loaded {len(self.recorded_qpos)} recorded poses from {npz_path} (filtered from {original_count} entries)"
-            )
-
-        else:
-            log.warning(f"NPZ file not found at {npz_path}, using default stretch pose")
-            self.recorded_qpos = None
-            self.recorded_cube_pos = None
 
         # self._reset(list(range(self.num_envs)))
         self._update_camera_pose = False
@@ -304,10 +242,29 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             device="cuda:0",
             # get indices of the arms joints
         )
-        if self.cfg.phase == 2 and self.cfg.task_name == "active_vision_cube":
+        if self.phase == 2 and self.cfg.task_name == "active_vision_cube":
             self.init_states.robots["vega"].joint_pos[: self.num_envs // 2] = self.vega_stretch_joint_pos.repeat(
                 self.num_envs // 2, 1
             )
+
+        self.finger_dist_buf = torch.ones(self.num_envs, device=self.device)
+
+        # Track previous phase to detect phase changes
+        self.previous_phase = self.phase
+
+        npz_path = "outputs/active_vision_cube/2026_0129_220225/ik_curriculum_data_active_vision_cube.npz"
+        if os.path.exists(npz_path):
+            data = np.load(npz_path)
+            recorded_qpos_raw = torch.tensor(data["qpos"], device=self.device, requires_grad=False)  # [400, num_joints]
+            # from isaacsim deleted joint version to none deleted version
+            self.recorded_qpos = recorded_qpos_raw[:, self.env._none_static_joint_idx_reindexed]
+            self.recorded_cube_pos = torch.tensor(data["cube_pos"], device=self.device, requires_grad=False)
+
+        #
+        if self.phase == 2:
+            self.step_limits[: self.num_envs // 2] = int(self.step_limits[0] / 3)
+
+        self.success = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool, requires_grad=False)
 
     def _parse_indices(self, robot):
         super()._parse_indices(robot)
@@ -377,6 +334,14 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 device=self.device,
                 dtype=torch.int32,
             )
+
+    def success_checker(self, object_pose_buf: torch.Tensor):
+        if self.phase == 2:
+            object_z_thres = object_pose_buf[:, 2] > self.cfg.success_thres_z
+            success = object_z_thres
+            return success
+        else:
+            return torch.zeros(self.num_envs, device=self.device, dtype=torch.bool, requires_grad=False)
 
     def _refreshed_tensors(self, tensor_state: TensorState):
         super()._refreshed_tensors(tensor_state)
@@ -451,17 +416,37 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         robot_yaw_buffer[robot_yaw_buffer > torch.pi] -= 2 * torch.pi
         self.robot_yaw_buffer[:, 0] = robot_yaw_buffer
 
+        # update finger dist
+        finger_tip_pos = tensor_state.robots[self.robot.name].body_state[
+            :, self.left_index_intermediate_link_indices, :3
+        ]
+
+        # get mean distance from finger tips to object, then subtract expected contact distance
+        # Note: This computes the mean distance across all finger tips, then subtracts 0.015m (expected contact distance)
+        self.finger_dist_buf = torch.norm(finger_tip_pos - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
+
+        # check stage change
+        self.extra_buf["episode_metrics"]["finger_dist_buf"] = self.finger_dist_buf.mean()
+        self.extra_buf["episode_metrics"]["phase"] = self.phase
+
+        # Check phase change and update reward functions if needed
+        self._check_phase()
+
+    def _stage_checker(self):
+        # for search and pick task, stage is
+        # 0: search
+        # 1: reaching
+        # 2: grasp and lift
+        # TODO implement this
+        pass
+
     def _compute_pixel_distance(self):
         if self.see_flag.any():
-            # 计算加权中心点
             weighted_y = (self.mask[self.see_flag] * self.y_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
             weighted_x = (self.mask[self.see_flag] * self.x_coords.unsqueeze(0)).sum(dim=(1, 2))  # (num_valid_envs,)
 
-            # 归一化
             self.center_y = weighted_y / self.pixel_counts[self.see_flag]
             self.center_x = weighted_x / self.pixel_counts[self.see_flag]
-
-            # 计算距离
 
         # Display the image and check if window is still open
 
@@ -518,33 +503,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     (255, 255, 0),
                     1,
                 )
-
-            # 在图像正中间绘制红色方框（高度50，宽度80）
-            # box_width = 80
-            # box_height = 50
-            # top_left = (int(self.image_center_x - box_width / 2), int(self.image_center_y - box_height / 2))
-            # bottom_right = (int(self.image_center_x + box_width / 2), int(self.image_center_y + box_height / 2))
-            # cv2.rectangle(rgb_image, top_left, bottom_right, (0, 0, 255), 2)  # 红色方框，线宽2
-
-            # # 在图像正中间绘制红色方框（高度25，宽度40）
-            # box_width2 = 40
-            # box_height2 = 25
-            # top_left2 = (int(self.image_center_x - box_width2 / 2), int(self.image_center_y - box_height2 / 2))
-            # bottom_right2 = (int(self.image_center_x + box_width2 / 2), int(self.image_center_y + box_height2 / 2))
-            # cv2.rectangle(rgb_image, top_left2, bottom_right2, (0, 232, 99), 2)  # 红色方框，线宽2
-
-            # # 在图像正中间绘制红色方框（高度25，宽度40）
-            # box_width2 = 120
-            # box_height2 = 75
-            # top_left2 = (int(self.image_center_x - box_width2 / 2), int(self.image_center_y - box_height2 / 2))
-            # bottom_right2 = (int(self.image_center_x + box_width2 / 2), int(self.image_center_y + box_height2 / 2))
-            # cv2.rectangle(rgb_image, top_left2, bottom_right2, (0, 155, 255), 2)  # 红色方框，线宽2
-
-            # box_width2 = 160
-            # box_height2 = 100
-            # top_left2 = (int(self.image_center_x - box_width2 / 2), int(self.image_center_y - box_height2 / 2))
-            # bottom_right2 = (int(self.image_center_x + box_width2 / 2), int(self.image_center_y + box_height2 / 2))
-            # cv2.rectangle(rgb_image, top_left2, bottom_right2, (155, 0, 255), 2)  # 红色方框，线宽2
 
             window_open = self.opencv_renderer.display(rgb_image)
 
@@ -640,8 +598,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.init_states.objects["object"].root_state[env_ids, 3:7] = quat
 
             # if robot is in the phase 2, align robot base yaw joint to face the object
-            # 使用物体相对于机器人的方位角来对齐机器人base yaw joint
-            if self.cfg.phase == 2:
+            # set those pos from ik
+            if self.phase == 2:
                 # only those < num_envs//2 are in stretch pose
                 # Convert env_ids to tensor for comparison
                 env_ids_tensor = torch.tensor(env_ids, device=self.device, dtype=torch.long)
@@ -650,66 +608,62 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
 
                 # align robot base yaw joint to face the object
                 if len(stretch_env_ids) > 0:
-                    # If we have recorded poses, randomly sample from them
-                    if self.recorded_qpos is not None and self.recorded_cube_pos is not None:
-                        num_stretch = len(stretch_env_ids)
-                        # Randomly select indices from recorded poses
-                        selected_indices = torch.randint(0, len(self.recorded_qpos), (num_stretch,), device=self.device)
+                    env_ids_tensor = torch.tensor(env_ids, device=self.device, dtype=torch.long)
+                    mask = env_ids_tensor < self.num_envs // 2
+                    stretch_env_ids = env_ids_tensor[mask]
 
-                        # Set joint positions from recorded data
-                        self.init_states.robots["vega"].joint_pos[stretch_env_ids, :][:, self.actuated_local_index] = (
-                            self.recorded_qpos[selected_indices, :]
-                        )
+                    # align robot base yaw joint to face the object
+                    if len(stretch_env_ids) > 0:
+                        # If we have recorded poses, randomly sample from them
+                        if self.recorded_qpos is not None and self.recorded_cube_pos is not None:
+                            num_stretch = len(stretch_env_ids)
+                            # Randomly select indices from recorded poses
+                            selected_indices = torch.randint(
+                                0, len(self.recorded_qpos), (num_stretch,), device=self.device
+                            )
 
-                        # Override base_joint_index with object_relative_yaw
-                        self.init_states.robots["vega"].joint_pos[stretch_env_ids, self.base_joint_index] = (
-                            object_relative_yaw[mask] - 0.3
-                        )
+                            # Directly copy recorded cube positions to object init_state
+                            self.init_states.objects["object"].root_state[stretch_env_ids, :7] = self.recorded_cube_pos[
+                                selected_indices, :
+                            ]
 
-                        # Get cube positions from recorded data (relative to robot base)
-                        cube_pos_local = self.recorded_cube_pos[selected_indices, :3]  # [num_stretch, 3]
-                        cube_quat_local = self.recorded_cube_pos[selected_indices, 3:7]  # [num_stretch, 4]
+                            self.init_states.robots["vega"].joint_pos[stretch_env_ids, :] = self.recorded_qpos[
+                                selected_indices, :
+                            ]
 
-                        # Rotate cube x and y coordinates by object_relative_yaw to convert to world coordinates
-                        yaw_angles = object_relative_yaw[mask]  # [num_stretch]
-                        cos_yaw = torch.cos(yaw_angles)
-                        sin_yaw = torch.sin(yaw_angles)
+    def _check_phase(self):
+        if self.phase == 2:
+            return True
+        elif self.phase == 1:
+            # reaching --> reverse
+            if self.finger_dist_buf.mean() < self.cfg.stage_finger_close_to_object_change_thres:
+                old_phase = self.phase
+                self.phase = 2
+                # dynamics time limit
+                # if reverse reset, only 280 / 3 = 93 steps = 2.325 s to lift up to success threshold
+                self.step_limits[: self.num_envs // 2] = int(self.step_limits[0] / 3)
 
-                        # Rotate 2D coordinates (x, y) by yaw angle
-                        cube_x_rotated = cube_pos_local[:, 0] * cos_yaw - cube_pos_local[:, 1] * sin_yaw
-                        cube_y_rotated = cube_pos_local[:, 0] * sin_yaw + cube_pos_local[:, 1] * cos_yaw
-
-                        # Set cube position in world coordinates (x, y rotated, z unchanged)
-                        self.init_states.objects["object"].root_state[stretch_env_ids, 0] = cube_x_rotated
-                        self.init_states.objects["object"].root_state[stretch_env_ids, 1] = cube_y_rotated
-                        self.init_states.objects["object"].root_state[stretch_env_ids, 2] = cube_pos_local[:, 2]
-
-                        # Rotate cube quaternion by yaw angle
-                        yaw_quat = quat_from_euler_xyz(
-                            torch.zeros(num_stretch, device=self.device),
-                            torch.zeros(num_stretch, device=self.device),
-                            yaw_angles,
-                        )
-                        cube_quat_rotated = quat_mul(yaw_quat, cube_quat_local)
-                        self.init_states.objects["object"].root_state[stretch_env_ids, 3:7] = cube_quat_rotated
-                    else:
-                        # Fallback to default behavior
-                        self.init_states.robots["vega"].joint_pos[stretch_env_ids, self.base_joint_index] = (
-                            object_relative_yaw[mask]
-                        )
+                # open hand mask in self.right_arm_joints_indices
+                # relax all joint masking
+                self.action_masking.fill_(1.0)
+                # Update reward functions when phase changes
+                if old_phase != self.phase:
+                    self._update_reward_functions_for_phase()
+        elif self.phase == 0:
+            # searching --> reaching
+            if abs(self.curriculum_object_yaw_range - self.cfg.randomize_object_yaw_range) < 1e-4:
+                old_phase = self.phase
+                self.phase = 1
+                # open arm mask
+                # relax right arm joint masking
+                for idx in self.right_arm_joints_indices:
+                    self.action_masking[idx] = 1.0
+                if old_phase != self.phase:
+                    self._update_reward_functions_for_phase()
+        else:
+            raise ValueError(f"Invalid phase: {self.phase}")
 
     def _post_reset_hook(self, env_ids):
-        # if self.cfg.phase == 2:
-        #     # set object close to the hand
-        #     body_reindex = self.env.get_body_reindex('vega')
-        #     body_state = self.env.scene.articulations["vega"].data.body_state_w[:, body_reindex]
-        #     finger_tip_pos = body_state[:, self.left_index_intermediate_link_indices, :3]
-
-        #     self.env._set_object_pose(
-        #         self.cfg.objects[1], finger_tip_pos, torch.zeros(len(env_ids), 4, device=self.device), env_ids=env_ids
-        #     )
-        # self.accumulated_actions[env_ids] = self.init_states.robots["vega"].joint_pos[env_ids, :][:, self.actuated_local_index].clone()
-
         self.stage[env_ids] = 0
         self.object_pose_buf[env_ids] = self.init_states.objects["object"].root_state[env_ids, :7]
         self.env.scene.sensors["camera_first_person"].update(dt=0)
@@ -726,20 +680,20 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.robot_yaw_buffer_action[env_ids] = 0.0
 
     def _check_reset(self):
+        # cube fall down
         terminate = self.cfg.init_states[0]["objects"]["object"]["pos"][2] - self.object_pose_buf[:, 2] > 0.1
-        # move 0.05 to config
-        # if self.cfg.phase == 2:
-        #     terminate = terminate | (torch.abs(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z) < 0.1)
+        # cube success: lift up to z threshold
+        success = self.success_checker(self.object_pose_buf)
 
-        too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
-        # self.reset_buf = self.timeout_buf
-        # too_low = self.object_pose_buf[:, 2] < self.cfg.reset_fall_down_threshold
-        # two far from reset_point
-        # too_far = (
-        #     torch.norm(self.object_pose_buf[:, :2] - self.init_states.objects["object"].root_state[:, :2], dim=1) > 0.2
-        # )
+        self.extra_buf["episode_metrics"]["success"] = self.success.float().mean()
+        too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.success_thres_z)
+        failure = self.timeout_buf | terminate | too_far
+        # set self.success to False if failure
+        self.success[failure] = False
+        # set self.success to True if success
+        self.success[success] = True
 
-        self.reset_buf = self.timeout_buf | terminate | too_far
+        self.reset_buf = failure | success
         return self.reset_buf
 
     def _reward_pixel_norm_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
@@ -772,38 +726,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         # print(f"ema_reward: {self._ema_reward}")
         return self.pixel_rewards_buf
 
-    def _reward_look_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        """Reward for looking at the object."""
-        # 获取相机的世界坐标位置 (num_envs, 3)
-        camera_pos = self.camera_pos_w
-
-        # 获取立方体的世界坐标位置 (num_envs, 3)
-        object_pos = tensor_state.objects["object"].root_state[:, :3]
-
-        # 计算从相机到立方体的方向向量 (num_envs, 3)
-        direction_vec = object_pos - camera_pos
-        direction_vec = direction_vec / (torch.norm(direction_vec, dim=1, keepdim=True) + 1e-8)  # 归一化
-
-        # 获取相机的朝向向量 (num_envs, 3)
-        # 相机的朝向通常是+X方向（根据CameraState的注释）
-        # camera_quat = tensor_state.cameras[self.cfg.cameras[0].name].quat_world  # (num_envs, 4) - (w, x, y, z)
-        camera_quat = self.camera_quat_w  # (num_envs, 4) - (w, x, y, z)
-        # 将相机的+X轴方向向量转换到世界坐标系
-        camera_forward = torch.tensor([1.0, 0.0, 0.0], device=self.device).expand(self.num_envs, 3)
-        camera_vec = quat_apply(camera_quat, camera_forward)  # 应用四元数旋转
-
-        # 计算两个向量的点积，得到相似度 (num_envs,)
-        dot_product = torch.sum(direction_vec * camera_vec, dim=1)
-
-        # 将点积转换为奖励 - 当相机完全对准立方体时点积为1，奖励最大
-        # 使用平滑的奖励函数：当dot_product接近1时奖励接近1
-        reward = torch.clamp(dot_product, min=0.0)  # 只考虑正向的对准
-
-        # if self.env._render_viewport:
-        #     self._update_marker_viz(camera_pos, camera_quat, direction_vec)
-
-        return reward
-
     def _reward_see_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         """Reward for seeing the object."""
         return self.see_flag_float
@@ -820,18 +742,16 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         )
 
     def _reward_finger_close_to_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
-        finger_tip_pos = tensor_state.robots[robot_name].body_state[:, self.left_index_intermediate_link_indices, :3]
 
         # get mean
-        dist = torch.square(
-            torch.norm(finger_tip_pos[:, :, :3] - self.object_pose_buf[:, None, :3], dim=2).mean(dim=1)
-            - 0.015 * torch.ones(self.num_envs, device=self.device)
-        )  # cube offset
 
-        reward = self.see_flag_float * torch.exp(-self.cfg.reward_wrist_close_to_object_exp_sharpness * dist)
+        reward = self.see_flag_float * torch.exp(
+            -self.cfg.reward_wrist_close_to_object_exp_sharpness * self.finger_dist_buf
+        )
 
+        # TODO integrate into the auto masking scheduling
         if self.cfg.curriculum_object_mass_flag and not self.mass_curriculum_trigger:
-            dist_mean = dist.mean()
+            dist_mean = self.finger_dist_buf.mean()
             if dist_mean < self.cfg.stage_finger_close_to_object_change_thres:
                 self.mass_curriculum_trigger_count += 1
                 log.info(f"mass_curriculum_trigger_count: {self.mass_curriculum_trigger_count}, dist_mean: {dist_mean}")
@@ -847,9 +767,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                     )
 
                     # release finger mask, set all finger mask to 1.0
-                    self.mask.fill_(1.0)
 
-        dist_close_to_object = dist < self.cfg.stage_finger_close_to_object_change_thres
+        dist_close_to_object = self.finger_dist_buf < self.cfg.stage_finger_close_to_object_change_thres
         # assign those both are stage 0 and dist_close_to_object to stage 1
         self.stage[dist_close_to_object] = 1
         return reward
@@ -1054,14 +973,6 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
     #     reward = self.see_flag_float * close * lifted * self.cfg.reward_lift_object_z  # e.g. 10.0
     #     return reward
 
-    def _reward_right_arm_default_joint_pos(
-        self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg
-    ):
-        joint_pos = tensor_state.robots[robot_name].joint_pos
-        return torch.norm((joint_pos - self.default_joint_pd_target)[:, self.right_arm_joints_indices], dim=1) * (
-            self.stage == 0
-        )
-
     def _reward_wrist_lower_than_table(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
         below_distance = torch.clamp(
             tensor_state.robots[robot_name].body_state[:, self.right_palm_index, 2]
@@ -1071,6 +982,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         return below_distance.squeeze(1) * (self.stage == 0)
 
     # def _reward_object_holding(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    def _reward_success(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+        return self.success.float()
 
     def _update_curriculum(self):
         current_iteration = int(self.common_step_counter / self.cfg.ppo_cfg.num_steps_per_env)
@@ -1135,3 +1048,100 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 mass = mass + (torch.rand((self.num_envs, 1), device="cpu") - 0.5) * 0.05
                 self.obj_randomizer.set_mass("object", mass, env_ids=list(range(self.num_envs)))
                 self.extra_buf["episode_metrics"]["curriculum_obj_mass"] = mass.mean().item()
+
+    def _get_reward_weights_for_phase(self, task_cfg: BaseTableHumanoidTaskCfg):
+        """Get reward weights based on current phase."""
+        if self.phase == 0:
+            return task_cfg.reward_weights_phase0
+        elif self.phase == 1:
+            return task_cfg.reward_weights_phase1
+        elif self.phase == 2:
+            return task_cfg.reward_weights_phase2
+        else:
+            raise ValueError(f"Invalid phase: {self.phase}")
+
+    def _setup_reward_functions_from_weights(self, reward_weights: dict):
+        """Setup reward scales and functions from reward weights dictionary."""
+        # Process reward scales
+        self.reward_scales = dict(reward_weights)
+        for key in list(self.reward_scales.keys()):
+            scale = self.reward_scales[key]
+            if scale == 0:
+                self.reward_scales.pop(key)
+            else:
+                self.reward_scales[key] *= self.dt
+
+        # Setup reward functions
+        self.reward_functions = []
+        self.reward_names = []
+        for name, scale in self.reward_scales.items():
+            if name == "termination":
+                continue
+            self.reward_names.append(name)
+            method_name = "_reward_" + name
+            fn = getattr(self, method_name, None)
+            if fn is None or not callable(fn):
+                raise KeyError(f"No reward function named '{method_name}' on {self.__class__.__name__}")
+            self.reward_functions.append(fn)
+
+    def _prepare_reward_function(self, task: BaseTableHumanoidTaskCfg):
+        """Override to use phase-specific reward weights."""
+        reward_weights = self._get_reward_weights_for_phase(task)
+        self._setup_reward_functions_from_weights(reward_weights)
+
+        # Initialize episode_sums and episode_metrics
+        self.episode_sums = {
+            name: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
+            for name in self.reward_scales.keys()
+        }
+        self.episode_metrics = {}
+
+    def _update_reward_functions_for_phase(self):
+        """Update reward functions when phase changes."""
+        reward_weights = self._get_reward_weights_for_phase(self.cfg)
+        self._setup_reward_functions_from_weights(reward_weights)
+
+        # Update episode_sums to include new reward terms (preserve existing ones)
+        new_episode_sums = {}
+        for name in self.reward_scales.keys():
+            if name in self.episode_sums:
+                new_episode_sums[name] = self.episode_sums[name]
+            else:
+                new_episode_sums[name] = torch.zeros(
+                    self.num_envs, dtype=torch.float, device=self.device, requires_grad=False
+                )
+        self.episode_sums = new_episode_sums
+
+        log.info(f"Updated reward functions for phase {self.phase}")
+
+    # def _reward_look_at_object(self, tensor_state: TensorState, robot_name: str, cfg: BaseTableHumanoidTaskCfg):
+    #     """Reward for looking at the object."""
+    #     # 获取相机的世界坐标位置 (num_envs, 3)
+    #     camera_pos = self.camera_pos_w
+
+    #     # 获取立方体的世界坐标位置 (num_envs, 3)
+    #     object_pos = tensor_state.objects["object"].root_state[:, :3]
+
+    #     # 计算从相机到立方体的方向向量 (num_envs, 3)
+    #     direction_vec = object_pos - camera_pos
+    #     direction_vec = direction_vec / (torch.norm(direction_vec, dim=1, keepdim=True) + 1e-8)  # 归一化
+
+    #     # 获取相机的朝向向量 (num_envs, 3)
+    #     # 相机的朝向通常是+X方向（根据CameraState的注释）
+    #     # camera_quat = tensor_state.cameras[self.cfg.cameras[0].name].quat_world  # (num_envs, 4) - (w, x, y, z)
+    #     camera_quat = self.camera_quat_w  # (num_envs, 4) - (w, x, y, z)
+    #     # 将相机的+X轴方向向量转换到世界坐标系
+    #     camera_forward = torch.tensor([1.0, 0.0, 0.0], device=self.device).expand(self.num_envs, 3)
+    #     camera_vec = quat_apply(camera_quat, camera_forward)  # 应用四元数旋转
+
+    #     # 计算两个向量的点积，得到相似度 (num_envs,)
+    #     dot_product = torch.sum(direction_vec * camera_vec, dim=1)
+
+    #     # 将点积转换为奖励 - 当相机完全对准立方体时点积为1，奖励最大
+    #     # 使用平滑的奖励函数：当dot_product接近1时奖励接近1
+    #     reward = torch.clamp(dot_product, min=0.0)  # 只考虑正向的对准
+
+    #     # if self.env._render_viewport:
+    #     #     self._update_marker_viz(camera_pos, camera_quat, direction_vec)
+
+    #     return reward

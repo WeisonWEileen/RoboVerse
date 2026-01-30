@@ -342,12 +342,15 @@ def get_args():
         seed: int = -1
         enable_grasp: bool = False
         vision4times_slowdown: bool = False
-        phase: int = 0
+        phase: int = None
         generate_ik_curriculum: bool = False  # Enable IK curriculum data generation
         ik_curriculum_samples: int = 2  # Number of IK samples to collect
         ik_curriculum_threshold: float = 0.1  # Position error threshold for success (meters)
-        ik_curriculum_max_iterations: int = 150  # Maximum iterations per IK attempt
-        
+        ik_curriculum_max_iterations: int = 70  # Maximum iterations per IK attempt
+        autotune: bool = False
+        edit_data: bool = False  # Enable manual filtering of npz curriculum data
+        edit_data_input: str = "ik_curriculum_data_active_vision_cube.npz"  # Input npz file path
+        edit_data_output: str = None  # Output npz file path (default: input_path_filtered.npz)
         """Random seed for reproducibility. -1 means random seed."""
 
         """Random seed for reproducibility. -1 means random seed."""

@@ -72,6 +72,8 @@ class HumanoidBaseWrapper(RslRlWrapper):
             )
         else:
             self.accumulated_actions = self.default_joint_pd_target[:, self.actuated_index].clone()
+        
+        self.step_limits = torch.ones(self.num_envs, device=self.device, dtype=torch.int32) * int(self.cfg.max_episode_length_s / self.dt)
 
     def _load_actuator_indices(self, robot):
         """Load actuator indices from robot cfg."""
@@ -470,7 +472,7 @@ class HumanoidBaseWrapper(RslRlWrapper):
         """After physics step, compute reward, get obs and privileged_obs, resample command."""
         self.common_step_counter += 1
         self.episode_length_buf += 1
-        self.timeout_buf = self.episode_length_buf >= self.cfg.max_episode_length_s / self.dt
+        self.timeout_buf = self.episode_length_buf >= self.step_limits
         self._post_physics_step_callback()
         tensor_state = self.env.get_states()
 
