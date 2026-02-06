@@ -74,7 +74,7 @@ class LeggedRobotRunnerCfg:
 
         # good schime for lifting
         learning_rate_mlp = 1e-4
-        learning_rate_rnn = 1e-4
+        learning_rate_rnn = 5e-5
         learning_rate_cnn = 4e-5
         # normalize_advantage_per_mini_batch = False
 

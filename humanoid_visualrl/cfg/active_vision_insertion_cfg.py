@@ -21,7 +21,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
     task_name = "active_vision_insertion"
 
-    scale = 1.0
+    scale = 0.25
     reward_weights_phase0 = {
         "pixel_norm_at_object": 0.8 * scale,
         "action_smoothness": -0.1 * scale,
