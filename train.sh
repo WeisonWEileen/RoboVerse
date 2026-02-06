@@ -1,6 +1,6 @@
 # train with walking
 export WANDB_API_KEY=70b35cc989ebf8652e52516c433f9faa444d21d2
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5
+export CUDA_VISIBLE_DEVICES=0
 # /home/balen/conda/envs/metasim/bin/python ./humanoid_visualrl/scripts/train.py \
 USER_NAME=$(whoami)
 
@@ -11,7 +11,7 @@ elif [ "$USER_NAME" = "ghr" ]; then
     PYTHON_PATH="/datasets/v2p/current/pw-workspace/conda/isaaclapb211/bin/python"
     echo "Using ghr's python path"
 elif [ "$USER_NAME" = "haoran" ]; then
-    PYTHON_PATH="/home/haoran/conda/envs/metasim/bin/python"
+    PYTHON_PATH="/home/haoran/miniconda3/envs/active_vision/bin/python"
     echo "Using haoran's python path"
 else
     PYTHON_PATH="python3"

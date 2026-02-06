@@ -11,7 +11,7 @@ elif [ "$USER_NAME" = "ghr" ]; then
     PYTHON_PATH="/datasets/v2p/current/pw-workspace/conda/isaaclapb211/bin/python"
     echo "Using ghr's python path"
 elif [ "$USER_NAME" = "haoran" ]; then
-    PYTHON_PATH="/home/haoran/conda/envs/metasim/bin/python"
+    PYTHON_PATH="/home/haoran/miniconda3/envs/active_vision/bin/python"
     echo "Using haoran's python path"
 else
     PYTHON_PATH="python3"
@@ -26,7 +26,12 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --actor_critic_class "use_rnn_cnn_ram" \
     --phase 2 \
     --enable_opencv_display \
-    --wandb 
+    --wandb \
+    --resume \
+    --load_run "2026_0206_203159" \
+    --ik_curriculum_samples 900 \
+    --wandb
+    # --phase 2 \
 
     # --resume \
     # --load_run "2026_0122_221516" \

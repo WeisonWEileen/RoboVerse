@@ -31,7 +31,7 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
 
         self.recorded_cube_pos = torch.tensor([0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522], device=self.device)
 
-        npz_path = "/home/panwei/RoboVerse/ik_curriculum_data_merged.npz"
+        npz_path = "ik_curriculum_data_merged.npz"
         if os.path.exists(npz_path):
             data = np.load(npz_path)
             recorded_qpos_raw = torch.tensor(data["qpos"], device=self.device, requires_grad=False)  # [400, num_joints]
@@ -125,13 +125,22 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
         terminate = self.cfg.init_states[0]["objects"]["object"]["pos"][2] - self.object_pose_buf[:, 2] > 0.1
         too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
         self.success = self.success_checker(self.object_pose_buf)
-        self.reset_buf = self.timeout_buf | terminate | too_far  | self.success
+        self.reset_buf = self.timeout_buf | terminate | too_far | self.success
 
-    
+    def _reward_lift_object(self, tensor_state: TensorState, robot_name: str, cfg):
+        """Stage 1 reward: lifting/holding the cube before it reaches z_threshold."""
+        # stage 1: cube not yet lifted above threshold
+        stage1_mask = (self.object_pose_buf[:, 2] <= self.cfg.z_threshold).float()
+
+        # Same shaping as in the base cube wrapper, but gated by stage1_mask
+        dist = torch.square(self.object_pose_buf[:, 2] - self.cfg.reward_lift_object_z)
+        base_reward = self.see_flag_float * (
+            torch.exp(-self.cfg.reward_lift_object_exp_shapeness * dist) - self.lift_offset
+        )
+        return base_reward * stage1_mask
+
     def _reward_success(self, tensor_state: TensorState, robot_name: str, cfg):
-        # if self.cfg.phase == 2:
-        return self.success.float()
-
-
-    
+        """Stage 2 reward: success only after cube z is over z_threshold."""
+        stage2_mask = (self.object_pose_buf[:, 2] > self.cfg.z_threshold).float()
+        return self.success.float() * stage2_mask
 

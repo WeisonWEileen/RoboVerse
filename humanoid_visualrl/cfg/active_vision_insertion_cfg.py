@@ -18,6 +18,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
     feet_indices: indices of the feet joints
     penalised_contact_indices: indices of the contact joints
     """
+    task_name = "active_vision_insertion"
 
     scale = 1.0
     reward_weights_phase0 = {
@@ -39,17 +40,17 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
     reward_weights_phase2 = {
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
-        "energy_consumption": -3e-7,
+            # "energy_consumption": -3e-7,
         "finger_close_to_object": 1.0 * scale,
-        "contact_force": 0.8 * scale,
-        "contact_force_upward": 0.8 * scale,
+        "contact_force": 0.4 * scale,
+        "contact_force_upward": 0.4 * scale,
         "lift_object": 100.0 * scale,
         "success": 100.0 * scale,
     }
 
     stage_finger_close_to_object_change_thres = 0.05
     # success threshold
-    y_threshold = 0.158
+    y_threshold = 0.156
     # x_threshold = 0.55
     z_threshold = 0.55
 
