@@ -18,6 +18,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
     feet_indices: indices of the feet joints
     penalised_contact_indices: indices of the contact joints
     """
+
     task_name = "active_vision_insertion"
 
     scale = 1.0
@@ -40,7 +41,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
     reward_weights_phase2 = {
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
-            # "energy_consumption": -3e-7,
+        # "energy_consumption": -3e-7,
         "finger_close_to_object": 1.0 * scale,
         "contact_force": 0.4 * scale,
         "contact_force_upward": 0.4 * scale,
@@ -90,7 +91,7 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
         self.curriculum_object_mass_flag = False
         self.objects[1].mass = 0.1
-        
+
         self.init_states[0]["robots"]["vega"]["dof_pos"].update({
             "torso_j2": 0.3,
         })

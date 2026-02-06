@@ -32,12 +32,19 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
         self.recorded_cube_pos = torch.tensor([0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522], device=self.device)
 
         npz_path = "ik_curriculum_data_merged.npz"
+        # 0:49  embed cube into the box data
+        # 50: 00 random ik data
         if os.path.exists(npz_path):
             data = np.load(npz_path)
             recorded_qpos_raw = torch.tensor(data["qpos"], device=self.device, requires_grad=False)  # [400, num_joints]
             # from isaacsim deleted joint version to none deleted version
-            self.recorded_qpos = recorded_qpos_raw[:, self.env._none_static_joint_idx_reindexed]
-            self.recorded_cube_pos = torch.tensor(data["cube_pos"], device=self.device, requires_grad=False)  # [400, 7]
+            self.recorded_qpos_raw = recorded_qpos_raw[:, self.env._none_static_joint_idx_reindexed]
+            self.recorded_cube_pos_raw = torch.tensor(data["cube_pos"], device=self.device, requires_grad=False)  # [400, 7]
+
+            # first inverse curriculum use embed cube into the box data and double it
+            self.recorded_qpos = self.recorded_qpos_raw[100:200, :].repeat(2, 1)
+            self.recorded_cube_pos = self.recorded_cube_pos_raw[100:200, :].repeat(2, 1)
+
 
             # # Filter out data where sqrt(x^2 + y^2) < threshold
             # threshold = self.cfg.init_states[0]["objects"]["object"]["pos"][0]
@@ -124,8 +131,24 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
     def _check_reset(self):
         terminate = self.cfg.init_states[0]["objects"]["object"]["pos"][2] - self.object_pose_buf[:, 2] > 0.1
         too_far = torch.norm(self.object_pose_buf[:, :2], dim=1) > (self.cfg.randomize_object_radius + 0.13)
-        self.success = self.success_checker(self.object_pose_buf)
-        self.reset_buf = self.timeout_buf | terminate | too_far | self.success
+        
+        success = self.success_checker(self.object_pose_buf)
+        failure = self.timeout_buf | terminate | too_far
+        # set self.success to False if failure
+        self.success[failure] = False
+        # set self.success to True if success
+        self.success[success] = True
+
+        success_rate = self.success.float().mean()
+        self.extra_buf["episode_metrics"]["success"] = success_rate
+
+        # when success rate exceed 0.7, the robot have learn to insert. now to learn random ik data to lift
+        if success_rate > 0.35:
+            self.recorded_qpos = self.recorded_qpos_raw
+            self.recorded_cube_pos = self.recorded_cube_pos_raw
+
+        self.reset_buf = failure | success
+        return self.reset_buf
 
     def _reward_lift_object(self, tensor_state: TensorState, robot_name: str, cfg):
         """Stage 1 reward: lifting/holding the cube before it reaches z_threshold."""
@@ -140,7 +163,7 @@ class ActiveVisionWrapper(ActiveVisionCubeWrapper):
         return base_reward * stage1_mask
 
     def _reward_success(self, tensor_state: TensorState, robot_name: str, cfg):
-        """Stage 2 reward: success only after cube z is over z_threshold."""
+        """Stage 2 reward in phase 2: success only after cube z is over z_threshold."""
         stage2_mask = (self.object_pose_buf[:, 2] > self.cfg.z_threshold).float()
         return self.success.float() * stage2_mask
 
