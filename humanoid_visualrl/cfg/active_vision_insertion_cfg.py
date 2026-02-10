@@ -34,11 +34,22 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
         "energy_consumption": -3e-7,
         "finger_close_to_object": 1.3 * scale,
         # "success": 100.0 * scale,
+        # "lift_object": 100.0 * scale,
+        # "success": 100.0 * scale,
+    }
+
+    reward_weights_phase2 = {
+        "pixel_norm_at_object": 0.4 * scale,
+        "action_smoothness": -0.1 * scale,
+        "energy_consumption": -3e-7,
+        "finger_close_to_object": 1.3 * scale,
+        # "success": 100.0 * scale,
         "lift_object": 100.0 * scale,
+        "success": 100.0 * scale,
     }
 
     # cube ready in hand. reward for holding the cube not falling down
-    reward_weights_phase2 = {
+    reward_weights_phase3 = {
         "pixel_norm_at_object": 0.4 * scale,
         "action_smoothness": -0.1 * scale,
         # "energy_consumption": -3e-7,
@@ -53,7 +64,8 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
     # success threshold
     y_threshold = 0.156
     # x_threshold = 0.55
-    z_threshold = 0.55
+    z_threshold = 0.57
+
 
     def __post_init__(self):
         super().__post_init__()
@@ -82,12 +94,12 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
         self.recorded_cube_pos = torch.tensor([0.488, 0.142, 0.5650, 0.9677, 0.0, 0.0, -0.2522], requires_grad=False)
 
-        self.init_states[0]["objects"]["object"] = {
-            # "pos": torch.tensor([0.55, 0.1, 0.54]),
-            "pos": self.recorded_cube_pos[:3],
-            # "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.51]),
-            "rot": self.recorded_cube_pos[3:7],
-        }
+        # self.init_states[0]["objects"]["object"] = {
+        #     # "pos": torch.tensor([0.55, 0.1, 0.54]),
+        #     "pos": self.recorded_cube_pos[:3],
+        #     # "rot": torch.tensor([0.8660254, 0.0, 0.0, 0.51]),
+        #     "rot": self.recorded_cube_pos[3:7],
+        # }
 
         self.curriculum_object_mass_flag = False
         self.objects[1].mass = 0.1
@@ -117,6 +129,10 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
 
         self.robot.modified_joint_limits.update({
             "torso_j2": (0.00, 0.60),
+        })
+
+        self.robot.action_scale.update({
+            "base_yaw_joint": 0.05 * self.robot.scale_factor,
         })
 
         self.robot.action_scale.update({
@@ -155,3 +171,47 @@ class ActiveVisionInsertionCfg(BaseTableHumanoidTaskCfg):
             self.reward_weights = self.reward_weights_phase1
         elif self.phase == 2:
             self.reward_weights = self.reward_weights_phase2
+
+            
+
+
+
+        # self.randomize_object_yaw_range = 0.1
+
+        self.randomize_object_x = self.init_states[0]["objects"]["object"]["pos"][0]
+        self.randomize_object_y = 0
+        self.randomize_object_range = 0.1
+
+        if self.robot == "vega":
+            if self.phase == 2 or self.phase == 3:
+                # lifting, mask
+                self.mask_joint_names = []
+            elif self.phase == 1:
+                # reaching, mask hand
+                self.mask_joint_names = [
+                    "R_th_j0",
+                    "R_th_j1",
+                    "R_ff_j1",
+                    "R_mf_j1",
+                    "R_rf_j1",
+                    "R_lf_j1",
+                ]
+            elif self.phase == 0:
+                # searching. mask all arm and hand
+                self.mask_joint_names = [
+                    "R_arm_j1",
+                    "R_arm_j2",
+                    "R_arm_j3",
+                    "R_arm_j4",
+                    "R_arm_j5",
+                    "R_arm_j6",
+                    "R_arm_j7",
+                    "R_th_j0",
+                    "R_th_j1",
+                    "R_ff_j1",
+                    "R_mf_j1",
+                    "R_rf_j1",
+                    "R_lf_j1",
+                ]
+            else:
+                raise ValueError(f"Invalid phase: {self.phase}")

@@ -199,15 +199,15 @@ if __name__ == "__main__":
         log.info(f"Loading model from: {resume_path}")
         ppo_runner.load(resume_path, load_optimizer=False)
 
-    # if args.edit_data:
-    #     filter_ik_curriculum_data(
-    #         env=env,
-    #         input_path=args.edit_data_input,
-    #         output_path=args.edit_data_output,
-    #     )
-    #     # Exit after filtering
-    #     env.env.simulation_app.close()
-    #     sys.exit(0)
+    if args.edit_data:
+        filter_ik_curriculum_data(
+            env=env,
+            input_path=args.edit_data_input,
+            output_path=args.edit_data_output,
+        )
+        # Exit after filtering
+        env.env.simulation_app.close()
+        sys.exit(0)
 
     # Generate IK curriculum data before training (for reverse curriculum)
     if hasattr(args, "generate_ik_curriculum") and args.generate_ik_curriculum:

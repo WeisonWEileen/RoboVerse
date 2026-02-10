@@ -21,12 +21,15 @@ fi
 $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --num_envs 128 \
     --task "active_vision_insertion" \
-    --run_name "insertion" \
+    --run_name "insertion_phase1" \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
     --phase 2 \
     --enable_opencv_display \
-    --wandb 
+    --resume \
+    --load_run "2026_0210_005534" \
+    --checkpoint 1200 \
+    --wandb \
     # --resume \
     # --load_run "2026_0206_203159" \
     # --ik_curriculum_samples 900 \

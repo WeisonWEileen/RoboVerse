@@ -25,8 +25,8 @@ $PYTHON_PATH ./humanoid_visualrl/scripts/train.py \
     --device "cuda:0" \
     --actor_critic_class "use_rnn_cnn_ram" \
     --enable_opencv_display \
-    --phase2 \
-    --wandb \
+    --phase 2 \
+    # --wandb \
     # --resume \
     # --checkpoint 100 \
     # --load_run 2026_0130_004031 

@@ -261,8 +261,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
             self.recorded_cube_pos = torch.tensor(data["cube_pos"], device=self.device, requires_grad=False)
 
         #
-        if self.phase == 2:
-            self.step_limits[: self.num_envs // 2] = int(self.step_limits[0] / 3)
+        # if self.phase == 2:
+        #     self.step_limits[: self.num_envs // 2] = int(self.step_limits[0] / 3)
 
         self.success = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool, requires_grad=False)
 
@@ -430,7 +430,8 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
         self.extra_buf["episode_metrics"]["phase"] = self.phase
 
         # Check phase change and update reward functions if needed
-        self._check_phase()
+        if self.autotune:
+            self._check_phase()
 
     def _stage_checker(self):
         # for search and pick task, stage is
@@ -641,7 +642,7 @@ class ActiveVisionWrapper(HumanoidBaseWrapper):
                 self.phase = 2
                 # dynamics time limit
                 # if reverse reset, only 280 / 3 = 93 steps = 2.325 s to lift up to success threshold
-                self.step_limits[: self.num_envs // 2] = int(self.step_limits[0] / 3)
+                # self.step_limits[: self.num_envs // 2] = int(self.step_limits[0] / 3)
 
                 # open hand mask in self.right_arm_joints_indices
                 # relax all joint masking

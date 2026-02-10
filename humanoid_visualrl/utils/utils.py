@@ -349,8 +349,8 @@ def get_args():
         ik_curriculum_max_iterations: int = 70  # Maximum iterations per IK attempt
         autotune: bool = False
         edit_data: bool = False  # Enable manual filtering of npz curriculum data
-        edit_data_input: str = "ik_curriculum_data_active_vision_cube.npz"  # Input npz file path
-        edit_data_output: str = None  # Output npz file path (default: input_path_filtered.npz)
+        edit_data_input: str = "ik_curriculum_data_merged.npz"  # Input npz file path
+        edit_data_output: str = "ik_curriculum_data_merged_output.npz"  # Output npz file path (default: input_path_filtered.npz)
         """Random seed for reproducibility. -1 means random seed."""
 
         """Random seed for reproducibility. -1 means random seed."""
